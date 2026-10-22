@@ -1,0 +1,135 @@
+:host {
+  display: block;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  .value {
+    font: var(--mat-sys-headline-small);
+  }
+
+  .label,
+  .muted {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mat-sys-surface-container-high);
+  overflow: hidden;
+  margin: 8px 0;
+
+  .fill {
+    height: 100%;
+    background: var(--mat-sys-primary);
+  }
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+mat-card-content {
+  padding-top: 12px;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.trend {
+  width: 100%;
+  height: auto;
+
+  .axis {
+    stroke: var(--mat-sys-outline-variant);
+  }
+
+  .faint {
+    stroke-dasharray: 3 3;
+  }
+
+  .line {
+    fill: none;
+    stroke: var(--mat-sys-primary);
+    stroke-width: 2;
+  }
+
+  .dot {
+    fill: var(--mat-sys-primary);
+  }
+
+  .tick {
+    font-size: 8px;
+    fill: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  .bar {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--mat-sys-surface-container-high);
+    overflow: hidden;
+  }
+
+  .fill {
+    height: 100%;
+    background: var(--mat-sys-primary);
+  }
+
+  .bar-val {
+    text-align: right;
+  }
+}
+
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.pass {
+  color: var(--mat-sys-tertiary);
+}
+
+.fail {
+  color: var(--mat-sys-error);
+}

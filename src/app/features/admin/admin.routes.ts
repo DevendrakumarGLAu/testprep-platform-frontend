@@ -1,0 +1,91 @@
+import { Routes } from '@angular/router';
+import { roleGuard } from '../../core/guards';
+import { Shell } from '../../layout/shell';
+
+export const ADMIN_ROUTES: Routes = [
+  {
+    path: '',
+    component: Shell,
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      {
+        path: 'dashboard',
+        loadComponent: () => import('./dashboard').then((m) => m.AdminDashboard),
+      },
+      {
+        path: 'users',
+        loadComponent: () => import('./users/user-list').then((m) => m.UserList),
+      },
+      {
+        path: 'students',
+        loadComponent: () => import('./students/student-list').then((m) => m.StudentList),
+      },
+      {
+        path: 'students/:id',
+        loadComponent: () => import('./students/student-profile').then((m) => m.StudentProfile),
+      },
+      {
+        path: 'subjects',
+        loadComponent: () => import('./question-bank/subjects-topics').then((m) => m.SubjectsTopics),
+      },
+      {
+        path: 'questions',
+        loadComponent: () => import('./question-bank/question-list').then((m) => m.QuestionList),
+      },
+      {
+        path: 'questions/new',
+        loadComponent: () => import('./question-bank/question-form').then((m) => m.QuestionForm),
+      },
+      {
+        path: 'questions/import',
+        loadComponent: () => import('./imports/import-wizard').then((m) => m.ImportWizard),
+      },
+      {
+        path: 'questions/:id',
+        loadComponent: () => import('./question-bank/question-form').then((m) => m.QuestionForm),
+      },
+      {
+        path: 'tests',
+        loadComponent: () => import('./exams/exam-list').then((m) => m.ExamList),
+      },
+      {
+        path: 'tests/new',
+        loadComponent: () => import('./exams/exam-form').then((m) => m.ExamForm),
+      },
+      {
+        path: 'tests/:id/results',
+        loadComponent: () => import('./exams/exam-results').then((m) => m.ExamResults),
+      },
+      {
+        path: 'attempts/:id',
+        loadComponent: () => import('./exams/attempt-review').then((m) => m.AttemptReview),
+      },
+      {
+        path: 'tests/:id/preview',
+        loadComponent: () => import('./exams/exam-preview').then((m) => m.ExamPreviewPage),
+      },
+      {
+        path: 'tests/:id',
+        loadComponent: () => import('./exams/exam-form').then((m) => m.ExamForm),
+      },
+      {
+        path: 'exams',
+        loadComponent: () => import('./exams/exam-catalogue').then((m) => m.ExamCatalogue),
+      },
+      {
+        path: 'batches',
+        loadComponent: () => import('./exams/batches').then((m) => m.Batches),
+      },
+      {
+        path: 'settings',
+        canActivate: [roleGuard('super_admin')],
+        loadComponent: () => import('./platform-settings').then((m) => m.PlatformSettings),
+      },
+      {
+        path: 'activity',
+        canActivate: [roleGuard('super_admin')],
+        loadComponent: () => import('./activity-log').then((m) => m.ActivityLogPage),
+      },
+    ],
+  },
+];
