@@ -18,6 +18,8 @@ import { environment } from '../../environments/environment';
 import { AuthService } from '../core/auth.service';
 import { Role } from '../core/models';
 import { PlatformService } from '../core/platform.service';
+import { ThemeService, THEME_LABEL } from '../core/theme.service';
+import { NotificationBell } from './notification-bell';
 
 interface SearchResults {
   questions: { id: number; text: string; subject: string }[];
@@ -38,6 +40,11 @@ const ALL_NAV: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', link: '/admin/dashboard', roles: ['admin', 'super_admin'] },
   { label: 'Subjects & Topics', icon: 'category', link: '/admin/subjects', roles: ['admin', 'super_admin'] },
   { label: 'Question bank', icon: 'quiz', link: '/admin/questions', roles: ['admin', 'super_admin'] },
+  { label: 'Insights', icon: 'insights', link: '/admin/insights', roles: ['admin', 'super_admin'] },
+  { label: 'Test series', icon: 'collections_bookmark', link: '/admin/test-series', roles: ['admin', 'super_admin'] },
+  { label: 'Study notes', icon: 'menu_book', link: '/admin/study-notes', roles: ['admin', 'super_admin'] },
+  { label: 'Announcements', icon: 'campaign', link: '/admin/announcements', roles: ['admin', 'super_admin'] },
+  { label: 'Question reports', icon: 'flag', link: '/admin/question-reports', roles: ['admin', 'super_admin'] },
   { label: 'Exams (SSC, ...)', icon: 'workspace_premium', link: '/admin/exams', roles: ['admin', 'super_admin'] },
   { label: 'Tests', icon: 'assignment', link: '/admin/tests', roles: ['admin', 'super_admin'] },
   { label: 'Batches', icon: 'groups', link: '/admin/batches', roles: ['admin', 'super_admin'] },
@@ -45,10 +52,17 @@ const ALL_NAV: NavItem[] = [
   { label: 'Users', icon: 'group', link: '/admin/users', roles: ['admin', 'super_admin'] },
   { label: 'Activity log', icon: 'history', link: '/admin/activity', roles: ['super_admin'] },
   { label: 'Platform settings', icon: 'settings', link: '/admin/settings', roles: ['super_admin'] },
+  { label: 'My profile', icon: 'account_circle', link: '/admin/profile', roles: ['admin', 'super_admin'] },
   { label: 'Dashboard', icon: 'dashboard', link: '/student/dashboard', roles: ['student'] },
   { label: 'My preparation', icon: 'school', link: '/student/prepare', roles: ['student'] },
   { label: 'All tests', icon: 'assignment', link: '/student/tests', roles: ['student'] },
+  { label: 'Practice', icon: 'fitness_center', link: '/student/practice', roles: ['student'] },
+  { label: 'Test series', icon: 'collections_bookmark', link: '/student/series', roles: ['student'] },
+  { label: 'Study notes', icon: 'menu_book', link: '/student/notes', roles: ['student'] },
+  { label: 'Revise', icon: 'style', link: '/student/revise', roles: ['student'] },
+  { label: 'Saved questions', icon: 'bookmarks', link: '/student/saved', roles: ['student'] },
   { label: 'My attempts', icon: 'history', link: '/student/attempts', roles: ['student'] },
+  { label: 'My profile', icon: 'account_circle', link: '/student/profile', roles: ['student'] },
 ];
 
 /** Shared responsive frame: sidebar + top bar. Used by both the admin and student areas. */
@@ -57,7 +71,7 @@ const ALL_NAV: NavItem[] = [
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive, MatSidenavModule, MatToolbarModule,
     MatListModule, MatIconModule, MatButtonModule, MatMenuModule, ReactiveFormsModule, MatAutocompleteModule,
-    MatFormFieldModule, MatInputModule,
+    MatFormFieldModule, MatInputModule, NotificationBell,
   ],
   styleUrl: './shell.scss',
   template: `
@@ -112,15 +126,30 @@ const ALL_NAV: NavItem[] = [
               </mat-autocomplete>
             </mat-form-field>
           }
+          <button mat-icon-button (click)="theme.cycle()" [attr.aria-label]="'Appearance: ' + themeLabel() + '. Click to change.'" [title]="'Appearance: ' + themeLabel()">
+            <mat-icon>{{ theme.mode() === 'dark' ? 'dark_mode' : theme.mode() === 'light' ? 'light_mode' : 'contrast' }}</mat-icon>
+          </button>
+          <app-notification-bell />
           <button mat-button [matMenuTriggerFor]="menu">
             <mat-icon>account_circle</mat-icon>
             <span class="name">{{ displayName() }}</span>
           </button>
           <mat-menu #menu="matMenu">
             <div class="menu-meta">{{ roleLabel() }}</div>
+            <a mat-menu-item [routerLink]="profileLink()"><mat-icon>person</mat-icon> My profile</a>
             <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon> Sign out</button>
           </mat-menu>
         </mat-toolbar>
+        @if (auth.user()?.must_change_password) {
+          <div class="banner warn" role="alert">
+            <mat-icon inline>lock_reset</mat-icon> You are using a temporary password. Please <a [routerLink]="profileLink()">choose your own password</a> now.
+          </div>
+        } @else if (auth.user() && auth.user()!.email_verified === false && platform.info().email_enabled) {
+          <div class="banner" role="status">
+            <mat-icon inline>mark_email_unread</mat-icon> Please confirm your email address ({{ auth.user()!.email }}).
+            <button mat-button (click)="sendVerification()" [disabled]="sentVerification()">{{ sentVerification() ? 'Link sent. Check your email' : 'Send me the link' }}</button>
+          </div>
+        }
         <main class="content"><router-outlet /></main>
       </mat-sidenav-content>
     </mat-sidenav-container>
@@ -128,6 +157,8 @@ const ALL_NAV: NavItem[] = [
 })
 export class Shell {
   auth = inject(AuthService);
+  theme = inject(ThemeService);
+  themeLabel = () => THEME_LABEL[this.theme.mode()];
   platform = inject(PlatformService);
   private http = inject(HttpClient);
   private router = inject(Router);
@@ -154,6 +185,15 @@ export class Shell {
   roleLabel = computed(() =>
     ({ super_admin: 'Super Admin', admin: 'Admin', student: 'Student' })[this.auth.role() ?? 'student'],
   );
+  sentVerification = signal(false);
+  sendVerification() {
+    this.auth.sendVerification().subscribe({
+      next: () => this.sentVerification.set(true),
+      error: () => this.sentVerification.set(false),
+    });
+  }
+
+  profileLink = computed(() => (this.auth.role() === 'student' ? '/student/profile' : '/admin/profile'));
   areaTitle = computed(() => (this.auth.role() === 'student' ? 'Student Portal' : 'Admin Panel'));
 
   constructor() {

@@ -1,42 +1,10 @@
-import { Component, Injectable, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { LANG_LABEL, Lang, LanguageService } from './language-state';
 
-export type Lang = 'en' | 'hi';
-
-export const LANG_LABEL: Record<Lang, string> = { en: 'English', hi: 'हिन्दी' };
-
-const KEY = 'tp_lang';
-
-function stored(): Lang {
-  try {
-    return localStorage.getItem(KEY) === 'hi' ? 'hi' : 'en';
-  } catch {
-    return 'en';
-  }
-}
-
-/** The language the student reads questions in. It is remembered, so it is the same on the next page and the next test. */
-@Injectable({ providedIn: 'root' })
-export class LanguageService {
-  readonly lang = signal<Lang>(stored());
-
-  set(lang: Lang) {
-    this.lang.set(lang);
-    try {
-      localStorage.setItem(KEY, lang);
-    } catch {
-      /* private mode: the choice just lasts for this visit */
-    }
-  }
-}
-
-/** The text in the chosen language, or the other one when this question was not written in it. */
-export function pick(en: string | null | undefined, hi: string | null | undefined, lang: Lang): string {
-  const first = lang === 'hi' ? hi : en;
-  const second = lang === 'hi' ? en : hi;
-  return first?.trim() ? first : second || '';
-}
+// The language state lives in language-state.ts so the app shell can use it without loading this component.
+export * from './language-state';
 
 /** Small language dropdown. Shows nothing unless the test really offers more than one language. */
 @Component({

@@ -23,13 +23,16 @@ import { RowFixDialog } from './row-fix-dialog';
 
 type Step = 'upload' | 'map' | 'review' | 'done';
 
-const FIELD_LABELS: { key: keyof Omit<ImportMapping, 'options'>; label: string; required?: boolean }[] = [
-  { key: 'question', label: 'Question text', required: true },
+const FIELD_LABELS: { key: keyof Omit<ImportMapping, 'options' | 'options_hi'>; label: string; required?: boolean }[] = [
+  { key: 'question', label: 'Question text (English)' },
+  { key: 'question_hi', label: 'Question text (Hindi)' },
   { key: 'correct', label: 'Correct answer (A, B, 1, 2 or the option text)', required: true },
-  { key: 'explanation', label: 'Explanation' },
+  { key: 'explanation', label: 'Explanation (English)' },
+  { key: 'explanation_hi', label: 'Explanation (Hindi)' },
   { key: 'subject', label: 'Subject' },
   { key: 'topic', label: 'Topic' },
   { key: 'difficulty', label: 'Difficulty' },
+  { key: 'question_date', label: 'Question date (YYYY-MM-DD or DD/MM/YYYY)' },
   { key: 'marks', label: 'Marks' },
   { key: 'negative_marks', label: 'Negative marks' },
   { key: 'tags', label: 'Tags (comma separated)' },
@@ -77,7 +80,7 @@ const FIELD_LABELS: { key: keyof Omit<ImportMapping, 'options'>; label: string; 
               <p>Drag a file here, or</p>
               <input #file type="file" accept=".csv,.xlsx,.xls,.pdf" hidden (change)="pick($event)" />
               <button mat-flat-button (click)="file.click()" [disabled]="busy()">Choose file</button>
-              <p class="muted">Up to 5 MB and 2000 questions. All sources use the same checks and review step.</p>
+              <p class="muted">Up to 100 MB and 2000 questions. All sources use the same checks and review step.</p>
             </div>
             @if (uploadError()) { <p class="err" role="alert">{{ uploadError() }}</p> }
             <div class="templates">
@@ -108,11 +111,18 @@ const FIELD_LABELS: { key: keyof Omit<ImportMapping, 'options'>; label: string; 
                   </mat-form-field>
                 }
                 <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
-                  <mat-label>Option columns * (lettered A, B, C… in file order)</mat-label>
+                  <mat-label>Option columns, English (lettered A, B, C… in file order)</mat-label>
                   <mat-select multiple [value]="mapping().options" (selectionChange)="setOptions($event.value)">
                     @for (h of j.headers; track h) { <mat-option [value]="h">{{ h }}</mat-option> }
                   </mat-select>
                 </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic" class="wide">
+                  <mat-label>Option columns, Hindi (same order: A, B, C…)</mat-label>
+                  <mat-select multiple [value]="mapping().options_hi ?? []" (selectionChange)="setOptionsHi($event.value)">
+                    @for (h of j.headers; track h) { <mat-option [value]="h">{{ h }}</mat-option> }
+                  </mat-select>
+                </mat-form-field>
+                <p class="hint wide">Provide English, Hindi or both. A language you use needs the question and every option.</p>
               </div>
 
               <h3>Defaults for empty cells</h3>
@@ -195,8 +205,8 @@ const FIELD_LABELS: { key: keyof Omit<ImportMapping, 'options'>; label: string; 
                   <tr [class]="r.status">
                     <td><mat-checkbox [checked]="r.selected" [disabled]="r.status === 'invalid'" (change)="toggle(r, $event.checked)" [attr.aria-label]="'Import row ' + r.row_number" /></td>
                     <td>{{ r.row_number }}</td>
-                    <td class="q">{{ r.normalized?.question || '(empty)' }}
-                      @if (r.normalized?.options?.length) { <div class="opts">@for (o of r.normalized!.options; track o.label) { <span [class.right]="o.label === r.normalized!.correct_label">{{ o.label }}. {{ o.text }}</span> } </div> }
+                    <td class="q">{{ r.normalized?.display || r.normalized?.question || '(empty)' }}
+                      @if (r.normalized?.options?.length) { <div class="opts">@for (o of r.normalized!.options; track o.label) { <span [class.right]="o.label === r.normalized!.correct_label">{{ o.label }}. {{ o.text || o.text_hi }}</span> } </div> }
                     </td>
                     <td>{{ r.normalized?.subject }}{{ r.normalized?.topic ? ' / ' + r.normalized?.topic : '' }}
                       @if (r.normalized?.new_subject || r.normalized?.new_topic) { <span class="new">will be created</span> }</td>
@@ -322,7 +332,7 @@ export class ImportWizard {
       next: (j) => {
         this.busy.set(false);
         this.job.set(j);
-        this.mapping.set({ ...j.mapping, options: [...(j.mapping.options ?? [])] });
+        this.mapping.set({ ...j.mapping, options: [...(j.mapping.options ?? [])], options_hi: [...(j.mapping.options_hi ?? [])] });
         this.step.set('map');
       },
       error: (e) => {
@@ -333,7 +343,7 @@ export class ImportWizard {
   }
 
   // --- 2 map ---
-  setField(key: keyof Omit<ImportMapping, 'options'>, value: string) {
+  setField(key: keyof Omit<ImportMapping, 'options' | 'options_hi'>, value: string) {
     this.mapping.update((m) => ({ ...m, [key]: value || undefined }));
   }
 
@@ -342,11 +352,16 @@ export class ImportWizard {
     this.mapping.update((m) => ({ ...m, options: [...selected].sort((a, b) => order.indexOf(a) - order.indexOf(b)) }));
   }
 
+  setOptionsHi(selected: string[]) {
+    const order = this.job()!.headers;
+    this.mapping.update((m) => ({ ...m, options_hi: [...selected].sort((a, b) => order.indexOf(a) - order.indexOf(b)) }));
+  }
+
   validate() {
     const m = this.mapping();
-    if (!m.question) return this.error.set('Choose the column that holds the question text.');
+    if (!m.question && !m.question_hi) return this.error.set('Choose the column that holds the question text (English or Hindi).');
     if (!m.correct) return this.error.set('Choose the column that holds the correct answer.');
-    if (m.options.length < 2) return this.error.set('Choose at least two option columns.');
+    if (Math.max(m.options.length, m.options_hi?.length ?? 0) < 2) return this.error.set('Choose at least two option columns.');
     this.error.set('');
     this.busy.set(true);
     const clean = Object.fromEntries(Object.entries(m).filter(([, v]) => v !== undefined && v !== '')) as unknown as ImportMapping;

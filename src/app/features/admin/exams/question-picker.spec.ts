@@ -117,4 +117,63 @@ describe('QuestionPicker bulk selection', () => {
     expect(el.querySelector('.count')!.textContent).toContain('10 selected');
     expect(el.querySelector('.count')!.textContent).toContain('287 more allowed');
   });
+
+  it('shows the id and date of each question, and flags the ones older than two years', async () => {
+    const { el, fixture } = await open();
+    api.questions.mockReturnValue(of({ count: 2, results: [
+      { ...q(7), question_date: '2026-07-08' }, { ...q(8), question_date: '2020-01-01' },
+    ] }));
+    const c = fixture.componentInstance;
+    c.age.set('1y');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const text = el.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('#7');
+    expect(text).toContain('2026-07-08');
+    expect(text).toContain('#8');
+    expect(el.querySelectorAll('.old').length).toBe(1);
+  });
+
+  it('a date preset filters the list and the "add random" / "select all" picks the same way', async () => {
+    const { c, fixture } = await open();
+    c.age.set('1y');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(api.questions.mock.calls.at(-1)![0].date_from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    c.randomCount.setValue(5);
+    c.addRandom();
+    expect(api.pick.mock.calls.at(-1)![0]).toMatchObject({ mode: 'random', count: 5 });
+    expect(api.pick.mock.calls.at(-1)![0].date_from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    c.age.set('older2y');
+    c.selectAllMatching();
+    const body = api.pick.mock.calls.at(-1)![0];
+    expect(body.date_to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(body.date_from).toBeUndefined();
+  });
+
+  it('asks the server to leave out the questions the test already has, so the count and pages are right', async () => {
+    await open([5, 6, 7]);
+    expect(api.questions.mock.calls.at(-1)![0].exclude_ids).toBe('5,6,7');
+  });
+
+  it('can show the questions already in the test, marked and not selectable, and the "used" filter reaches the server', async () => {
+    const { c, el, fixture } = await open([1, 2]);
+    expect(api.questions.mock.calls.at(-1)![0].exclude_ids).toBe('1,2');
+    c.showInTest.set(true);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.questions.mock.calls.at(-1)![0].exclude_ids).toBe('');
+    expect(el.textContent).toContain('In this test');
+    c.togglePage(true);
+    expect(c.selected().has(1)).toBe(false);
+    expect(c.selected().has(3)).toBe(true);
+    c.usage.set('no');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(api.questions.mock.calls.at(-1)![0].used).toBe(false);
+    c.addRandom();
+    expect(api.pick.mock.calls.at(-1)![0].used).toBe(false);
+  });
 });

@@ -5,15 +5,19 @@ import { Page } from '../../../core/models';
 
 export interface ImportMapping {
   question?: string;
+  question_hi?: string;
+  explanation_hi?: string;
   correct?: string;
   explanation?: string;
   subject?: string;
   topic?: string;
   difficulty?: string;
+  question_date?: string;
   marks?: string;
   negative_marks?: string;
   tags?: string;
   options: string[];
+  options_hi?: string[];
 }
 
 export interface ImportDefaults {
@@ -51,7 +55,9 @@ export interface ImportRowData {
   raw: Record<string, string>;
   normalized: {
     question: string;
-    options: { label: string; text: string }[];
+    question_hi?: string;
+    display?: string;
+    options: { label: string; text: string; text_hi?: string }[];
     correct_label: string | null;
     explanation: string;
     subject: string;

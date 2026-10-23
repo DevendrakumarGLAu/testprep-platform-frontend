@@ -1,4 +1,4 @@
-export type StudentExamStatus = 'available' | 'upcoming' | 'in_progress' | 'completed' | 'missed';
+export type StudentExamStatus = 'available' | 'upcoming' | 'in_progress' | 'completed' | 'missed' | 'locked';
 
 export interface StudentExam {
   id: string;
@@ -21,6 +21,10 @@ export interface StudentExam {
   attempts_used: number;
   negative_marking_enabled: boolean;
   sectional_timing: boolean;
+  /** A premium test can only be started with access granted by an admin. */
+  premium?: boolean;
+  price?: string | null;
+  locked?: boolean;
   status: StudentExamStatus;
   can_start: boolean;
   reason: string;
@@ -153,6 +157,106 @@ export interface Dashboard {
   trend: { attempt: string; title: string; percentage: number; submitted_at: string }[];
   subjects: { subject: string; accuracy: number; marks: string; max_marks: string }[];
   recommended: StudentExam[];
+  activity: ActivitySummary;
+}
+
+/** How much the student practised: questions answered per day, the streak and the daily goal. */
+export interface ActivitySummary {
+  streak: number;
+  best_streak: number;
+  today: number;
+  goal: number;
+  goal_reached: boolean;
+  last_7_days: { date: string; questions: number }[];
+}
+
+export interface WeakTopic {
+  subject_id: number;
+  subject: string;
+  topic_id: number | null;
+  topic: string;
+  answered: number;
+  correct: number;
+  accuracy: number;
+}
+
+export interface WeakTopicsData {
+  weak: WeakTopic[];
+  all: WeakTopic[];
+  rule: string;
+}
+
+/** Returned when a practice set or the daily quiz is started: go straight to the exam screen with attempt_id. */
+export interface PracticeStart {
+  attempt_id: string;
+  exam_id: string;
+  questions: number;
+  created: boolean;
+}
+
+export interface SavedQuestion {
+  id: number;
+  exam_title: string;
+  subject: string;
+  text: string;
+  text_hi: string;
+  options: { id: number; text: string; text_hi?: string; is_correct: boolean }[];
+  selected_option: number | null;
+  explanation: string;
+  explanation_hi: string;
+  note: string;
+  created_at: string;
+}
+
+export interface SavedList {
+  count: number;
+  subjects: string[];
+  results: SavedQuestion[];
+}
+
+export interface MyReport {
+  id: number;
+  question: string;
+  exam_title: string;
+  reason: string;
+  message: string;
+  status: 'open' | 'resolved' | 'rejected';
+  status_label: string;
+  admin_note: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
+export const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'wrong_answer', label: 'The marked answer is wrong' },
+  { value: 'wrong_question', label: 'The question is wrong or unclear' },
+  { value: 'typo', label: 'Spelling or typing mistake' },
+  { value: 'translation', label: 'Hindi and English do not match' },
+  { value: 'other', label: 'Something else' },
+];
+
+export interface DailyQuizStatus {
+  available: boolean;
+  done: boolean;
+  in_progress: boolean;
+  size: number;
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  name: string;
+  score: string;
+  total_marks: string;
+  percent: number | null;
+  time_taken_seconds: number | null;
+  is_me: boolean;
+}
+
+export interface LeaderboardData {
+  exam: string;
+  participants: number;
+  me: (LeaderboardRow & { better_than_percent: number }) | null;
+  top: LeaderboardRow[];
 }
 
 export function formatDuration(seconds: number): string {
@@ -167,4 +271,38 @@ export function formatSeconds(s: number): string {
   const m = Math.floor(s / 60);
   const r = s % 60;
   return r ? `${m}m ${String(r).padStart(2, '0')}s` : `${m}m`;
+}
+
+/** The last seven days compared with the seven before. */
+export interface WeeklySummary {
+  from: string;
+  to: string;
+  questions: number;
+  questions_before: number;
+  tests: number;
+  tests_before: number;
+  active_days: number;
+  accuracy: number | null;
+  accuracy_before: number | null;
+  accuracy_change: number | null;
+  best_subject: { name: string; accuracy: number } | null;
+  weakest_subject: { name: string; accuracy: number } | null;
+}
+
+export interface ReviseCard {
+  key: string;
+  subject: string;
+  exam_title: string;
+  text: string;
+  text_hi: string;
+  options: { id: number; text: string; text_hi: string; is_correct: boolean }[];
+  your_option: number | null;
+  explanation: string;
+  explanation_hi: string;
+}
+
+export interface ReviseData {
+  source: 'saved' | 'mistakes';
+  total: number;
+  cards: ReviseCard[];
 }

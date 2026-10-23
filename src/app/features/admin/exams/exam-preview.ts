@@ -29,8 +29,9 @@ import { ExamService } from './exam.service';
     li { padding: 4px 0; }
   `,
   template: `
-    <div class="banner"><mat-icon inline>visibility</mat-icon> Preview mode: answers cannot be submitted.
-      <a mat-button [routerLink]="['/admin/tests', id()]">Back to editor</a></div>
+    <div class="banner no-print"><mat-icon inline>visibility</mat-icon> Preview mode: answers cannot be submitted.
+      <a mat-button [routerLink]="['/admin/tests', id()]">Back to editor</a>
+      <button mat-button (click)="print()"><mat-icon>print</mat-icon> Print the paper</button></div>
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
     @if (p(); as t) {
       <h1>{{ t.title }}</h1>
@@ -78,6 +79,11 @@ export class ExamPreviewPage {
   private router = inject(Router);
   loading = signal(true);
   p = signal<ExamPreview | null>(null);
+
+  /** Prints the paper as it appears here (questions and options, no answers). The browser can save it as a PDF. */
+  print() {
+    window.print();
+  }
 
   constructor() {
     effect(() => {

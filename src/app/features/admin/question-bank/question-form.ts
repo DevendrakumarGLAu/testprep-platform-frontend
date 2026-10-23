@@ -19,6 +19,7 @@ import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
 import { DuplicateMatch, Question, Subject, Topic } from './qb.models';
 import { QuestionBankService } from './qb.service';
+import { today } from '../../../shared/question-age';
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 10;
@@ -43,7 +44,7 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
   styleUrl: './question-form.scss',
   template: `
     <div class="head">
-      <h1>{{ id() ? 'Edit question' : 'New question' }}</h1>
+      <h1>{{ id() ? 'Edit question #' + id() : 'New question' }}</h1>
       <a mat-button routerLink="/admin/questions"><mat-icon>arrow_back</mat-icon> Back to list</a>
     </div>
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
@@ -106,6 +107,12 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
               </mat-select>
             </mat-form-field>
             <mat-form-field appearance="outline">
+              <mat-label>Question date</mat-label>
+              <input matInput type="date" formControlName="question_date" [max]="todayStr" />
+              <mat-hint>When the event happened or the question is current as of. Tests can then use only recent questions.</mat-hint>
+              <mat-error>Choose today or an earlier date</mat-error>
+            </mat-form-field>
+            <mat-form-field appearance="outline">
               <mat-label>Question type</mat-label>
               <mat-select formControlName="question_type">
                 <mat-option value="single_mcq">Single-correct MCQ</mat-option>
@@ -143,6 +150,11 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
 
       <mat-card appearance="outlined">
         <mat-card-content>
+          <mat-form-field appearance="outline">
+            <mat-label>Solution video link (optional)</mat-label>
+            <input matInput type="url" formControlName="video_url" placeholder="https://youtu.be/..." />
+            <mat-hint>Shown to students as "Watch solution" in their review.</mat-hint>
+          </mat-form-field>
           @if (lang() === 'en') {
             <mat-form-field appearance="outline">
               <mat-label>Explanation / solution (English)</mat-label>
@@ -178,6 +190,18 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
             <button mat-stroked-button type="button" (click)="file.click()"><mat-icon>image</mat-icon> Choose image</button>
           </div>
 
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="review">
+            <mat-label>Review status</mat-label>
+            <mat-select formControlName="review_status">
+              <mat-option value="approved">Approved</mat-option>
+              <mat-option value="needs_review">Needs review</mat-option>
+            </mat-select>
+            <mat-hint>A test cannot be published while it holds a question that needs review.</mat-hint>
+          </mat-form-field>
+          @if (openReports() > 0) {
+            <p class="err"><mat-icon inline>flag</mat-icon> {{ openReports() }} open student report{{ openReports() === 1 ? '' : 's' }} on this question.
+              <a routerLink="/admin/question-reports">Open the reports</a></p>
+          }
           <mat-slide-toggle formControlName="is_active">Active (available for tests)</mat-slide-toggle>
           @if (source()) { <p class="meta">Source: {{ source() }} · Version {{ version() }}</p> }
         </mat-card-content>
@@ -200,6 +224,7 @@ export class QuestionForm {
   private router = inject(Router);
   private notify = inject(NotifyService);
 
+  readonly todayStr = today();
   readonly MIN = MIN_OPTIONS;
   readonly MAX = MAX_OPTIONS;
   readonly separators = [ENTER, COMMA];
@@ -216,6 +241,7 @@ export class QuestionForm {
   pendingPreview = signal<string | null>(null);
   source = signal('');
   version = signal(1);
+  openReports = signal(0);
   subjectId = signal<number | null>(null);
   correctIndex = signal<number | null>(null);
   lang = signal<'en' | 'hi'>('en');
@@ -229,9 +255,12 @@ export class QuestionForm {
     topic: this.fb.control<number | null>(null),
     difficulty: ['medium'],
     question_type: ['single_mcq'],
+    question_date: [today(), [Validators.required, (c: AbstractControl) => (c.value && c.value > today() ? { future: true } : null)]],
     explanation: [''],
     explanation_hi: [''],
+    video_url: [''],
     is_active: [true],
+    review_status: ['approved'],
     allow_duplicate: [false],
     options: this.fb.array([this.newOption(), this.newOption(), this.newOption(), this.newOption()], optionsValid),
   });
@@ -313,7 +342,7 @@ export class QuestionForm {
     this.options.clear();
     q.options.forEach((o) => this.options.push(this.newOption(o.text, o.is_correct, o.id, o.text_hi ?? '')));
     this.form.patchValue({
-      text: q.text, text_hi: q.text_hi ?? '', explanation_hi: q.explanation_hi ?? '', subject: q.subject, topic: q.topic, difficulty: q.difficulty, question_type: q.question_type,
+      text: q.text, text_hi: q.text_hi ?? '', explanation_hi: q.explanation_hi ?? '', video_url: q.video_url ?? '', question_date: q.question_date ?? '', review_status: q.review_status ?? 'approved', subject: q.subject, topic: q.topic, difficulty: q.difficulty, question_type: q.question_type,
       explanation: q.explanation, is_active: q.is_active,
     });
     this.lang.set(q.languages?.length === 1 ? q.languages[0] : 'en');
@@ -323,6 +352,7 @@ export class QuestionForm {
     this.imageUrl.set(q.image_url);
     this.source.set(q.source_info ? `${q.source} (${q.source_info})` : q.source);
     this.version.set(q.version);
+    this.openReports.set(q.open_reports ?? 0);
   }
 
   addOption() {

@@ -7,6 +7,11 @@ export interface User {
   first_name: string;
   last_name: string;
   phone: string;
+  daily_goal_questions?: number;
+  preferred_language?: '' | 'en' | 'hi';
+  weekly_summary?: boolean;
+  email_verified?: boolean;
+  must_change_password?: boolean;
   role: Role;
   is_active: boolean;
   date_joined: string;

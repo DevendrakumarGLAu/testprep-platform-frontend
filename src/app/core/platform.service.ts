@@ -7,6 +7,8 @@ export interface PlatformInfo {
   platform_name: string;
   allow_registration: boolean;
   support_email: string;
+  /** True when the server can send email (forgot password, email confirmation). */
+  email_enabled?: boolean;
 }
 
 /** Public platform settings: shown on the login page and in the app header. */
@@ -17,12 +19,21 @@ export class PlatformService {
 
   readonly info = signal<PlatformInfo>({ platform_name: 'TestPrep', allow_registration: true, support_email: '' });
 
+  /** True once the server has answered, so a page can tell "not known yet" from "emails are off". */
+  readonly loaded = signal(false);
+
   constructor() {
     this.refresh();
   }
 
   refresh() {
-    this.http.get<PlatformInfo>(this.url).subscribe({ next: (i) => this.info.set(i), error: () => undefined });
+    this.http.get<PlatformInfo>(this.url).subscribe({
+      next: (i) => {
+        this.info.set(i);
+        this.loaded.set(true);
+      },
+      error: () => undefined,
+    });
   }
 
   save(body: Partial<PlatformInfo>) {

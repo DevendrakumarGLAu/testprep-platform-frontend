@@ -81,6 +81,33 @@ describe('AttemptPage (exam screen)', () => {
     expect(c.remaining()).toBe(20);
   });
 
+  it('warns at five minutes and at one minute, once each', async () => {
+    const warn = vi.spyOn(TestBed.inject(NotifyService), 'warning').mockImplementation(() => undefined);
+    const deadline = new Date(T0 + 600_000).toISOString();
+    api.saveAnswers.mockImplementation(() => of({ ...okNow(), deadline, remaining_seconds: 600 }));
+    await open(state({ deadline, remaining_seconds: 600 }));
+    await settle(299_000);
+    expect(warn.mock.calls).toEqual([]);
+    await settle(2_000); // 299 s left
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toContain('5 minutes');
+    await settle(100_000);
+    expect(warn).toHaveBeenCalledTimes(1);
+    await settle(150_000); // under a minute left
+    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn.mock.calls[1][0]).toContain('1 minute');
+    await settle(20_000);
+    expect(warn).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts questions the student never opened for the submit summary', async () => {
+    const c = await open();
+    expect(c.notVisited()).toBe(1); // question 1 is on screen, question 2 was never opened
+    c.go(1);
+    await settle(0);
+    expect(c.notVisited()).toBe(0);
+  });
+
   it('saves a chosen answer shortly after, with the question marked visited', async () => {
     const c = await open();
     c.select(2);
@@ -431,7 +458,7 @@ describe('AttemptPage subject tabs', () => {
 describe('AttemptPage timed sections', () => {
   let fixture: ComponentFixture<AttemptPage>;
   let api: { attempt: ReturnType<typeof vi.fn>; saveAnswers: ReturnType<typeof vi.fn>; submit: ReturnType<typeof vi.fn>; submitSection: ReturnType<typeof vi.fn> };
-  let notify: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
+  let notify: { success: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn>; warning: ReturnType<typeof vi.fn> };
 
   const q = (id: number, number: number) => ({
     id, number, text: `Question ${number}`, image_url: null, marks: '1', negative_marks: '0', selected_option: null as number | null,
@@ -455,7 +482,7 @@ describe('AttemptPage timed sections', () => {
 
   async function open(first: AttemptState) {
     api = { attempt: vi.fn(), saveAnswers: vi.fn(() => of(okNow())), submit: vi.fn(() => of(submitted)), submitSection: vi.fn() };
-    notify = { success: vi.fn(), error: vi.fn() };
+    notify = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),

@@ -127,6 +127,15 @@ table.plain {
     border-left-color: var(--mat-sys-error);
   }
 
+  .q-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    padding-top: 4px;
+  }
+
   .q-head {
     display: flex;
     justify-content: space-between;

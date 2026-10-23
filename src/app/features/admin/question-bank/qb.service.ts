@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { Page } from '../../../core/models';
-import { BulkAction, DuplicateMatch, PickedQuestion, Question, Subject, Topic } from './qb.models';
+import { BulkAction, DuplicateGroup, DuplicateMatch, PickedQuestion, Question, QuestionReportRow, Subject, Topic } from './qb.models';
 
 type Query = Record<string, string | number | boolean | null | undefined>;
 
@@ -91,10 +91,26 @@ export class QuestionBankService {
     });
   }
   /** Pick many active questions at once, newest first or at random, by the same filters as the list. */
-  pick(body: { count: number; mode: 'random' | 'newest'; subject?: number | null; difficulty?: string; search?: string; exclude_ids?: number[] }) {
+  pick(body: { count: number; mode: 'random' | 'newest'; subject?: number | null; difficulty?: string; search?: string; date_from?: string; date_to?: string; used?: boolean; exclude_ids?: number[] }) {
     return this.http.post<{ available: number; questions: PickedQuestion[] }>(`${this.api}/questions/pick/`, body);
   }
-  bulk(ids: number[], action: BulkAction, extra: { difficulty?: string; tags?: string[] } = {}) {
+  reports(q: Query) {
+    return this.http.get<Page<QuestionReportRow>>(`${this.api}/question-reports/`, { params: params(q) });
+  }
+  updateReport(id: number, body: { status: string; admin_note: string }) {
+    return this.http.patch<QuestionReportRow>(`${this.api}/question-reports/${id}/`, body);
+  }
+  /** Every question id matching the list's filters (at most 500), for "select all matching". */
+  ids(q: Query) {
+    return this.http.get<{ count: number; ids: number[]; truncated: boolean }>(`${this.api}/questions/ids/`, { params: params(q) });
+  }
+  duplicates() {
+    return this.http.get<{ groups: DuplicateGroup[] }>(`${this.api}/questions/duplicates/`);
+  }
+  resolveDuplicates(keep: number, archive: number[]) {
+    return this.http.post<{ archived: number; still_used_in: string[] }>(`${this.api}/questions/duplicates/resolve/`, { keep, archive });
+  }
+  bulk(ids: number[], action: BulkAction, extra: { difficulty?: string; tags?: string[]; review_status?: string; question_date?: string; subject?: number } = {}) {
     return this.http.post<{ updated: number }>(`${this.api}/questions/bulk/`, { ids, action, ...extra });
   }
 }

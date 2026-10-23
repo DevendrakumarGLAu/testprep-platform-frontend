@@ -8,6 +8,19 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/login').then((m) => m.Login),
   },
   {
+    path: 'forgot-password',
+    canActivate: [guestGuard],
+    loadComponent: () => import('./features/auth/password-pages').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'reset-password/:uid/:token',
+    loadComponent: () => import('./features/auth/password-pages').then((m) => m.ResetPassword),
+  },
+  {
+    path: 'verify-email/:token',
+    loadComponent: () => import('./features/auth/password-pages').then((m) => m.VerifyEmail),
+  },
+  {
     path: 'register',
     canActivate: [guestGuard],
     loadComponent: () => import('./features/auth/register').then((m) => m.Register),
@@ -22,6 +35,7 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard('student')],
     loadChildren: () => import('./features/student/student.routes').then((m) => m.STUDENT_ROUTES),
   },
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
-  { path: '**', redirectTo: 'login' },
+  { path: 'exam/:id', loadComponent: () => import('./features/landing/exam-page').then((m) => m.PublicExamPage) },
+  { path: '', pathMatch: 'full', loadComponent: () => import('./features/landing/landing').then((m) => m.Landing) },
+  { path: '**', redirectTo: '' },
 ];

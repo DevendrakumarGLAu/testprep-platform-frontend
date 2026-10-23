@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Frontend
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
@@ -58,7 +57,3 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
-=======
-# testprep-platform-frontend
-testprep-platform-frontend
->>>>>>> 109ae024baea852122ed9dd4b21ecf183e74c2b2

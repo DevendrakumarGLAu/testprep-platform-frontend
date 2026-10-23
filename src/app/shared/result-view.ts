@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { LangSwitch, Lang, LanguageService, pick } from './language';
+import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +11,7 @@ import { ResultData } from './result.models';
 /** Result and question-by-question review. Shared by the student and admin screens. */
 @Component({
   selector: 'app-result-view',
-  imports: [DatePipe, MatCardModule, MatIconModule, MatButtonToggleModule, LangSwitch],
+  imports: [DatePipe, MatButtonModule, MatCardModule, MatIconModule, MatButtonToggleModule, LangSwitch],
   styleUrl: './result-view.scss',
   template: `
     @let r = data();
@@ -134,6 +135,20 @@ import { ResultData } from './result.models';
           </ol>
           @if (q.selected_option === null) { <p class="muted">You did not answer this question.</p> }
           @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
+          @if (q.video_url) {
+            <a mat-button class="video" [href]="q.video_url" target="_blank" rel="noopener noreferrer"><mat-icon>smart_display</mat-icon> Watch solution</a>
+          }
+          @if (canAct() && data().solutions_available) {
+            <div class="q-actions">
+              <button mat-button type="button" (click)="saveToggle.emit(q.number)" [attr.aria-pressed]="!!q.saved_id">
+                <mat-icon>{{ q.saved_id ? 'bookmark' : 'bookmark_border' }}</mat-icon> {{ q.saved_id ? 'Saved' : 'Save' }}
+              </button>
+              <button mat-button type="button" (click)="report.emit(q.number)" [disabled]="q.report_status === 'open'">
+                <mat-icon>flag</mat-icon>
+                {{ q.report_status === 'open' ? 'Reported, waiting for review' : q.report_status === 'resolved' ? 'Reported, fixed. Report again?' : 'Report a problem' }}
+              </button>
+            </div>
+          }
         </mat-card-content>
       </mat-card>
     }
@@ -141,6 +156,10 @@ import { ResultData } from './result.models';
 })
 export class ResultView {
   data = input.required<ResultData>();
+  /** On a student's own review: show Save and Report buttons under each question. */
+  canAct = input(false);
+  saveToggle = output<number>();
+  report = output<number>();
   private langs = inject(LanguageService);
   /** Languages that appear anywhere in this test. */
   languages = computed<Lang[]>(() => {

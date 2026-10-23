@@ -1,0 +1,166 @@
+:host {
+  display: block;
+}
+
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(340px, 0.9fr) 1.1fr;
+  background: var(--mat-sys-surface);
+}
+
+// ---- brand panel
+.brand-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 36px 44px;
+  color: var(--mat-sys-on-primary);
+  background: linear-gradient(160deg, var(--mat-sys-primary), color-mix(in srgb, var(--mat-sys-primary) 60%, #000));
+
+  // soft decorative circles
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.09);
+    pointer-events: none;
+  }
+
+  &::before {
+    width: 380px;
+    height: 380px;
+    right: -140px;
+    top: -120px;
+  }
+
+  &::after {
+    width: 280px;
+    height: 280px;
+    left: -100px;
+    bottom: -90px;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: var(--mat-sys-title-large);
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-copy {
+  h2 {
+    font-size: clamp(1.7rem, 2.6vw, 2.4rem);
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+
+  p {
+    margin: 0 0 20px;
+    max-width: 420px;
+    opacity: 0.9;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  mat-icon {
+    vertical-align: -3px;
+    margin-right: 4px;
+    opacity: 0.95;
+  }
+}
+
+.brand-foot {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+// ---- form panel
+.form-panel {
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.form-box {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px color-mix(in srgb, #000 8%, transparent);
+
+  h1 {
+    margin: 12px 0 4px;
+    font: var(--mat-sys-headline-medium);
+  }
+
+  .form-sub {
+    margin: 0 0 20px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+  }
+}
+
+
+// ---- small screens: the brand panel becomes a slim banner above the form
+@media (max-width: 860px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .brand-panel {
+    padding: 22px 20px 48px;
+    gap: 0;
+  }
+
+  .brand-copy,
+  .brand-foot {
+    display: none;
+  }
+
+  .form-panel {
+    padding: 0 16px 28px;
+    align-items: start;
+  }
+
+  .form-box {
+    margin-top: -28px;
+    padding: 24px 20px;
+    position: relative;
+  }
+}

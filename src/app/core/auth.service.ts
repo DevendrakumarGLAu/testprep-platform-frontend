@@ -44,8 +44,8 @@ export class AuthService {
     return read(REFRESH);
   }
 
-  login(username: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.base}/login/`, { username, password }).pipe(
+  login(username: string, password: string, captcha: Record<string, string> = {}): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.base}/login/`, { username, password, ...captcha }).pipe(
       tap((res) => {
         write(ACCESS, res.access);
         write(REFRESH, res.refresh);
@@ -67,6 +67,22 @@ export class AuthService {
           if (res.refresh) write(REFRESH, res.refresh);
         }),
       );
+  }
+
+  /** Saves the person's own name and phone, and refreshes the signed-in user everywhere (top bar, profile). */
+  updateProfile(body: Partial<Pick<User, 'first_name' | 'last_name' | 'phone' | 'daily_goal_questions' | 'preferred_language' | 'weekly_summary'>>): Observable<User> {
+    return this.http.patch<User>(`${this.base}/me/`, body).pipe(tap((u) => this.setUser(u)));
+  }
+
+  changePassword(oldPassword: string, newPassword: string, captcha: Record<string, string> = {}): Observable<{ detail: string }> {
+    return this.http.post<{ detail: string }>(`${this.base}/change-password/`, {
+      old_password: oldPassword, new_password: newPassword, ...captcha,
+    });
+  }
+
+  /** Emails the signed-in person a link to confirm their address. */
+  sendVerification() {
+    return this.http.post<{ detail: string; already?: boolean }>(`${this.base}/send-verification/`, {});
   }
 
   /** Re-validates the stored session with the server (role/status may have changed). */

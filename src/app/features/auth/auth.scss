@@ -1,46 +1,46 @@
-.auth-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: var(--mat-sys-surface-container);
+// Styles for the forms on the sign-in and registration pages (the frame around them is in auth-layout.scss).
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.auth-card {
-  width: 100%;
-  max-width: 440px;
-  padding: 16px;
+button[type='submit'] {
+  height: 48px;
+  margin-top: 8px;
+  font-size: 1rem;
+}
 
-  mat-card-header {
-    margin-bottom: 16px;
+.row {
+  display: flex;
+  gap: 12px;
+
+  mat-form-field {
+    flex: 1;
+    min-width: 0;
   }
+}
 
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.forgot {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: right;
+
+  a {
+    color: var(--mat-sys-primary);
   }
+}
 
-  mat-card-actions {
-    padding: 8px 16px 0;
-    gap: 6px;
-    display: flex;
-    flex-wrap: wrap;
-  }
+.switch {
+  margin: 20px 0 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
 
-  button[type='submit'] {
-    height: 44px;
-    margin-top: 8px;
-  }
-
-  .row {
-    display: flex;
-    gap: 12px;
-
-    mat-form-field {
-      flex: 1;
-      min-width: 0;
-    }
+  a {
+    color: var(--mat-sys-primary);
+    font-weight: 500;
+    margin-left: 4px;
   }
 }
 

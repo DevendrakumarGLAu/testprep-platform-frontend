@@ -38,10 +38,48 @@ body {
 }
 /* You can add global styles to this file, and also import other style files */
 
+.snack-success {
+  --mat-snack-bar-button-color: #fff;
+  --mat-snack-bar-container-color: #1b5e20;
+  --mat-snack-bar-supporting-text-color: #fff;
+}
+
+.snack-warning {
+  --mat-snack-bar-button-color: #fff;
+  --mat-snack-bar-container-color: #b45309;
+  --mat-snack-bar-supporting-text-color: #fff;
+}
+
 .snack-error {
   --mat-snack-bar-button-color: #fff;
   --mat-snack-bar-container-color: var(--mat-sys-error);
   --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error);
+}
+
+// Printing a result or a test paper: only the content, without the side bar, top bar and buttons.
+@media print {
+  mat-sidenav,
+  .topbar,
+  .no-print,
+  app-notification-bell,
+  app-loader {
+    display: none !important;
+  }
+
+  mat-sidenav-content {
+    margin-left: 0 !important;
+  }
+
+  body,
+  .mat-sidenav-container {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  mat-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
 }
 
 // Date and time fields show one calendar button of our own, and a click anywhere on the field opens the picker.
@@ -53,4 +91,70 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 input[type='date'],
 input[type='datetime-local'] {
   cursor: pointer;
+}
+
+// ---- Premium look: soft canvas, rounded raised cards, pill buttons, calmer headings ----
+:root {
+  --tp-radius: 20px;
+  --tp-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
+  --tp-shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.08), 0 16px 36px rgba(16, 24, 40, 0.1);
+  --tp-gradient: linear-gradient(135deg, var(--mat-sys-primary), color-mix(in srgb, var(--mat-sys-primary) 55%, #6a1b9a));
+}
+
+body {
+  background: color-mix(in srgb, var(--mat-sys-surface) 92%, var(--mat-sys-primary));
+}
+
+h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+mat-card.mat-mdc-card {
+  --mat-card-outlined-container-shape: var(--tp-radius);
+  --mat-card-outlined-outline-color: color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+  box-shadow: var(--tp-shadow);
+  background: var(--mat-sys-surface);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+a.mat-mdc-card:hover,
+mat-card.mat-mdc-card:hover {
+  box-shadow: var(--tp-shadow-hover);
+}
+
+.mat-mdc-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button {
+  --mat-button-filled-container-shape: 999px;
+  --mat-button-outlined-container-shape: 999px;
+  --mat-button-text-container-shape: 999px;
+  --mat-button-filled-container-height: 44px;
+  --mat-button-outlined-container-height: 44px;
+  font-weight: 600;
+}
+
+.mat-mdc-unelevated-button:not(:disabled) {
+  background-image: var(--tp-gradient);
+  --mat-button-filled-container-color: transparent;
+  --mat-button-filled-label-text-color: #fff;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+// Set by the exam screen in the production build: questions cannot be selected, and printing shows nothing.
+body.exam-locked {
+  -webkit-user-select: none;
+  user-select: none;
+
+  input, textarea { -webkit-user-select: text; user-select: text; }
+}
+
+@media print {
+  body.exam-locked * { display: none !important; }
 }

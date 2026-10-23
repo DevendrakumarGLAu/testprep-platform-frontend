@@ -12,6 +12,8 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { apiErrorMessage } from '../../../core/models';
+import { environment } from '../../../../environments/environment';
+import { protectExam } from '../../../shared/protect';
 import { NotifyService } from '../../../core/notify.service';
 import { LangSwitch, Lang, LanguageService, pick } from '../../../shared/language';
 import { AnswerPatch, AttemptQuestion, AttemptSectionState, AttemptState, ResultSummary, formatDuration } from '../student.models';
@@ -22,6 +24,8 @@ interface SubmitDialogData {
   answered: number;
   unanswered: number;
   marked: number;
+  /** Questions the student never opened. */
+  notVisited: number;
   /** Set when submitting one section of a test with timed sections. */
   section?: string;
   last?: boolean;
@@ -30,12 +34,21 @@ interface SubmitDialogData {
 @Component({
   selector: 'app-submit-dialog',
   imports: [MatDialogModule, MatButtonModule],
+  styles: `
+    .review { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
+    .review li { padding: 8px 12px; border-radius: 10px; background: var(--mat-sys-surface-container-high); }
+    .review li.warn { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+  `,
   template: `
     <h2 mat-dialog-title>{{ data.section && !data.last ? 'Submit ' + data.section + '?' : 'Submit your test?' }}</h2>
     <mat-dialog-content>
       <p>You answered <strong>{{ data.answered }}</strong> of {{ data.total }} questions{{ data.section && !data.last ? ' in this section' : '' }}.</p>
-      @if (data.unanswered) { <p>{{ data.unanswered }} unanswered.</p> }
-      @if (data.marked) { <p>{{ data.marked }} marked for review.</p> }
+      <ul class="review" aria-label="Summary of your test">
+        <li><strong>{{ data.answered }}</strong> answered</li>
+        <li [class.warn]="data.unanswered"><strong>{{ data.unanswered }}</strong> not answered</li>
+        <li [class.warn]="data.marked"><strong>{{ data.marked }}</strong> marked for review</li>
+        <li><strong>{{ data.notVisited }}</strong> not visited</li>
+      </ul>
       @if (data.section && !data.last) {
         <p>You will move on to the next section. You cannot come back to {{ data.section }} or change its answers.</p>
       } @else {
@@ -276,6 +289,9 @@ export class AttemptPage {
     return { answered, unanswered: l.length - answered, marked: l.filter((x) => x.marked_for_review).length };
   });
 
+  /** Questions the student never opened (the one on screen counts as opened). */
+  notVisited = computed(() => this.questions().filter((x, i) => !x.visited && i !== this.index() && x.selected_option === null && !x.marked_for_review).length);
+
   /** Time on the question on screen as m:ss: what was saved earlier plus the seconds running now. */
   questionClock = computed(() => {
     this.now(); // re-evaluated every second
@@ -363,6 +379,7 @@ export class AttemptPage {
   };
 
   constructor() {
+    inject(DestroyRef).onDestroy(protectExam(document, environment.production));
     this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
     this.timeTimer = setInterval(() => this.accrue(), 10_000);
     document.addEventListener('visibilitychange', this.onVisibility);
@@ -386,12 +403,33 @@ export class AttemptPage {
         untracked(() => this.sectionExpired());
       }
     });
+    // Tell the student when five minutes and one minute are left (of the section, in a test with timed sections).
+    effect(() => {
+      if (this.loading() || this.finished() || !this.questions().length) return;
+      const sectionTimed = this.sectional() && this.hasUpcoming();
+      const left = sectionTimed ? this.sectionRemaining() : this.remaining();
+      untracked(() => this.timeWarning(left, sectionTimed ? `in ${this.activeName}` : 'for this test'));
+    });
     // Time is up: submit without waiting for a click.
     effect(() => {
       if (!this.loading() && !this.finished() && this.questions().length && this.remaining() === 0) {
         untracked(() => this.autoSubmit());
       }
     });
+  }
+
+  private warned = new Set<string>();
+  private timeWarning(left: number, where: string) {
+    for (const [limit, text] of [[60, '1 minute'], [300, '5 minutes']] as const) {
+      const key = `${this.activeOrder}:${limit}`;
+      if (left > 0 && left <= limit && !this.warned.has(key)) {
+        // Crossing 5 minutes and 1 minute only gives the message for the smaller limit that now applies.
+        this.warned.add(key);
+        if (limit === 300 && left <= 60) this.warned.add(`${this.activeOrder}:60`);
+        this.notify.warning(`Only ${left <= 60 ? '1 minute' : text} left ${where}.`);
+        return;
+      }
+    }
   }
 
   letter(i: number) {
@@ -594,7 +632,7 @@ export class AttemptPage {
   confirmSubmit() {
     const c = this.counts();
     const last = !this.hasUpcoming();
-    const data: SubmitDialogData = { total: this.questions().length, ...c, ...(this.sectional() ? { section: this.activeName, last } : {}) };
+    const data: SubmitDialogData = { total: this.questions().length, ...c, notVisited: this.notVisited(), ...(this.sectional() ? { section: this.activeName, last } : {}) };
     this.dialog
       .open(SubmitDialog, { data })
       .afterClosed()

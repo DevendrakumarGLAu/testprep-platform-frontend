@@ -13,11 +13,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
+import { UsageTags } from '../../../shared/usage-tags';
+import { AGE_PRESETS, ageLabel, ageRange, isOld } from '../../../shared/question-age';
 import { MAX_QUESTIONS_PER_TEST, PickedQuestion, Question, Subject } from '../question-bank/qb.models';
 import { QuestionBankService } from '../question-bank/qb.service';
 
 export interface PickerData {
   excludeIds: number[];
+  /** The test being edited, so the picker can say which questions are already in it. */
+  examId?: number | null;
 }
 
 /** Pick active questions from the bank. Selection survives paging and filtering. */
@@ -25,7 +29,7 @@ export interface PickerData {
   selector: 'app-question-picker',
   imports: [
     ReactiveFormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatPaginatorModule, MatProgressBarModule, MatIconModule,
+    MatSelectModule, MatPaginatorModule, MatProgressBarModule, MatIconModule, UsageTags,
   ],
   styles: `
     .filters { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -37,6 +41,7 @@ export interface PickerData {
     mat-dialog-content { min-width: min(760px, 88vw); }
     .item { display: flex; align-items: flex-start; gap: 4px; padding: 4px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
     .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.85em; }
+    .old { color: var(--mat-sys-error); font-weight: 500; margin-left: 4px; }
     .empty { padding: 24px; text-align: center; color: var(--mat-sys-on-surface-variant); }
   `,
   template: `
@@ -56,6 +61,20 @@ export interface PickerData {
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Question date</mat-label>
+          <mat-select [value]="age()" (selectionChange)="age.set($event.value); pageIndex.set(0)">
+            @for (a of agePresets; track a.value) { <mat-option [value]="a.value">{{ a.label }}</mat-option> }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Used in tests</mat-label>
+          <mat-select [value]="usage()" (selectionChange)="usage.set($event.value); pageIndex.set(0)">
+            <mat-option value="">Any</mat-option>
+            <mat-option value="no">Not used in any test yet</mat-option>
+            <mat-option value="yes">Already used in a test</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Difficulty</mat-label>
           <mat-select [value]="difficulty()" (selectionChange)="difficulty.set($event.value); pageIndex.set(0)">
             <mat-option value="">All</mat-option>
@@ -65,6 +84,11 @@ export interface PickerData {
           </mat-select>
         </mat-form-field>
       </div>
+      @if (data.excludeIds.length) {
+        <mat-checkbox [checked]="showInTest()" (change)="showInTest.set($event.checked); pageIndex.set(0)">
+          Also show the {{ data.excludeIds.length }} questions already in this test
+        </mat-checkbox>
+      }
       <div class="bulk">
         <mat-checkbox [checked]="pageAllSelected()" [indeterminate]="pageSomeSelected()" (change)="togglePage($event.checked)" [disabled]="rows().length === 0">
           Select this page
@@ -81,10 +105,15 @@ export interface PickerData {
       @if (loading() || busy()) { <mat-progress-bar mode="indeterminate" /> }
       @for (q of rows(); track q.id) {
         <div class="item">
-          <mat-checkbox [checked]="selected().has(q.id)" (change)="toggle(q, $event.checked)" [attr.aria-label]="'Select question ' + q.id" />
+          <mat-checkbox [checked]="selected().has(q.id)" [disabled]="inTest(q.id)" (change)="toggle(q, $event.checked)" [attr.aria-label]="'Select question ' + q.id" />
           <div>
             <div>{{ q.text || q.text_hi }}</div>
-            <div class="meta">{{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }} · {{ q.difficulty }}</div>
+            <div class="meta">
+              <strong>#{{ q.id }}</strong> · {{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }} · {{ q.difficulty }}
+              · {{ q.question_date ? q.question_date + ' (' + ageOf(q.question_date) + ')' : 'no date' }}
+              @if (old(q.question_date)) { <span class="old">older than 2 years</span> }
+              <app-usage-tags [usedIn]="q.used_in" [currentId]="data.examId" [inCurrent]="inTest(q.id)" />
+            </div>
           </div>
         </div>
       } @empty {
@@ -101,12 +130,19 @@ export interface PickerData {
 export class QuestionPicker {
   private api = inject(QuestionBankService);
   private qapi = this.api;
-  private data = inject<PickerData>(MAT_DIALOG_DATA);
+  protected data = inject<PickerData>(MAT_DIALOG_DATA);
 
   search = new FormControl('', { nonNullable: true });
   private term = toSignal(this.search.valueChanges.pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });
   subject = signal<number | null>(null);
   difficulty = signal('');
+  age = signal('');
+  usage = signal<'' | 'yes' | 'no'>('');
+  showInTest = signal(false);
+  inTest = (id: number) => this.data.excludeIds.includes(id);
+  readonly agePresets = AGE_PRESETS;
+  ageOf = ageLabel;
+  old = (d: string | null | undefined) => isOld(d);
   pageIndex = signal(0);
   pageSize = signal(10);
   busy = signal(false);
@@ -124,8 +160,8 @@ export class QuestionPicker {
     this.api.subjects().subscribe((p) => this.subjects.set(p.results));
     this.search.valueChanges.pipe(debounceTime(300)).subscribe(() => this.pageIndex.set(0));
     const query = computed(() => ({
-      search: this.term(), subject: this.subject(), difficulty: this.difficulty(),
-      is_active: true, page: this.pageIndex() + 1, page_size: this.pageSize(), ordering: '-created_at',
+      search: this.term(), subject: this.subject(), difficulty: this.difficulty(), ...ageRange(this.age()),
+      is_active: true, exclude_ids: this.showInTest() ? '' : this.data.excludeIds.join(','), ...this.usedParam(), page: this.pageIndex() + 1, page_size: this.pageSize(), ordering: '-question_date',
     }));
     toObservable(query)
       .pipe(
@@ -134,7 +170,7 @@ export class QuestionPicker {
       )
       .subscribe({
         next: (p) => {
-          this.rows.set(p.results.filter((r) => !this.data.excludeIds.includes(r.id)));
+          this.rows.set(this.showInTest() ? p.results : p.results.filter((r) => !this.data.excludeIds.includes(r.id)));
           this.total.set(p.count);
           this.loading.set(false);
         },
@@ -142,9 +178,14 @@ export class QuestionPicker {
       });
   }
 
+  private usedParam(): { used?: boolean } {
+    return this.usage() === '' ? {} : { used: this.usage() === 'yes' };
+  }
+
   remaining = computed(() => Math.max(0, this.limit - this.data.excludeIds.length - this.selected().size));
-  pageAllSelected = computed(() => this.rows().length > 0 && this.rows().every((r) => this.selected().has(r.id)));
-  pageSomeSelected = computed(() => !this.pageAllSelected() && this.rows().some((r) => this.selected().has(r.id)));
+  private pickable = computed(() => this.rows().filter((r) => !this.inTest(r.id)));
+  pageAllSelected = computed(() => this.pickable().length > 0 && this.pickable().every((r) => this.selected().has(r.id)));
+  pageSomeSelected = computed(() => !this.pageAllSelected() && this.pickable().some((r) => this.selected().has(r.id)));
 
   onPage(e: PageEvent) {
     this.pageSize.set(e.pageSize);
@@ -164,7 +205,7 @@ export class QuestionPicker {
   }
 
   togglePage(on: boolean) {
-    if (on) this.addAll(this.rows());
+    if (on) this.addAll(this.rows().filter((r) => !this.inTest(r.id)));
     else this.selected.update((m) => {
       const next = new Map(m);
       this.rows().forEach((r) => next.delete(r.id));
@@ -174,7 +215,7 @@ export class QuestionPicker {
 
   private pickFilters() {
     return {
-      subject: this.subject(), difficulty: this.difficulty() || undefined, search: this.term() || undefined,
+      subject: this.subject(), difficulty: this.difficulty() || undefined, search: this.term() || undefined, ...ageRange(this.age()), ...this.usedParam(),
       exclude_ids: [...this.data.excludeIds, ...this.selected().keys()],
     };
   }

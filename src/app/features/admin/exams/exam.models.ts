@@ -38,6 +38,10 @@ export interface Exam {
   access_type: AccessType;
   assigned_student_ids: number[];
   assigned_batch_ids: number[];
+  is_premium: boolean;
+  price: string | null;
+  premium_student_ids: number[];
+  premium_batch_ids: number[];
   status: ExamStatus;
   published_at: string | null;
   version: number;
@@ -64,6 +68,9 @@ export interface ExamSection {
 export interface ExamQuestion {
   question: number;
   text: string;
+  question_date?: string | null;
+  /** Titles of the other tests this question is also in. */
+  also_in?: string[];
   subject_name?: string;
   difficulty?: string;
   is_active?: boolean;

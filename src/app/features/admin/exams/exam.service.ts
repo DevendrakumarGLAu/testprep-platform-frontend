@@ -42,6 +42,9 @@ export class ExamService {
   saveAssignment(id: number, students: number[], batches: number[]) {
     return this.http.put<Exam>(`${this.api}/exams/${id}/assignment/`, { students, batches });
   }
+  savePremiumAccess(id: number, students: number[], batches: number[]) {
+    return this.http.put<Exam>(`${this.api}/exams/${id}/premium-access/`, { students, batches });
+  }
   preview(id: number) {
     return this.http.get<ExamPreview>(`${this.api}/exams/${id}/preview/`);
   }

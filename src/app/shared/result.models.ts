@@ -1,12 +1,12 @@
 export interface ResultData {
   attempt: {
-    id: number;
+    id: number | string; // students get a public id (string); admins get the numeric id
     attempt_number: number;
     submitted_at: string;
     auto_submitted: boolean;
     student?: { id: number; name: string; email: string };
   };
-  exam: { id: number; title: string };
+  exam: { id: number | string; title: string };
   summary: {
     score: string;
     total_marks: string;
@@ -40,5 +40,9 @@ export interface ResultData {
     marks_awarded?: string;
     explanation?: string;
     explanation_hi?: string;
+    video_url?: string;
+    /** Set on a student's own review: the saved-question id and the state of their report on this question. */
+    saved_id?: number | null;
+    report_status?: 'open' | 'resolved' | 'rejected' | null;
   }[];
 }

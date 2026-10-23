@@ -1,3 +1,6 @@
+import { UsageTags } from '../../../shared/usage-tags';
+import { BulkValueDialog, BulkValueData, DuplicatesDialog } from './bulk-dialogs';
+import { AGE_PRESETS, ageRange, ageLabel } from '../../../shared/question-age';
 import { SelectionModel } from '@angular/cdk/collections';
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
@@ -26,7 +29,7 @@ import { QuestionPreview } from './question-preview';
   selector: 'app-question-list',
   imports: [
     ReactiveFormsModule, RouterLink, MatTableModule, MatPaginatorModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatCheckboxModule, MatMenuModule,
+    MatSelectModule, MatButtonModule, MatIconModule, MatProgressBarModule, MatCheckboxModule, MatMenuModule, UsageTags,
   ],
   styles: `
     .head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
@@ -37,6 +40,12 @@ import { QuestionPreview } from './question-preview';
             background: var(--mat-sys-secondary-container); flex-wrap: wrap; }
     .table-wrap { overflow-x: auto; }
     table { width: 100%; }
+    td.needs { color: var(--mat-sys-error); font-weight: 500; }
+    td.ok, span.ok { color: var(--mat-sys-on-surface-variant); }
+    td.usage { min-width: 150px; max-width: 240px; }
+    td.qid { color: var(--mat-sys-on-surface-variant); white-space: nowrap; }
+    td.qdate { white-space: nowrap; }
+    td.qdate .age { color: var(--mat-sys-on-surface-variant); font-size: 0.8em; }
     td.text { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .off { color: var(--mat-sys-on-surface-variant); font-style: italic; }
     .empty { padding: 24px; text-align: center; color: var(--mat-sys-on-surface-variant); }
@@ -45,6 +54,7 @@ import { QuestionPreview } from './question-preview';
     <div class="head">
       <h1>Question bank</h1>
       <span class="head-actions">
+        <button mat-stroked-button (click)="findDuplicates()"><mat-icon>content_copy</mat-icon> Find duplicates</button>
         <button mat-stroked-button routerLink="/admin/questions/import"><mat-icon>upload_file</mat-icon> Import questions</button>
         <button mat-flat-button routerLink="/admin/questions/new"><mat-icon>add</mat-icon> New question</button>
       </span>
@@ -88,6 +98,14 @@ import { QuestionPreview } from './question-preview';
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline">
+        <mat-label>Review</mat-label>
+        <mat-select [value]="review()" (selectionChange)="review.set($event.value); pageIndex.set(0)">
+          <mat-option [value]="''">All</mat-option>
+          <mat-option value="needs_review">Needs review</mat-option>
+          <mat-option value="approved">Approved</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
         <mat-label>Tag</mat-label>
         <mat-select [value]="tag()" (selectionChange)="tag.set($event.value); pageIndex.set(0)">
           <mat-option [value]="''">All</mat-option>
@@ -95,9 +113,17 @@ import { QuestionPreview } from './question-preview';
         </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline">
+        <mat-label>Question date</mat-label>
+        <mat-select [value]="age()" (selectionChange)="age.set($event.value); pageIndex.set(0)">
+          @for (a of agePresets; track a.value) { <mat-option [value]="a.value">{{ a.label }}</mat-option> }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
         <mat-label>Sort by</mat-label>
         <mat-select [value]="ordering()" (selectionChange)="ordering.set($event.value); pageIndex.set(0)">
           <mat-option value="-created_at">Newest first</mat-option>
+          <mat-option value="-question_date">Question date (latest)</mat-option>
+          <mat-option value="question_date">Question date (oldest)</mat-option>
           <mat-option value="created_at">Oldest first</mat-option>
           <mat-option value="-updated_at">Recently edited</mat-option>
           <mat-option value="difficulty">Difficulty</mat-option>
@@ -116,7 +142,12 @@ import { QuestionPreview } from './question-preview';
           <button mat-menu-item (click)="bulk('set_difficulty', 'medium')">Medium</button>
           <button mat-menu-item (click)="bulk('set_difficulty', 'hard')">Hard</button>
         </mat-menu>
+        <button mat-button (click)="bulk('set_review_status', 'approved')">Approve</button>
+        <button mat-button (click)="bulk('set_review_status', 'needs_review')">Needs review</button>
+        <button mat-button (click)="bulkValue('date')">Set date…</button>
+        <button mat-button (click)="bulkValue('subject')">Move to subject…</button>
         <button mat-button (click)="bulkTag()">Add tag…</button>
+        @if (total() > rows().length) { <button mat-button (click)="selectAllMatching()">Select all {{ total() }} matching</button> }
         <button mat-button (click)="selection.clear()">Clear</button>
       </div>
     }
@@ -134,9 +165,21 @@ import { QuestionPreview } from './question-preview';
               [checked]="selection.isSelected(q.id)" aria-label="Select question" />
           </td>
         </ng-container>
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef>ID</th>
+          <td mat-cell *matCellDef="let q" class="qid">#{{ q.id }}</td>
+        </ng-container>
+        <ng-container matColumnDef="qdate">
+          <th mat-header-cell *matHeaderCellDef>Question date</th>
+          <td mat-cell *matCellDef="let q" class="qdate">{{ q.question_date || '—' }}<div class="age">{{ ageOf(q.question_date) }}</div></td>
+        </ng-container>
         <ng-container matColumnDef="text">
           <th mat-header-cell *matHeaderCellDef>Question</th>
           <td mat-cell class="text" *matCellDef="let q" [title]="q.text || q.text_hi"><span [class.off]="!q.is_active">{{ q.text || q.text_hi }}</span></td>
+        </ng-container>
+        <ng-container matColumnDef="usage">
+          <th mat-header-cell *matHeaderCellDef>Used in</th>
+          <td mat-cell *matCellDef="let q" class="usage"><app-usage-tags [usedIn]="q.used_in" /></td>
         </ng-container>
         <ng-container matColumnDef="subject">
           <th mat-header-cell *matHeaderCellDef>Subject / topic</th>
@@ -145,6 +188,14 @@ import { QuestionPreview } from './question-preview';
         <ng-container matColumnDef="difficulty">
           <th mat-header-cell *matHeaderCellDef>Difficulty</th>
           <td mat-cell *matCellDef="let q">{{ q.difficulty }}</td>
+        </ng-container>
+        <ng-container matColumnDef="review">
+          <th mat-header-cell *matHeaderCellDef>Review</th>
+          <td mat-cell *matCellDef="let q">
+            @if (q.review_status === 'needs_review') {
+              <span class="needs" [attr.title]="q.open_reports + ' open student report(s)'">Needs review{{ q.open_reports ? ' (' + q.open_reports + ')' : '' }}</span>
+            } @else { <span class="ok">Approved</span> }
+          </td>
         </ng-container>
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -176,7 +227,11 @@ export class QuestionList {
   private notify = inject(NotifyService);
   private router = inject(Router);
 
-  columns = ['select', 'text', 'subject', 'difficulty', 'status', 'actions'];
+  columns = ['select', 'id', 'text', 'qdate', 'usage', 'subject', 'difficulty', 'review', 'status', 'actions'];
+  review = signal('');
+  readonly agePresets = AGE_PRESETS;
+  age = signal('');
+  ageOf = (d: string | null) => ageLabel(d);
   selection = new SelectionModel<number>(true, []);
 
   search = new FormControl('', { nonNullable: true });
@@ -200,6 +255,12 @@ export class QuestionList {
   topicOptions = computed(() => this.topics().filter((t) => t.subject === this.subject()));
   allSelected = computed(() => this.rows().length > 0 && this.rows().every((r) => this.selection.isSelected(r.id)));
 
+  /** What the list is filtered by (no paging or sort), also used to find every matching question. */
+  private filters = computed(() => ({
+    search: this.searchTerm(), subject: this.subject(), topic: this.topic(), difficulty: this.difficulty(),
+    is_active: this.status(), tag: this.tag(), ...ageRange(this.age()), review_status: this.review(),
+  }));
+
   constructor() {
     this.api.subjects().subscribe((p) => this.subjects.set(p.results));
     this.api.topics().subscribe((p) => this.topics.set(p.results));
@@ -208,9 +269,7 @@ export class QuestionList {
     this.search.valueChanges.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(() => this.pageIndex.set(0));
 
     const query = computed(() => ({
-      search: this.searchTerm(), subject: this.subject(), topic: this.topic(), difficulty: this.difficulty(),
-      is_active: this.status(), tag: this.tag(), ordering: this.ordering(),
-      page: this.pageIndex() + 1, page_size: this.pageSize(), r: this.reload(),
+      ...this.filters(), ordering: this.ordering(), page: this.pageIndex() + 1, page_size: this.pageSize(), r: this.reload(),
     }));
     toObservable(query)
       .pipe(
@@ -234,6 +293,35 @@ export class QuestionList {
   onPage(e: PageEvent) {
     this.pageIndex.set(e.pageIndex);
     this.pageSize.set(e.pageSize);
+  }
+
+  /** Selects every question that matches the filters, across all pages (up to 500). */
+  selectAllMatching() {
+    this.api.ids(this.filters()).subscribe({
+      next: (r) => {
+        r.ids.forEach((id) => this.selection.select(id));
+        if (r.truncated) this.notify.success(`Selected the first ${r.ids.length} of ${r.count} matching questions (the most that can be changed at once).`);
+      },
+      error: (e) => this.notify.error(apiErrorMessage(e)),
+    });
+  }
+
+  bulkValue(kind: 'date' | 'subject') {
+    this.dialog
+      .open<BulkValueDialog, BulkValueData, string | number>(BulkValueDialog, { data: { kind, count: this.selection.selected.length, subjects: this.subjects().filter((s) => s.is_active) } })
+      .afterClosed()
+      .subscribe((value) => {
+        if (value === undefined || value === null || value === '') return;
+        const ids = this.selection.selected;
+        const request = kind === 'date' ? this.api.bulk(ids, 'set_question_date', { question_date: String(value) }) : this.api.bulk(ids, 'set_subject', { subject: Number(value) });
+        request.subscribe({ next: (r) => this.afterBulk(r.updated), error: (e) => this.notify.error(apiErrorMessage(e)) });
+      });
+  }
+
+  findDuplicates() {
+    this.dialog.open<DuplicatesDialog, void, boolean>(DuplicatesDialog, { maxWidth: '96vw' }).afterClosed().subscribe((changed) => {
+      if (changed) this.reload.update((n) => n + 1);
+    });
   }
 
   selectPage() {
@@ -274,7 +362,7 @@ export class QuestionList {
 
   bulk(action: BulkAction, value?: string) {
     const ids = this.selection.selected;
-    this.api.bulk(ids, action, action === 'set_difficulty' ? { difficulty: value } : {}).subscribe({
+    this.api.bulk(ids, action, action === 'set_difficulty' ? { difficulty: value } : action === 'set_review_status' ? { review_status: value } : {}).subscribe({
       next: (r) => this.afterBulk(r.updated),
       error: (e) => this.notify.error(apiErrorMessage(e)),
     });

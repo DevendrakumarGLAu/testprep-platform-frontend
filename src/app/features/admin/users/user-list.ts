@@ -17,6 +17,7 @@ import { AuthService } from '../../../core/auth.service';
 import { Page, Role, User, apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
 import { ConfirmDialog } from '../../../shared/confirm-dialog';
+import { ResetPasswordDialog } from './reset-password-dialog';
 import { UserDialog } from './user-dialog';
 
 @Component({
@@ -94,6 +95,7 @@ import { UserDialog } from './user-dialog';
           <td mat-cell *matCellDef="let u">
             <button mat-icon-button (click)="openDialog(u)" aria-label="Edit user"><mat-icon>edit</mat-icon></button>
             @if (u.id !== auth.user()?.id) {
+              <button mat-icon-button (click)="resetPassword(u)" aria-label="Reset password"><mat-icon>lock_reset</mat-icon></button>
               <button mat-icon-button (click)="toggleActive(u)" [attr.aria-label]="u.is_active ? 'Deactivate user' : 'Activate user'">
                 <mat-icon>{{ u.is_active ? 'person_off' : 'person_add' }}</mat-icon>
               </button>
@@ -183,6 +185,13 @@ export class UserList {
           this.reload.update((n) => n + 1);
         }
       });
+  }
+
+  resetPassword(u: User) {
+    this.dialog.open(ResetPasswordDialog, {
+      data: { id: u.id, username: u.username, name: `${u.first_name} ${u.last_name}`.trim() || u.username },
+      width: '460px', maxWidth: '95vw',
+    });
   }
 
   toggleActive(u: User) {

@@ -2,12 +2,77 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResultData } from '../../shared/result.models';
-import { AnswerPatch, AttemptState, Dashboard, HistoryRow, PrepExam, PrepHubData, StudentExam, SubmitResponse } from './student.models';
+import {
+  AnswerPatch, AttemptState, Dashboard, DailyQuizStatus, HistoryRow, LeaderboardData, PracticeStart, PrepExam, PrepHubData,
+  MyReport, SavedList, SavedQuestion, StudentExam, SubmitResponse, WeakTopic, WeakTopicsData, WeeklySummary, ReviseData,
+} from './student.models';
 
 @Injectable({ providedIn: 'root' })
 export class StudentService {
   private http = inject(HttpClient);
   private api = `${environment.apiUrl}/student`;
+
+  saveQuestion(attemptId: string, number: number, note = '') {
+    return this.http.post<SavedQuestion>(`${this.api}/attempts/${attemptId}/questions/${number}/save/`, { note });
+  }
+
+  unsaveQuestion(attemptId: string, number: number) {
+    return this.http.delete<void>(`${this.api}/attempts/${attemptId}/questions/${number}/save/`);
+  }
+
+  saved(subject = '') {
+    return this.http.get<SavedList>(`${this.api}/saved/`, { params: subject ? { subject } : {} });
+  }
+
+  updateSaved(id: number, note: string) {
+    return this.http.patch<SavedQuestion>(`${this.api}/saved/${id}/`, { note });
+  }
+
+  deleteSaved(id: number) {
+    return this.http.delete<void>(`${this.api}/saved/${id}/`);
+  }
+
+  reportQuestion(attemptId: string, number: number, reason: string, message: string) {
+    return this.http.post<{ id: number; status: string; updated: boolean }>(
+      `${this.api}/attempts/${attemptId}/questions/${number}/report/`, { reason, message },
+    );
+  }
+
+  myReports() {
+    return this.http.get<{ results: MyReport[] }>(`${this.api}/reports/`);
+  }
+
+  weakTopics() {
+    return this.http.get<WeakTopicsData>(`${this.api}/weak-topics/`);
+  }
+
+  practiceWeak(topics: Pick<WeakTopic, 'topic_id' | 'subject_id'>[], count: number) {
+    return this.http.post<PracticeStart>(`${this.api}/practice/weak/`, { topics, count });
+  }
+
+  practiceMistakes(attemptId: string, includeUnanswered = true) {
+    return this.http.post<PracticeStart>(`${this.api}/attempts/${attemptId}/practice-wrong/`, { include_unanswered: includeUnanswered });
+  }
+
+  revise(source: 'saved' | 'mistakes', limit = 20) {
+    return this.http.get<ReviseData>(`${this.api}/revise/`, { params: { source, limit } });
+  }
+
+  weeklySummary() {
+    return this.http.get<WeeklySummary>(`${this.api}/weekly-summary/`);
+  }
+
+  dailyQuiz() {
+    return this.http.get<DailyQuizStatus>(`${this.api}/daily-quiz/`);
+  }
+
+  startDailyQuiz() {
+    return this.http.post<PracticeStart>(`${this.api}/daily-quiz/`, {});
+  }
+
+  leaderboard(examId: string) {
+    return this.http.get<LeaderboardData>(`${this.api}/exams/${examId}/leaderboard/`);
+  }
 
   dashboard() {
     return this.http.get<Dashboard>(`${this.api}/dashboard/`);

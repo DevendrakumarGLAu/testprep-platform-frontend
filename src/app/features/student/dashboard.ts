@@ -8,16 +8,21 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { ActivityCards } from './activity-cards';
+import { WeeklyCard } from './weekly-card';
 import { Dashboard } from './student.models';
 import { StudentService } from './student.service';
 import { TestCard } from './test-card';
 
 @Component({
   selector: 'app-student-dashboard',
-  imports: [DatePipe, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatProgressBarModule, TestCard],
+  imports: [DatePipe, RouterLink, MatCardModule, MatIconModule, MatButtonModule, MatProgressBarModule, TestCard, ActivityCards, WeeklyCard],
   styleUrl: './dashboard.scss',
   template: `
-    <h1>Welcome, {{ auth.user()?.first_name || auth.user()?.username }}</h1>
+    <header class="hero">
+      <h1>Welcome back, {{ auth.user()?.first_name || auth.user()?.username }}</h1>
+      <p>Keep your streak going. A little practice every day adds up.</p>
+    </header>
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
 
     @if (d(); as d) {
@@ -35,6 +40,9 @@ import { TestCard } from './test-card';
         <mat-card appearance="outlined" class="stat"><mat-icon>gps_fixed</mat-icon>
           <div><div class="value">{{ d.accuracy_percent === null ? '—' : d.accuracy_percent + '%' }}</div><div class="label">Accuracy</div></div></mat-card>
       </div>
+
+      <app-activity-cards [activity]="d.activity" />
+      <app-weekly-card />
 
       <h2>Your preparation</h2>
       @if (d.preparing.length) {

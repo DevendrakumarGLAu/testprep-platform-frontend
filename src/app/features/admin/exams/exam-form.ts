@@ -1,3 +1,4 @@
+import { isOld } from '../../../shared/question-age';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs';
@@ -297,7 +298,10 @@ import { StudentPicker } from './student-picker';
                     <span class="num">{{ qi + 1 }}</span>
                     <div class="q-text">
                       {{ q.text }}
-                      <div class="meta">{{ q.subject_name }} · {{ q.difficulty }}
+                      <div class="meta"><strong>#{{ q.question }}</strong> · {{ q.subject_name }} · {{ q.difficulty }}
+                        · {{ q.question_date || 'no date' }}
+                        @if (old(q.question_date)) { <span class="warn">older than 2 years</span> }
+                        @if (q.also_in?.length) { · <span class="also" [attr.title]="q.also_in!.join(', ')">also in {{ q.also_in!.length === 1 ? q.also_in![0] : q.also_in!.length + ' other tests' }}</span> }
                         @if (q.current_version && q.question_version && q.current_version !== q.question_version) {
                           · <span class="warn">bank question changed since added (v{{ q.question_version }} → v{{ q.current_version }})</span>
                         }
@@ -348,6 +352,28 @@ import { StudentPicker } from './student-picker';
           <div class="actions">
             <button mat-flat-button (click)="saveAccess()" [disabled]="saving()">Save access</button>
           </div>
+
+          <mat-card appearance="outlined"><mat-card-content>
+            <mat-slide-toggle [checked]="premium()" (change)="premium.set($event.checked)">Premium test</mat-slide-toggle>
+            <p class="meta">Premium tests are listed for everyone but locked until you give a student access. Payments are not connected: you grant access here by hand.</p>
+            @if (premium()) {
+              <mat-form-field appearance="outline">
+                <mat-label>Price shown to students (₹, optional)</mat-label>
+                <input matInput type="number" min="0" step="1" [value]="price()" (input)="price.set($any($event.target).value)" />
+              </mat-form-field>
+              <strong>Students with access</strong>
+              <app-student-picker [value]="premiumStudentIds()" (changed)="premiumStudentIds.set($event)" />
+              <mat-form-field appearance="outline">
+                <mat-label>Batches with access</mat-label>
+                <mat-select multiple [value]="premiumBatchIds()" (selectionChange)="premiumBatchIds.set($event.value)">
+                  @for (b of batches(); track b.id) { <mat-option [value]="b.id">{{ b.name }} ({{ b.member_count }})</mat-option> }
+                </mat-select>
+              </mat-form-field>
+            }
+          </mat-card-content></mat-card>
+          <div class="actions">
+            <button mat-flat-button (click)="savePremium()" [disabled]="saving()">Save premium settings</button>
+          </div>
         </div>
       </mat-tab>
     </mat-tab-group>
@@ -376,6 +402,10 @@ export class ExamForm {
   batches = signal<Batch[]>([]);
   sections = signal<ExamSection[]>([{ name: 'Section 1', questions: [] }]);
   access = signal<AccessType>('public');
+  premium = signal(false);
+  price = signal('');
+  premiumStudentIds = signal<number[]>([]);
+  premiumBatchIds = signal<number[]>([]);
   studentIds = signal<number[]>([]);
   batchIds = signal<number[]>([]);
 
@@ -528,6 +558,10 @@ export class ExamForm {
       );
     }
     this.access.set(e.access_type);
+    this.premium.set(!!e.is_premium);
+    this.price.set(e.price ?? '');
+    this.premiumStudentIds.set(e.premium_student_ids ?? []);
+    this.premiumBatchIds.set(e.premium_batch_ids ?? []);
     this.studentIds.set(e.assigned_student_ids);
     this.batchIds.set(e.assigned_batch_ids);
   }
@@ -605,6 +639,8 @@ export class ExamForm {
   addSection() {
     this.update((s) => [...s, { name: `Section ${s.length + 1}`, questions: [] }]);
   }
+  old = (d: string | null | undefined) => isOld(d);
+
   setSectionMinutes(i: number, value: string) {
     const n = Math.floor(Number(value));
     this.update((s) => ((s[i].duration_minutes = n >= 1 ? Math.min(n, 600) : null), s));
@@ -638,14 +674,14 @@ export class ExamForm {
   addQuestions(si: number) {
     const used = this.sections().flatMap((s) => s.questions.map((q) => q.question));
     this.dialog
-      .open(QuestionPicker, { data: { excludeIds: used }, width: '820px', maxWidth: '95vw' })
+      .open(QuestionPicker, { data: { excludeIds: used, examId: this.exam()?.id ?? null }, width: '820px', maxWidth: '95vw' })
       .afterClosed()
       .subscribe((picked: Question[] | undefined) => {
         if (!picked?.length) return;
         this.update((s) => {
           s[si].questions.push(
             ...picked.map((q) => ({
-              question: q.id, text: q.text, subject_name: q.subject_name, difficulty: q.difficulty,
+              question: q.id, text: q.text || q.text_hi || '', question_date: q.question_date ?? null, subject_name: q.subject_name, difficulty: q.difficulty,
               marks: String(this.marksPer()), negative_marks: this.deduction(this.marksPer(), q.negative_marks), question_version: q.version, current_version: q.version,
             })),
           );
@@ -708,6 +744,30 @@ export class ExamForm {
     } else {
       afterAccess();
     }
+  }
+
+  savePremium() {
+    const id = this.exam()!.id;
+    this.saving.set(true);
+    const price = this.premium() && this.price() !== '' ? String(this.price()) : null;
+    this.api.save({ is_premium: this.premium(), price }, id).subscribe({
+      next: () =>
+        this.api.savePremiumAccess(id, this.premium() ? this.premiumStudentIds() : [], this.premium() ? this.premiumBatchIds() : []).subscribe({
+          next: (e) => {
+            this.saving.set(false);
+            this.notify.success('Premium settings saved');
+            this.load(e.id);
+          },
+          error: (err) => {
+            this.saving.set(false);
+            this.notify.error(apiErrorMessage(err));
+          },
+        }),
+      error: (err) => {
+        this.saving.set(false);
+        this.notify.error(apiErrorMessage(err));
+      },
+    });
   }
 
   // --- lifecycle ---

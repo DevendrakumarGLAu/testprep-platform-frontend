@@ -8,6 +8,7 @@ export const ADMIN_ROUTES: Routes = [
     component: Shell,
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: 'profile', loadComponent: () => import('../profile/profile').then((m) => m.Profile) },
       {
         path: 'dashboard',
         loadComponent: () => import('./dashboard').then((m) => m.AdminDashboard),
@@ -27,6 +28,30 @@ export const ADMIN_ROUTES: Routes = [
       {
         path: 'subjects',
         loadComponent: () => import('./question-bank/subjects-topics').then((m) => m.SubjectsTopics),
+      },
+      {
+        path: 'notifications',
+        loadComponent: () => import('../notifications/notifications-page').then((m) => m.NotificationsPage),
+      },
+      {
+        path: 'announcements',
+        loadComponent: () => import('./content/announcements').then((m) => m.Announcements),
+      },
+      {
+        path: 'insights',
+        loadComponent: () => import('./insights/insights').then((m) => m.InsightsPage),
+      },
+      {
+        path: 'study-notes',
+        loadComponent: () => import('./content/study-notes').then((m) => m.StudyNotes),
+      },
+      {
+        path: 'test-series',
+        loadComponent: () => import('./content/test-series').then((m) => m.TestSeriesPage),
+      },
+      {
+        path: 'question-reports',
+        loadComponent: () => import('./question-bank/question-reports').then((m) => m.QuestionReports),
       },
       {
         path: 'questions',
