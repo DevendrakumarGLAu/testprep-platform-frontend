@@ -9,7 +9,7 @@ import { QuestionReports } from './question-reports';
 
 const row = (over: Partial<QuestionReportRow> = {}): QuestionReportRow => ({
   id: 1, question: 12, question_text: 'Which river is the longest?', student_name: 'Dan Old', exam_title: 'Mock 1',
-  reason: 'wrong_answer', reason_label: 'The marked answer is wrong', message: 'Option B is right', status: 'open', admin_note: '',
+  reason: 'wrong_answer', reason_label: 'The marked answer is wrong', message: 'Option B is right', image_url: null, status: 'open', admin_note: '',
   resolved_at: null, created_at: '2026-10-20T10:00:00Z', ...over,
 });
 
@@ -64,5 +64,20 @@ describe('QuestionReports (admin queue)', () => {
   it('says so when there is nothing to do', async () => {
     const { f } = await open([]);
     expect(text(f)).toContain('Nothing is waiting for you');
+  });
+
+  it('shows the picture a student attached and opens it full size when clicked', async () => {
+    const { f, c } = await open([row({ image_url: 'https://cdn.example/storage/reports/a.png' })]);
+    const img = f.nativeElement.querySelector('img.thumb') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://cdn.example/storage/reports/a.png');
+    const zoom = vi.spyOn(c, 'zoom').mockImplementation(() => undefined);
+    img.click();
+    img.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(zoom).toHaveBeenCalledTimes(2);
+  });
+
+  it('a report without a picture shows none', async () => {
+    const { f } = await open();
+    expect(f.nativeElement.querySelector('img.thumb')).toBeNull();
   });
 });

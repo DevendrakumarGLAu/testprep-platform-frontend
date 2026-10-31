@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,7 +6,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
-import { PrepExam } from './student.models';
+import { PrepExam, PrepFamily } from './student.models';
 import { StudentService } from './student.service';
 
 /** Pick the exams you are preparing for. Choosing is optional; every exam can be opened and attempted. */
@@ -15,6 +15,8 @@ import { StudentService } from './student.service';
   imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule],
   styles: `
     .intro { color: var(--mat-sys-on-surface-variant); max-width: 640px; }
+    .family { margin: 28px 0 0; }
+    .family-note { margin: 2px 0 0; color: var(--mat-sys-on-surface-variant); }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
     mat-card { display: flex; flex-direction: column; }
     mat-card.on { border-color: var(--mat-sys-primary); border-width: 2px; }
@@ -30,8 +32,13 @@ import { StudentService } from './student.service';
       and you can attempt whichever you like.
     </p>
     @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
+    @for (sec of sections(); track sec.key) {
+      @if (sec.title) {
+        <h2 class="family">{{ sec.title }}</h2>
+        @if (sec.note) { <p class="family-note">{{ sec.note }}</p> }
+      }
     <div class="grid">
-      @for (e of exams(); track e.id) {
+      @for (e of sec.exams; track e.id) {
         <mat-card appearance="outlined" [class.on]="e.preparing">
           <mat-card-content>
             <h2>{{ e.name }}</h2>
@@ -39,6 +46,7 @@ import { StudentService } from './student.service';
             <div>@for (s of e.subjects; track s) { <span class="chip">{{ s }}</span> }</div>
             <div class="counts">
               {{ e.counts.full_test }} full test{{ e.counts.full_test === 1 ? '' : 's' }} ·
+              {{ e.counts.mini_mock ?? 0 }} mini mock{{ e.counts.mini_mock === 1 ? '' : 's' }} ·
               {{ e.counts.sectional }} subject test{{ e.counts.sectional === 1 ? '' : 's' }} ·
               {{ e.counts.previous_year }} previous year paper{{ e.counts.previous_year === 1 ? '' : 's' }}
             </div>
@@ -53,6 +61,7 @@ import { StudentService } from './student.service';
         </mat-card>
       }
     </div>
+    }
     @if (!loading() && exams().length === 0) { <div class="empty">No exams are available yet. Check back soon.</div> }
   `,
 })
@@ -63,11 +72,27 @@ export class Prepare {
   loading = signal(true);
   saving = signal(false);
   exams = signal<PrepExam[]>([]);
+  private families = signal<PrepFamily[]>([]);
+
+  /** Exams grouped under their family (SSC > MTS, CHSL, CGL), families in the instructor's order, loose exams last. */
+  sections = computed(() => {
+    const exams = this.exams();
+    const families = this.families();
+    const out: { key: string; title: string; note: string; exams: PrepExam[] }[] = [];
+    for (const f of families) {
+      const list = exams.filter((e) => e.group?.id === f.id);
+      if (list.length) out.push({ key: f.id, title: f.name, note: f.description, exams: list });
+    }
+    const loose = exams.filter((e) => !e.group || !families.some((f) => f.id === e.group!.id));
+    if (loose.length) out.push({ key: 'other', title: out.length ? 'Other exams' : '', note: '', exams: loose });
+    return out;
+  });
 
   constructor() {
     this.api.prep().subscribe({
       next: (r) => {
         this.exams.set(r.exams);
+        this.families.set(r.families ?? []);
         this.loading.set(false);
       },
       error: (e) => {
@@ -84,6 +109,7 @@ export class Prepare {
     this.api.setPrep(next).subscribe({
       next: (r) => {
         this.exams.set(r.exams);
+        this.families.set(r.families ?? []);
         this.saving.set(false);
         this.notify.success(e.preparing ? `Removed ${e.name} from your preparation` : `You are now preparing for ${e.name}`);
       },

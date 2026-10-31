@@ -100,7 +100,7 @@ export class StudentResultPage {
     );
     if (!result) return;
     try {
-      await firstValueFrom(this.api.reportQuestion(this.id(), number, result.reason, result.message));
+      await firstValueFrom(this.api.reportQuestion(this.id(), number, result.reason, result.message, result.image));
       this.patchQuestion(number, { report_status: 'open' });
       this.notify.success('Thanks. The admins will look at this question.');
     } catch (e) {

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResultData } from '../../shared/result.models';
 import {
-  AnswerPatch, AttemptState, Dashboard, DailyQuizStatus, HistoryRow, LeaderboardData, PracticeStart, PrepExam, PrepHubData,
+  AnswerPatch, AttemptState, Dashboard, DailyQuizStatus, HistoryRow, LeaderboardData, LiveExam, PracticeStart, PrepExam, PrepHubData, PrepResponse,
   MyReport, SavedList, SavedQuestion, StudentExam, SubmitResponse, WeakTopic, WeakTopicsData, WeeklySummary, ReviseData,
 } from './student.models';
 
@@ -32,9 +32,17 @@ export class StudentService {
     return this.http.delete<void>(`${this.api}/saved/${id}/`);
   }
 
-  reportQuestion(attemptId: string, number: number, reason: string, message: string) {
-    return this.http.post<{ id: number; status: string; updated: boolean }>(
-      `${this.api}/attempts/${attemptId}/questions/${number}/report/`, { reason, message },
+  /** With a picture the report goes as a form, without one as plain JSON. */
+  reportQuestion(attemptId: string, number: number, reason: string, message: string, image: File | null = null) {
+    let body: FormData | { reason: string; message: string } = { reason, message };
+    if (image) {
+      body = new FormData();
+      body.append('reason', reason);
+      body.append('message', message);
+      body.append('image', image);
+    }
+    return this.http.post<{ id: number; status: string; updated: boolean; image_url: string | null }>(
+      `${this.api}/attempts/${attemptId}/questions/${number}/report/`, body,
     );
   }
 
@@ -54,8 +62,8 @@ export class StudentService {
     return this.http.post<PracticeStart>(`${this.api}/attempts/${attemptId}/practice-wrong/`, { include_unanswered: includeUnanswered });
   }
 
-  revise(source: 'saved' | 'mistakes', limit = 20) {
-    return this.http.get<ReviseData>(`${this.api}/revise/`, { params: { source, limit } });
+  revise(source: 'saved' | 'mistakes', limit = 20, exam = '') {
+    return this.http.get<ReviseData>(`${this.api}/revise/`, { params: { source, limit, ...(exam ? { exam } : {}) } });
   }
 
   weeklySummary() {
@@ -87,11 +95,11 @@ export class StudentService {
   }
 
   prep() {
-    return this.http.get<{ exams: PrepExam[]; preparing: string[] }>(`${this.api}/prep/`);
+    return this.http.get<PrepResponse>(`${this.api}/prep/`);
   }
 
   setPrep(categoryIds: string[]) {
-    return this.http.put<{ exams: PrepExam[]; preparing: string[] }>(`${this.api}/prep/`, { category_ids: categoryIds });
+    return this.http.put<PrepResponse>(`${this.api}/prep/`, { category_ids: categoryIds });
   }
 
   hub(id: string) {
@@ -99,7 +107,12 @@ export class StudentService {
   }
 
   filters() {
-    return this.http.get<{ categories: { id: string; name: string }[]; subjects: { id: number; name: string }[] }>(`${this.api}/filters/`);
+    return this.http.get<{ categories: { id: string; name: string; group?: { id: string; name: string } | null }[]; subjects: { id: number; name: string }[] }>(`${this.api}/filters/`);
+  }
+
+  /** The page behind a live test's share link; only for a signed-in student who may take the test. */
+  live(id: string) {
+    return this.http.get<LiveExam>(`${this.api}/live/${id}/`);
   }
 
   exam(id: string) {
@@ -119,6 +132,14 @@ export class StudentService {
       `${this.api}/attempts/${id}/answers/`,
       { answers },
     );
+  }
+
+  pause(id: string) {
+    return this.http.post<AttemptState>(`${this.api}/attempts/${id}/pause/`, {});
+  }
+
+  resume(id: string) {
+    return this.http.post<AttemptState>(`${this.api}/attempts/${id}/resume/`, {});
   }
 
   submitSection(id: string, order: number) {

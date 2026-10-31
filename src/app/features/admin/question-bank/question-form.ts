@@ -1,6 +1,6 @@
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { DecimalPipe } from '@angular/common';
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -180,13 +180,14 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
 
           <div class="image">
             <strong>Image (optional, max 2 MB)</strong>
+            <span class="meta">JPG, PNG, WebP or GIF. A very large picture is made smaller for you. You can also paste a screenshot with Ctrl+V.</span>
             @if (imageUrl()) {
               <img [src]="imageUrl()" alt="Question image" />
               <button mat-button type="button" (click)="removeImage()"><mat-icon>delete</mat-icon> Remove image</button>
             } @else if (pendingPreview()) {
               <img [src]="pendingPreview()" alt="Selected image preview" />
             }
-            <input #file type="file" accept="image/*" hidden (change)="pickImage($event)" />
+            <input #file type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden (change)="pickImage($event)" />
             <button mat-stroked-button type="button" (click)="file.click()"><mat-icon>image</mat-icon> Choose image</button>
           </div>
 
@@ -386,9 +387,27 @@ export class QuestionForm {
     this.tags.update((l) => l.filter((x) => x !== t));
   }
 
-  pickImage(ev: Event) {
-    const f = (ev.target as HTMLInputElement).files?.[0];
+  /** A screenshot or copied picture pasted anywhere on the page becomes the question's image (text pastes are left alone). */
+  @HostListener('document:paste', ['$event'])
+  pasteImage(ev: ClipboardEvent) {
+    const f = [...(ev.clipboardData?.files ?? [])].find((x) => x.type.startsWith('image/'));
     if (!f) return;
+    ev.preventDefault();
+    this.takeImage(f);
+  }
+
+  pickImage(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = ''; // so choosing the same file again still counts
+    if (f) this.takeImage(f);
+  }
+
+  private takeImage(f: File) {
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) {
+      this.notify.error('Use a JPG, PNG, WebP or GIF picture.');
+      return;
+    }
     if (f.size > 2 * 1024 * 1024) {
       this.notify.error('Image must be 2 MB or smaller.');
       return;

@@ -6,7 +6,13 @@ export interface StudentExam {
   description: string;
   category: string | null;
   category_name: string | null;
-  test_type: 'full_test' | 'sectional' | 'previous_year';
+  /** Public ids of the other exams that show this test too. */
+  also_in?: string[];
+  /** A live test: everyone starts and finishes together. */
+  is_live?: boolean;
+  /** Until when a student can still join a live test. */
+  join_closes_at?: string | null;
+  test_type: 'full_test' | 'mini_mock' | 'sectional' | 'previous_year';
   test_type_label: string;
   subject: number | null;
   subject_name: string | null;
@@ -29,8 +35,19 @@ export interface StudentExam {
   can_start: boolean;
   reason: string;
   active_attempt_id: string | null;
+  /** The student's latest submitted attempt of this test, where its result can be opened. */
+  last_attempt_id?: string | null;
+  /** False while the instructor has not released results yet. */
+  result_available?: boolean;
   instructions?: string;
   unanswered_penalty?: string;
+  allow_pause?: boolean;
+  /** The server clock, so a live test can count down to its start. */
+  server_now?: string;
+  late_join_minutes?: number;
+  /** 0 = unlimited. */
+  max_pauses?: number;
+  pause_minutes?: number;
   sections?: { name: string; question_count: number; duration_minutes: number | null }[];
   languages?: ('en' | 'hi')[];
 }
@@ -75,6 +92,19 @@ export interface AttemptSectionState {
   closed_by?: 'submitted' | 'expired' | null;
 }
 
+/** Pause rules and state of a running attempt. */
+export interface PauseInfo {
+  allowed: boolean;
+  paused: boolean;
+  paused_at: string | null;
+  /** When a pause that is running now ends by itself. */
+  auto_resume_at: string | null;
+  max_minutes: number;
+  pauses_used: number;
+  /** null = unlimited */
+  pauses_left: number | null;
+}
+
 export interface AttemptState {
   id: string;
   status: 'in_progress' | 'submitted';
@@ -83,6 +113,9 @@ export interface AttemptState {
   server_now: string;
   deadline: string;
   remaining_seconds: number;
+  /** True while the student has paused: the clock is stopped and no questions are sent. */
+  paused?: boolean;
+  pause?: PauseInfo;
   sections?: AttemptSectionState[];
   sectional?: boolean;
   /** Languages the test is written in. */
@@ -128,26 +161,58 @@ export interface HistoryRow {
   percentage: number | null;
 }
 
+/** A family of exams, for example SSC (MTS, CHSL, CGL). */
+/** A live test as its share-link page shows it. */
+export interface LiveExam extends StudentExam {
+  family: string | null;
+  ends_at: string | null;
+  late_join_minutes: number;
+  state: 'upcoming' | 'live' | 'joining_closed' | 'ended';
+  server_now: string;
+}
+
+/** A family of exams, for example SSC (MTS, CHSL, CGL). */
+export interface PrepFamily {
+  id: string;
+  name: string;
+  description: string;
+  order: number;
+}
+
 export interface PrepExam {
   id: string;
   name: string;
   description: string;
+  /** The family this exam belongs to, or null for an exam that stands on its own. */
+  group?: { id: string; name: string } | null;
   subjects: string[];
-  counts: { full_test: number; sectional: number; previous_year: number; total: number };
+  counts: { full_test: number; mini_mock?: number; sectional: number; previous_year: number; total: number };
   preparing: boolean;
 }
 
+export interface PrepResponse {
+  exams: PrepExam[];
+  preparing: string[];
+  /** Families that have exams to show, in the order the instructor set. */
+  families?: PrepFamily[];
+}
+
 export interface PrepHubData {
-  exam: { id: string; name: string; description: string; subjects: { id: number; name: string }[] };
+  exam: { id: string; name: string; description: string; group?: { id: string; name: string } | null; subjects: { id: number; name: string }[] };
   preparing: boolean;
+  /** The tabs the admin set up, in order (all four, some may be hidden). Missing on older servers: then the four standard tabs. */
+  tabs?: { key: string; label: string; visible: boolean; custom?: boolean }[];
+  /** Tests the admin put in the exam's own tabs, by tab key. */
+  custom_tests?: Record<string, StudentExam[]>;
   full_tests: StudentExam[];
+  mini_mocks: StudentExam[];
   subject_tests: { subject: number | null; subject_name: string; tests: StudentExam[] }[];
   previous_year: StudentExam[];
   progress: { total: number; attempted: number };
 }
 
 export interface Dashboard {
-  preparing: { id: string; name: string; total_tests: number; attempted_tests: number }[];
+  preparing: { id: string; name: string; total_tests: number; attempted_tests: number; group?: { id: string; name: string } | null }[];
   counts: { available: number; upcoming: number; in_progress: number; completed: number };
   average_score_percent: number | null;
   accuracy_percent: number | null;
@@ -223,6 +288,7 @@ export interface MyReport {
   status: 'open' | 'resolved' | 'rejected';
   status_label: string;
   admin_note: string;
+  image_url: string | null;
   created_at: string;
   resolved_at: string | null;
 }
@@ -301,8 +367,18 @@ export interface ReviseCard {
   explanation_hi: string;
 }
 
+/** An exam the student has revision cards for, and how many. `id` is "none" for tests that belong to no exam. */
+export interface ReviseExam {
+  id: string;
+  name: string;
+  group: string | null;
+  count: number;
+}
+
 export interface ReviseData {
   source: 'saved' | 'mistakes';
   total: number;
   cards: ReviseCard[];
+  /** Every exam the student has cards for in this source (not only the chosen one). Missing on older servers. */
+  exams?: ReviseExam[];
 }

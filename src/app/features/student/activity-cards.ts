@@ -7,7 +7,7 @@ import { RouterLink } from '@angular/router';
 import { DailyQuizCard } from './daily-quiz-card';
 import { ActivitySummary } from './student.models';
 
-/** The top of the student dashboard: streak, daily goal with the last 7 days, today's quiz and a link to practice. */
+/** The "Today" row of the student dashboard: daily goal with the last 7 days, today's quiz and a link to practice. The streak is in the page header. */
 @Component({
   selector: 'app-activity-cards',
   imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, DailyQuizCard],
@@ -25,16 +25,6 @@ import { ActivitySummary } from './student.models';
     p.text { margin: 4px 0 12px; color: var(--mat-sys-on-surface-variant); }
   `,
   template: `
-    <mat-card appearance="outlined">
-      <mat-card-content>
-        <div class="head"><mat-icon class="fire">local_fire_department</mat-icon><strong>Streak</strong></div>
-        <div class="big">{{ activity().streak }} {{ activity().streak === 1 ? 'day' : 'days' }}</div>
-        <p class="muted">
-          @if (activity().streak === 0) { Answer a question today to start a streak. } @else { Best streak: {{ activity().best_streak }} }
-        </p>
-      </mat-card-content>
-    </mat-card>
-
     <mat-card appearance="outlined">
       <mat-card-content>
         <div class="head"><mat-icon>flag</mat-icon><strong>Daily goal</strong></div>

@@ -188,3 +188,55 @@ mat-card-content {
   justify-content: flex-end;
   gap: 8px;
 }
+
+.pattern-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+
+  span {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+.live-box {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface-container-low);
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  .late {
+    display: block;
+    max-width: 360px;
+    margin-top: 8px;
+  }
+}
+
+.live-link {
+  margin-top: 4px;
+
+  .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 6px 0;
+  }
+
+  input {
+    flex: 1;
+    min-width: 220px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--mat-sys-outline);
+    background: var(--mat-sys-surface);
+    color: var(--mat-sys-on-surface);
+  }
+}

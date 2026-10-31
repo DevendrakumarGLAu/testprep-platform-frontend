@@ -16,8 +16,9 @@ import { environment } from '../../../../environments/environment';
 import { protectExam } from '../../../shared/protect';
 import { NotifyService } from '../../../core/notify.service';
 import { LangSwitch, Lang, LanguageService, pick } from '../../../shared/language';
-import { AnswerPatch, AttemptQuestion, AttemptSectionState, AttemptState, ResultSummary, formatDuration } from '../student.models';
+import { AnswerPatch, AttemptQuestion, AttemptSectionState, AttemptState, PauseInfo, ResultSummary, formatDuration } from '../student.models';
 import { StudentService } from '../student.service';
+import { ImageViewer } from '../../../shared/image-viewer';
 
 interface SubmitDialogData {
   total: number;
@@ -111,6 +112,25 @@ function clockOf(s: number): string {
           </mat-card-content>
         </mat-card>
       </main>
+    } @else if (paused()) {
+      <main class="done paused">
+        <mat-card appearance="outlined">
+          <mat-card-content>
+            <mat-icon class="big">pause_circle</mat-icon>
+            <h1>Test paused</h1>
+            <p>{{ title() }}</p>
+            <div class="score">{{ frozenClock() }} <span>left</span></div>
+            <p>Your timer is stopped and your answers are saved. The questions stay hidden until you resume.</p>
+            @if (autoResumeIn() !== null) {
+              <p class="hint">The test restarts by itself in <strong>{{ autoResumeClock() }}</strong>, and the timer then keeps running.</p>
+            }
+            @if (pauseNote()) { <p class="hint">{{ pauseNote() }}</p> }
+            <div class="actions">
+              <button mat-flat-button (click)="resumeTest()" [disabled]="busy()"><mat-icon>play_arrow</mat-icon> Resume test</button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </main>
     } @else if (q(); as cur) {
       <mat-sidenav-container class="shell">
         <!-- Small screens: the question palette lives in a drawer opened from the burger button on the right. -->
@@ -143,6 +163,11 @@ function clockOf(s: number): string {
                 <span class="timer" [class.low]="remaining() <= 300" role="timer" aria-live="off">
                   <mat-icon inline>timer</mat-icon> {{ clock() }}
                 </span>
+              }
+              @if (pause()?.allowed) {
+                <button mat-stroked-button class="pause-btn" (click)="pauseTest()" [disabled]="submitting() || busy() || pauseBlocked()" [attr.title]="pauseHint()">
+                  <mat-icon>pause</mat-icon> Pause
+                </button>
               }
               <button mat-flat-button (click)="confirmSubmit()" [disabled]="submitting()">{{ submitLabel() }}</button>
               @if (mobile()) {
@@ -177,7 +202,10 @@ function clockOf(s: number): string {
                     </span>
                     <span>+{{ cur.q.marks }} / -{{ cur.q.negative_marks }}</span>
                   </div>
-                  @if (cur.q.image_url) { <img [src]="cur.q.image_url" alt="Question image" /> }
+                  @if (cur.q.image_url) {
+                    <img class="zoomable" [src]="cur.q.image_url" alt="Question image" tabindex="0" role="button" title="Tap to enlarge"
+                      (click)="zoom(cur.q.image_url)" (keydown.enter)="zoom(cur.q.image_url)" />
+                  }
                   <div class="q-text" [attr.lang]="lang()">{{ say(cur.q.text, cur.q.text_hi) }}</div>
                   <mat-radio-group class="options" [value]="cur.q.selected_option" (change)="select($event.value)" [attr.aria-label]="'Options for question ' + (index() + 1)">
                     @for (o of cur.q.options; track o.id; let i = $index) {
@@ -259,6 +287,33 @@ export class AttemptPage {
   saveState = signal<SaveState>('saved');
   submitting = signal(false);
   finished = signal<{ result: ResultSummary | null; autoSubmitted: boolean } | null>(null);
+
+  // Pausing: the server stops the clock and sends no questions while the test is paused.
+  pause = signal<PauseInfo | null>(null);
+  paused = signal(false);
+  /** A pause or resume request is in flight. */
+  busy = signal(false);
+  private frozenSeconds = signal(0);
+  private autoResumeMs = 0;
+  private resumeRetryAt = 0;
+  frozenClock = computed(() => clockOf(this.frozenSeconds()));
+  /** Seconds until a pause ends by itself, or null when that is not known. */
+  autoResumeIn = computed(() => (this.paused() && this.autoResumeMs ? Math.max(0, Math.floor((this.autoResumeMs - (this.now() + this.offsetMs)) / 1000)) : null));
+  autoResumeClock = computed(() => clockOf(this.autoResumeIn() ?? 0));
+  pauseBlocked = computed(() => this.pause()?.pauses_left === 0);
+  pauseHint = computed(() => {
+    const p = this.pause();
+    if (!p) return '';
+    if (p.pauses_left === 0) return 'You have used all your pauses.';
+    const left = p.pauses_left === null ? 'Unlimited pauses' : `${p.pauses_left} pause${p.pauses_left === 1 ? '' : 's'} left`;
+    return `Stop the clock for up to ${p.max_minutes} minutes. ${left}.`;
+  });
+  pauseNote = computed(() => {
+    const p = this.pause();
+    if (!p) return '';
+    if (p.pauses_left === null) return '';
+    return p.pauses_left === 0 ? 'You have no pauses left after this one.' : `You can pause ${p.pauses_left} more time${p.pauses_left === 1 ? '' : 's'}.`;
+  });
 
   // Clock: the server's deadline and clock are the truth; the browser only counts seconds between syncs.
   private offsetMs = 0;
@@ -372,7 +427,7 @@ export class AttemptPage {
   };
   private tickTimer: ReturnType<typeof setInterval>;
   private guard = (e: BeforeUnloadEvent) => {
-    if (!this.finished()) {
+    if (!this.finished() && !this.paused()) {
       e.preventDefault();
       e.returnValue = '';
     }
@@ -409,6 +464,10 @@ export class AttemptPage {
       const sectionTimed = this.sectional() && this.hasUpcoming();
       const left = sectionTimed ? this.sectionRemaining() : this.remaining();
       untracked(() => this.timeWarning(left, sectionTimed ? `in ${this.activeName}` : 'for this test'));
+    });
+    // A pause that has used up its time ends on the server by itself: look again so the test comes back.
+    effect(() => {
+      if (this.paused() && this.autoResumeIn() === 0) untracked(() => this.checkAutoResume());
     });
     // Time is up: submit without waiting for a click.
     effect(() => {
@@ -452,11 +511,22 @@ export class AttemptPage {
   private apply(a: AttemptState) {
     this.title.set(a.exam.title);
     this.syncClock(a.server_now, a.deadline);
+    this.pause.set(a.pause ?? null);
     if (a.status === 'submitted') {
+      this.paused.set(false);
       this.finished.set({ result: a.result ?? null, autoSubmitted: !!a.auto_submitted });
       this.loading.set(false);
       return;
     }
+    if (a.paused) {
+      this.frozenSeconds.set(a.remaining_seconds);
+      this.autoResumeMs = a.pause?.auto_resume_at ? new Date(a.pause.auto_resume_at).getTime() : 0;
+      this.questions.set([]);
+      this.paused.set(true);
+      this.loading.set(false);
+      return;
+    }
+    this.paused.set(false);
     let source: AttemptSectionState[] = a.sections ?? [];
     this.sectional.set(!!a.sectional);
     if (a.languages?.length) this.languages.set(a.languages);
@@ -531,6 +601,11 @@ export class AttemptPage {
       this.queue({ question: cur.q.id, time_spent: Math.floor(total) }, true);
     }
     this.lastMark = now;
+  }
+
+  /** Opens the question picture at full size. */
+  zoom(src: string) {
+    ImageViewer.open(this.dialog, src);
   }
 
   select(optionId: number) {
@@ -637,6 +712,45 @@ export class AttemptPage {
       .open(SubmitDialog, { data })
       .afterClosed()
       .subscribe((ok) => ok && (this.sectional() && !last ? this.submitSection() : this.submit(false)));
+  }
+
+  /** Stops the clock. Saves first so nothing the student just did is lost while the questions are hidden. */
+  async pauseTest() {
+    if (this.busy() || this.submitting() || this.paused()) return;
+    this.busy.set(true);
+    this.accrue();
+    if (!(await this.flushAll())) {
+      this.busy.set(false);
+      this.notify.error('Cannot reach the server to save your latest answers. Check your connection and try again.');
+      return;
+    }
+    try {
+      this.apply(await firstValueFrom(this.api.pause(this.id())));
+    } catch (e: any) {
+      this.notify.error(apiErrorMessage(e));
+      if (e.status === 409) this.reload(); // the attempt ended, or the pause limit was reached: show the server's view
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** Restarts the clock with the same time left. */
+  async resumeTest() {
+    if (this.busy()) return;
+    this.busy.set(true);
+    try {
+      this.apply(await firstValueFrom(this.api.resume(this.id())));
+    } catch (e: any) {
+      this.notify.error(apiErrorMessage(e));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private checkAutoResume() {
+    if (Date.now() < this.resumeRetryAt) return;
+    this.resumeRetryAt = Date.now() + 3000; // if the clocks disagree slightly, look again shortly
+    this.reload();
   }
 
   /** Re-reads the attempt from the server (it decides which section is open). */

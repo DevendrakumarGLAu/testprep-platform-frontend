@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { formatDuration, formatSeconds } from '../features/student/student.models';
 import { fromLocalInput, toLocalInput } from '../features/admin/exams/exam.models';
 import { ResultView } from './result-view';
@@ -117,5 +118,124 @@ describe('formatting helpers', () => {
     expect(toLocalInput(null)).toBe('');
     expect(fromLocalInput('')).toBeNull();
     expect(fromLocalInput(null)).toBeNull();
+  });
+});
+
+
+describe('ResultView question picture', () => {
+  const withPicture = () => {
+    const d = data(false);
+    d.questions[0] = { ...d.questions[0], image_url: 'https://cdn.example/storage/questions/fig.png' };
+    return d;
+  };
+
+  it('shows the picture the student saw, from the storage address', () => {
+    const img = render(withPicture()).querySelector('img.zoomable') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://cdn.example/storage/questions/fig.png');
+    expect(img.getAttribute('title')).toBe('Tap to enlarge');
+  });
+
+  it('opens it at full size when tapped or when Enter is pressed', () => {
+    const fixture = TestBed.createComponent(ResultView);
+    fixture.componentRef.setInput('data', withPicture());
+    fixture.detectChanges();
+    const zoom = vi.spyOn(fixture.componentInstance, 'zoom').mockImplementation(() => undefined);
+    const img = (fixture.nativeElement as HTMLElement).querySelector('img.zoomable') as HTMLImageElement;
+    img.click();
+    img.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(zoom).toHaveBeenCalledTimes(2);
+    expect(zoom).toHaveBeenCalledWith('https://cdn.example/storage/questions/fig.png');
+  });
+
+  it('a question without a picture has no image element', () => {
+    expect(render(data(false)).querySelector('img')).toBeNull();
+  });
+});
+
+describe('ResultView re-attempt', () => {
+  function open(canAct = true, solutions = true) {
+    const fixture = TestBed.createComponent(ResultView);
+    fixture.componentRef.setInput('data', data(solutions));
+    fixture.componentRef.setInput('canAct', canAct);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const text = () => el.textContent!.replace(/\s+/g, ' ');
+    const button = (label: string) => [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent!.includes(label));
+    const opt = (i: number) => el.querySelectorAll<HTMLLIElement>('ol.retry li')[i];
+    return { fixture, c: fixture.componentInstance, el, text, button, opt };
+  }
+
+  it('offers Re-attempt on a student review once solutions are out, and not otherwise', () => {
+    expect(open().button('Re-attempt')).toBeTruthy();
+    expect(open(false).button('Re-attempt')).toBeUndefined();
+    expect(open(true, false).button('Re-attempt')).toBeUndefined();
+  });
+
+  it('is on when the server does not say, and off when the server setting turns it off', () => {
+    const on = open();
+    expect(on.button('Re-attempt')).toBeTruthy();
+    const fixture = TestBed.createComponent(ResultView);
+    fixture.componentRef.setInput('data', { ...data(true), reattempt_enabled: false });
+    fixture.componentRef.setInput('canAct', true);
+    fixture.detectChanges();
+    const buttons = [...(fixture.nativeElement as HTMLElement).querySelectorAll('button')].map((b) => b.textContent);
+    expect(buttons.some((t) => t!.includes('Re-attempt'))).toBe(false);
+    expect(buttons.some((t) => t!.includes('Save'))).toBe(true);
+  });
+
+  it('hides the answers and explanation while choosing again', () => {
+    const { fixture, button, text, el } = open();
+    button('Re-attempt')!.click();
+    fixture.detectChanges();
+    expect(text()).toContain('choose the answer again');
+    expect(text()).not.toContain('Correct answer');
+    expect(text()).not.toContain('Your answer');
+    expect(text()).not.toContain('Paris is the capital.');
+    expect(el.querySelectorAll('ol.retry li.correct').length).toBe(0);
+  });
+
+  it('a right pick says so and shows the explanation', () => {
+    const { fixture, button, text, opt } = open();
+    button('Re-attempt')!.click();
+    fixture.detectChanges();
+    opt(0).click();
+    fixture.detectChanges();
+    expect(text()).toContain('Correct! Well done.');
+    expect(text()).toContain('Paris is the capital.');
+    expect(opt(0).classList).toContain('correct');
+  });
+
+  it('a wrong pick marks it and highlights the right answer', () => {
+    const { fixture, button, text, opt } = open();
+    button('Re-attempt')!.click();
+    fixture.detectChanges();
+    opt(1).click();
+    fixture.detectChanges();
+    expect(text()).toContain('Not quite');
+    expect(opt(1).classList).toContain('wrong');
+    expect(opt(0).classList).toContain('correct');
+  });
+
+  it('the first pick stands until Try again, which starts over', () => {
+    const { fixture, c, button, opt } = open();
+    button('Re-attempt')!.click();
+    fixture.detectChanges();
+    opt(1).click();
+    opt(0).click();
+    expect(c.retry()[1].picked).toBe(2);
+    fixture.detectChanges();
+    button('Try again')!.click();
+    expect(c.retry()[1].picked).toBeNull();
+  });
+
+  it('Back to my result returns to the normal review and does not change the score', () => {
+    const { fixture, c, button, text } = open();
+    button('Re-attempt')!.click();
+    fixture.detectChanges();
+    button('Back to my result')!.click();
+    fixture.detectChanges();
+    expect(c.retry()).toEqual({});
+    expect(text()).toContain('Your answer');
+    expect(text()).toContain('incorrect');
   });
 });

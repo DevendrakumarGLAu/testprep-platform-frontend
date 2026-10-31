@@ -82,6 +82,7 @@ export interface QuestionReportRow {
   reason: string;
   reason_label: string;
   message: string;
+  image_url: string | null;
   status: 'open' | 'resolved' | 'rejected';
   admin_note: string;
   resolved_at: string | null;

@@ -4,6 +4,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import { switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
+import { ImageViewer } from '../../../shared/image-viewer';
 import { QuestionReportRow } from './qb.models';
 import { QuestionBankService } from './qb.service';
 
@@ -34,6 +36,7 @@ import { QuestionBankService } from './qb.service';
     .chip.rejected { background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface-variant); }
     .text { margin: 6px 0; }
     .msg { background: var(--mat-sys-surface-container); padding: 8px 12px; border-radius: 8px; margin: 6px 0; white-space: pre-wrap; }
+    img.thumb { display: block; max-width: 100%; max-height: 140px; border-radius: 8px; border: 1px solid var(--mat-sys-outline-variant); margin: 6px 0; cursor: zoom-in; }
     .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.85em; }
     mat-form-field { width: 100%; margin-top: 8px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -66,6 +69,9 @@ import { QuestionBankService } from './qb.service';
           </div>
           <div class="text">{{ r.question_text }}</div>
           @if (r.message) { <div class="msg">{{ r.message }}</div> }
+          @if (r.image_url) {
+            <img class="thumb" [src]="r.image_url" alt="Picture attached by the student" title="Click to enlarge" tabindex="0" role="button" (click)="zoom(r.image_url)" (keydown.enter)="zoom(r.image_url)" />
+          }
           <div class="meta">Reported by {{ r.student_name }}{{ r.exam_title ? ' in ' + r.exam_title : '' }} · {{ r.created_at | date: 'medium' }}</div>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Note to the student (optional)</mat-label>
@@ -88,6 +94,11 @@ import { QuestionBankService } from './qb.service';
 export class QuestionReports {
   private api = inject(QuestionBankService);
   private notify = inject(NotifyService);
+  private dialog = inject(MatDialog);
+
+  zoom(src: string) {
+    ImageViewer.open(this.dialog, src, 'Picture attached by the student');
+  }
 
   readonly pageSize = 20;
   status = signal('open');

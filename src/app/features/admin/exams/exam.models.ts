@@ -2,25 +2,31 @@ export type ExamStatus = 'draft' | 'published' | 'archived';
 export type AccessType = 'public' | 'assigned' | 'batch';
 export type ResultRelease = 'immediate' | 'scheduled' | 'manual';
 export type SolutionRelease = 'with_result' | 'after_end' | 'manual';
-export type TestType = 'full_test' | 'sectional' | 'previous_year';
+export type TestType = 'full_test' | 'mini_mock' | 'sectional' | 'previous_year';
 
 export const TEST_TYPE_LABELS: Record<TestType, string> = {
   full_test: 'Full test',
+  mini_mock: 'Mini mock',
   sectional: 'Subject test',
   previous_year: 'Previous year paper',
 };
 
 export interface Exam {
   id: number;
+  /** The id students and public links use. */
+  public_id: string;
   title: string;
   description: string;
   instructions: string;
   category: number | null;
+  also_in: number[];
   category_name: string | null;
   test_type: TestType;
   subject: number | null;
   subject_name: string | null;
   year: number | null;
+  /** One of the exam's own tabs to show this test in; empty means the tab of its type. */
+  tab_key?: string;
   thumbnail_url: string | null;
   duration_minutes: number;
   passing_marks: string;
@@ -32,6 +38,16 @@ export interface Exam {
   unanswered_penalty: string;
   shuffle_questions: boolean;
   shuffle_options: boolean;
+  /** Students may pause a running attempt (clock stops, questions hidden). */
+  allow_pause: boolean;
+  /** A live test: everyone starts together and finishes together. */
+  is_live: boolean;
+  /** Minutes after the start during which students can still join a live test. */
+  late_join_minutes: number;
+  /** 0 = unlimited. */
+  max_pauses: number;
+  /** Longest a single pause may last, in minutes. */
+  pause_minutes: number;
   max_attempts: number;
   start_at: string | null;
   end_at: string | null;
@@ -88,12 +104,58 @@ export interface Batch {
   member_count: number;
 }
 
+/** A family of exams, for example SSC (MTS, CHSL, CGL). */
+export interface ExamGroup {
+  id: number;
+  public_id: string;
+  name: string;
+  description: string;
+  order: number;
+  is_active: boolean;
+  /** How many exams are in this family. */
+  exam_count: number;
+}
+
+/** An exam's usual settings, used to fill in a new test. Every setting is optional. */
+export interface ExamPattern {
+  duration_minutes?: number;
+  marks_per_question?: number;
+  passing_marks?: number;
+  negative_option?: 'off' | 'question' | 'fraction' | 'fixed';
+  negative_value?: number;
+  sectional_timing?: boolean;
+  max_attempts?: number;
+  sections?: { name: string; duration_minutes: number | null }[];
+}
+
+/**
+ * One tab students see inside an exam. The four built-in keys (full, mini, previous, subject) each hold one type of test; a tab the
+ * admin adds has its own key (custom: true) and holds the tests put in it. The admin sets names, order and whether each shows.
+ */
+export interface ExamTab {
+  key: string;
+  label: string;
+  visible: boolean;
+  custom?: boolean;
+}
+
+export const STANDARD_TABS: ExamTab[] = [
+  { key: 'full', label: 'Full tests', visible: true },
+  { key: 'mini', label: 'Mini mocks', visible: true },
+  { key: 'previous', label: 'Previous year', visible: true },
+  { key: 'subject', label: 'Subject wise', visible: true },
+];
+
 export interface ExamCategory {
   id: number;
   name: string;
   description: string;
   subjects: number[];
   subject_names: string[];
+  group: number | null;
+  group_name: string | null;
+  pattern: ExamPattern;
+  tabs?: ExamTab[];
   is_active: boolean;
   exam_count: number;
 }

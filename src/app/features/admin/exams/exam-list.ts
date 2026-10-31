@@ -65,7 +65,7 @@ import { ExamService } from './exam.service';
       <table mat-table [dataSource]="rows()">
         <ng-container matColumnDef="title">
           <th mat-header-cell *matHeaderCellDef>Test</th>
-          <td mat-cell *matCellDef="let e"><a [routerLink]="['/admin/tests', e.id]">{{ e.title }}</a></td>
+          <td mat-cell *matCellDef="let e"><a [routerLink]="['/admin/tests', e.id]">{{ e.title }}</a>@if (e.is_live) { <span class="live-chip"><mat-icon inline>sensors</mat-icon> LIVE</span> }</td>
         </ng-container>
         <ng-container matColumnDef="category">
           <th mat-header-cell *matHeaderCellDef>Exam / type</th>
@@ -102,6 +102,9 @@ import { ExamService } from './exam.service';
               @if (e.status !== 'draft') {
                 <button mat-menu-item [routerLink]="['/admin/tests', e.id, 'results']"><mat-icon>bar_chart</mat-icon> Results</button>
               }
+              @if (e.is_live && e.status === 'published') {
+                <button mat-menu-item (click)="copyLiveLink(e)"><mat-icon>link</mat-icon> Copy live link</button>
+              }
               <button mat-menu-item (click)="duplicate(e)"><mat-icon>content_copy</mat-icon> Duplicate</button>
               @if (e.status === 'draft') {
                 <button mat-menu-item (click)="publish(e)"><mat-icon>publish</mat-icon> Publish</button>
@@ -134,6 +137,14 @@ export class ExamList {
   private api = inject(ExamService);
   private dialog = inject(MatDialog);
   private notify = inject(NotifyService);
+
+  /** The link to give students for a live test. */
+  copyLiveLink(e: Exam) {
+    const link = `${window.location.origin}/student/live/${e.public_id}`;
+    const fail = () => this.notify.error(`Could not copy. The link is ${link}`);
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => this.notify.success('Live link copied'), fail);
+    else fail();
+  }
   private router = inject(Router);
 
   columns = ['title', 'category', 'questions', 'duration', 'window', 'status', 'actions'];

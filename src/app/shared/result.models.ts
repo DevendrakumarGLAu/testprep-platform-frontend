@@ -24,6 +24,8 @@ export interface ResultData {
   subjects: { subject: string; marks: string; max_marks: string; accuracy: number }[];
   comparison: { attempts_count: number; average_percentage: number | null };
   solutions_available: boolean;
+  /** Server setting REATTEMPT_ENABLED; a missing value counts as on. */
+  reattempt_enabled?: boolean;
   questions: {
     number: number;
     section: string;

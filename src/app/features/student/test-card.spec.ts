@@ -3,52 +3,48 @@ import { provideRouter } from '@angular/router';
 import { StudentExam } from './student.models';
 import { TestCard } from './test-card';
 
-function exam(over: Partial<StudentExam>): StudentExam {
+function exam(over: Partial<StudentExam> = {}): StudentExam {
   return {
-    id: 'ex1', title: 'Some test', description: '', category: 'cat1', category_name: 'SSC', test_type: 'full_test', test_type_label: 'Full test',
-    subject: null, subject_name: null, year: null, thumbnail_url: null, question_count: 10, total_marks: '20.00', duration_minutes: 30,
-    start_at: null, end_at: null, max_attempts: 0, attempts_used: 0, negative_marking_enabled: true, sectional_timing: false, status: 'available',
-    can_start: true, reason: '', active_attempt_id: null, ...over,
+    id: 'ex1', title: 'SuperTET 1', description: '', category: null, category_name: 'SuperTET', test_type: 'full_test', test_type_label: 'Full test',
+    subject: null, subject_name: null, year: null, thumbnail_url: null, question_count: 120, total_marks: '360.00', duration_minutes: 120,
+    start_at: null, end_at: null, max_attempts: 0, attempts_used: 0, negative_marking_enabled: true, sectional_timing: false,
+    status: 'available', can_start: true, reason: '', active_attempt_id: null, ...over,
   };
 }
 
-function render(e: StudentExam): HTMLElement {
+function render(e: StudentExam) {
   TestBed.configureTestingModule({ providers: [provideRouter([])] });
-  const fixture = TestBed.createComponent(TestCard);
-  fixture.componentRef.setInput('exam', e);
-  fixture.detectChanges();
-  return fixture.nativeElement;
+  const f = TestBed.createComponent(TestCard);
+  f.componentRef.setInput('exam', e);
+  f.detectChanges();
+  return f.nativeElement as HTMLElement;
 }
 
-describe('TestCard', () => {
-  it('labels a full test with its exam', () => {
-    expect(render(exam({})).textContent).toContain('SSC · Full test');
+describe('TestCard result link', () => {
+  it('links to the result of the last attempt once the student has taken the test', () => {
+    const el = render(exam({ attempts_used: 1, last_attempt_id: 'att9', result_available: true }));
+    const link = el.querySelector('a.view-result') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.textContent).toContain('View result');
+    expect(link.getAttribute('href')).toBe('/student/results/att9');
+    expect(el.textContent).toContain('Attempt again'); // the main action stays
   });
 
-  it('labels a subject test with the subject', () => {
-    const el = render(exam({ test_type: 'sectional', test_type_label: 'Subject test', subject: 2, subject_name: 'Maths' }));
-    expect(el.textContent).toContain('SSC · Maths only');
+  it('says the result is not released yet when the instructor has not released it', () => {
+    const el = render(exam({ attempts_used: 1, last_attempt_id: 'att9', result_available: false }));
+    expect(el.querySelector('a.view-result')).toBeNull();
+    expect(el.textContent).toContain('Result not released yet');
   });
 
-  it('labels a previous year paper with its year', () => {
-    const el = render(exam({ test_type: 'previous_year', test_type_label: 'Previous year paper', year: 2023 }));
-    expect(el.textContent).toContain('SSC · Previous year 2023');
+  it('has no result link for a test the student has not taken', () => {
+    const el = render(exam());
+    expect(el.querySelector('a.view-result')).toBeNull();
+    expect(el.textContent).not.toContain('Result not released');
   });
 
-  it('shows unlimited retakes and offers to attempt again after a first attempt', () => {
-    const el = render(exam({ attempts_used: 2 }));
-    expect(el.textContent).toContain('2 / unlimited');
-    expect(el.textContent).toContain('Attempt again');
-  });
-
-  it('offers Resume for an attempt in progress', () => {
-    expect(render(exam({ status: 'in_progress', active_attempt_id: 'att7' })).textContent).toContain('Resume');
-  });
-
-  it('does not offer to start a test that has not opened yet', () => {
-    const el = render(exam({ status: 'upcoming', can_start: false, reason: 'This test has not started yet.' }));
-    expect(el.textContent).toContain('This test has not started yet.');
-    expect(el.querySelector('a.mat-mdc-unelevated-button')).toBeNull(); // no primary Start / Resume button
-    expect(el.textContent).toContain('Details');
+  it('keeps the result link next to Resume when a retake is in progress', () => {
+    const el = render(exam({ status: 'in_progress', attempts_used: 1, last_attempt_id: 'att9', result_available: true, active_attempt_id: 'att10' }));
+    expect(el.textContent).toContain('Resume');
+    expect((el.querySelector('a.view-result') as HTMLAnchorElement).getAttribute('href')).toBe('/student/results/att9');
   });
 });

@@ -4,8 +4,10 @@ import { LangSwitch, Lang, LanguageService, pick } from './language';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { formatDuration, formatSeconds } from '../features/student/student.models';
+import { ImageViewer } from './image-viewer';
 import { ResultData } from './result.models';
 
 /** Result and question-by-question review. Shared by the student and admin screens. */
@@ -122,24 +124,54 @@ import { ResultData } from './result.models';
               <span class="muted">{{ q.marks }} marks</span>
             }
           </div>
-          @if (q.image_url) { <img [src]="q.image_url" alt="Question image" /> }
+          @if (q.image_url) {
+            <img class="zoomable" [src]="q.image_url" alt="Question image" tabindex="0" role="button" title="Tap to enlarge"
+              (click)="zoom(q.image_url)" (keydown.enter)="zoom(q.image_url)" />
+          }
           <div class="q-text" [attr.lang]="lang()">{{ say(q.text, q.text_hi) }}</div>
-          <ol class="opts">
-            @for (o of q.options; track o.id) {
-              <li [class.correct]="o.is_correct" [class.wrong]="q.selected_option === o.id && o.is_correct === false" [class.chosen]="q.selected_option === o.id">
-                {{ say(o.text, o.text_hi) }}
-                @if (q.selected_option === o.id) { <span class="mark">Your answer</span> }
-                @if (o.is_correct) { <span class="mark good">Correct answer</span> }
-              </li>
+          @if (retry()[q.number]; as t) {
+            <p class="muted retry-hint">{{ t.picked === null ? 'Re-attempt: choose the answer again.' : 'Re-attempt' }}</p>
+            <ol class="opts retry">
+              @for (o of q.options; track o.id) {
+                <li tabindex="0" role="button" [attr.aria-disabled]="t.picked !== null"
+                  [class.correct]="t.picked !== null && o.is_correct" [class.wrong]="t.picked === o.id && o.is_correct === false" [class.chosen]="t.picked === o.id"
+                  (click)="pickRetry(q.number, o.id)" (keydown.enter)="pickRetry(q.number, o.id)">
+                  {{ say(o.text, o.text_hi) }}
+                  @if (t.picked === o.id) { <span class="mark">Your new answer</span> }
+                </li>
+              }
+            </ol>
+            @if (t.picked !== null) {
+              <p class="retry-result" [class.ok]="isRetryCorrect(q, t.picked)" role="status">
+                {{ isRetryCorrect(q, t.picked) ? 'Correct! Well done.' : 'Not quite. The right answer is highlighted.' }}
+              </p>
+              @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
             }
-          </ol>
-          @if (q.selected_option === null) { <p class="muted">You did not answer this question.</p> }
-          @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
+            <div class="q-actions">
+              @if (t.picked !== null) { <button mat-button type="button" (click)="startRetry(q.number)"><mat-icon>replay</mat-icon> Try again</button> }
+              <button mat-button type="button" (click)="stopRetry(q.number)">Back to my result</button>
+            </div>
+          } @else {
+            <ol class="opts">
+              @for (o of q.options; track o.id) {
+                <li [class.correct]="o.is_correct" [class.wrong]="q.selected_option === o.id && o.is_correct === false" [class.chosen]="q.selected_option === o.id">
+                  {{ say(o.text, o.text_hi) }}
+                  @if (q.selected_option === o.id) { <span class="mark">Your answer</span> }
+                  @if (o.is_correct) { <span class="mark good">Correct answer</span> }
+                </li>
+              }
+            </ol>
+            @if (q.selected_option === null) { <p class="muted">You did not answer this question.</p> }
+            @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
+          }
           @if (q.video_url) {
             <a mat-button class="video" [href]="q.video_url" target="_blank" rel="noopener noreferrer"><mat-icon>smart_display</mat-icon> Watch solution</a>
           }
-          @if (canAct() && data().solutions_available) {
+          @if (canAct() && data().solutions_available && !retry()[q.number]) {
             <div class="q-actions">
+              @if (data().reattempt_enabled !== false) {
+              <button mat-button type="button" (click)="startRetry(q.number)"><mat-icon>replay</mat-icon> Re-attempt</button>
+              }
               <button mat-button type="button" (click)="saveToggle.emit(q.number)" [attr.aria-pressed]="!!q.saved_id">
                 <mat-icon>{{ q.saved_id ? 'bookmark' : 'bookmark_border' }}</mat-icon> {{ q.saved_id ? 'Saved' : 'Save' }}
               </button>
@@ -161,6 +193,32 @@ export class ResultView {
   saveToggle = output<number>();
   report = output<number>();
   private langs = inject(LanguageService);
+  private dialog = inject(MatDialog);
+
+  /** Questions the student is trying again right now: question number to the option picked this time (null before choosing). Nothing is saved or scored. */
+  retry = signal<Record<number, { picked: number | null }>>({});
+
+  startRetry(number: number) {
+    this.retry.update((r) => ({ ...r, [number]: { picked: null } }));
+  }
+
+  pickRetry(number: number, optionId: number) {
+    if (this.retry()[number]?.picked !== null) return; // one go at a time; "Try again" resets it
+    this.retry.update((r) => ({ ...r, [number]: { picked: optionId } }));
+  }
+
+  stopRetry(number: number) {
+    this.retry.update(({ [number]: _gone, ...rest }) => rest);
+  }
+
+  isRetryCorrect(q: ResultData['questions'][number], picked: number) {
+    return q.options.some((o) => o.id === picked && o.is_correct);
+  }
+
+  /** Opens the question picture at full size. */
+  zoom(src: string) {
+    ImageViewer.open(this.dialog, src);
+  }
   /** Languages that appear anywhere in this test. */
   languages = computed<Lang[]>(() => {
     const qs = this.data().questions;

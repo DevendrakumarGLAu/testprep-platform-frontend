@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -10,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { ImageViewer } from '../../shared/image-viewer';
 import { LangSwitch, Lang, LanguageService, pick } from '../../shared/language';
 import { MyReport, SavedList, SavedQuestion } from './student.models';
 import { StudentService } from './student.service';
@@ -23,6 +25,7 @@ import { StudentService } from './student.service';
   ],
   styles: `
     :host { display: block; max-width: 900px; }
+    img.thumb { display: block; max-width: 100%; max-height: 140px; border-radius: 8px; border: 1px solid var(--mat-sys-outline-variant); margin: 6px 0; cursor: zoom-in; }
     .bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
     .bar .spacer { flex: 1; }
     mat-card { margin-bottom: 12px; }
@@ -100,6 +103,9 @@ import { StudentService } from './student.service';
           <div class="meta">{{ r.exam_title }}</div>
           <div>{{ r.question }}</div>
           <p class="muted">{{ r.reason }}{{ r.message ? ': ' + r.message : '' }}</p>
+          @if (r.image_url) {
+            <img class="thumb" [src]="r.image_url" alt="The picture you sent" title="Tap to enlarge" tabindex="0" role="button" (click)="zoom(r.image_url)" (keydown.enter)="zoom(r.image_url)" />
+          }
           <span class="chip" [class]="'chip ' + r.status">{{ r.status === 'open' ? 'Waiting for review' : r.status === 'resolved' ? 'Fixed' : 'No change needed' }}</span>
           @if (r.admin_note) { <div class="note">Admin: {{ r.admin_note }}</div> }
         </mat-card-content></mat-card>
@@ -111,6 +117,11 @@ export class Saved {
   private api = inject(StudentService);
   private notify = inject(NotifyService);
   private langs = inject(LanguageService);
+  private dialog = inject(MatDialog);
+
+  zoom(src: string) {
+    ImageViewer.open(this.dialog, src, 'The picture you sent');
+  }
 
   languages: Lang[] = ['en', 'hi'];
   lang = computed<Lang>(() => this.langs.lang());

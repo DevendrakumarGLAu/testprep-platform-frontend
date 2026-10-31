@@ -771,3 +771,203 @@ describe('AttemptPage question language', () => {
     expect(dropdown(el)).toBeNull();
   });
 });
+
+describe('AttemptPage pausing', () => {
+  let api: Record<string, ReturnType<typeof vi.fn>>;
+  let fixture: ComponentFixture<AttemptPage>;
+  const pauseInfo = (over: Record<string, unknown> = {}) => ({
+    allowed: true, paused: false, paused_at: null, auto_resume_at: null, max_minutes: 10, pauses_used: 0, pauses_left: 3, ...over,
+  });
+  const pausedState = (over: Partial<AttemptState> = {}) =>
+    state({
+      paused: true, sections: [], remaining_seconds: 45, // the stored deadline is stale while paused
+      deadline: new Date(T0 - 3600_000).toISOString(),
+      pause: pauseInfo({ paused: true, paused_at: new Date(T0).toISOString(), auto_resume_at: new Date(T0 + 600_000).toISOString(), pauses_used: 1, pauses_left: 2 }),
+      ...over,
+    });
+
+  async function open(initial: AttemptState) {
+    api['attempt'].mockReturnValue(of(initial));
+    fixture = TestBed.createComponent(AttemptPage);
+    fixture.componentRef.setInput('id', 'att5');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+  const settle = async (ms: number) => {
+    await vi.advanceTimersByTimeAsync(ms);
+    fixture.detectChanges();
+  };
+  const html = () => fixture.nativeElement as HTMLElement;
+  const button = (cls: string) => html().querySelector(cls) as HTMLButtonElement | null;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] });
+    vi.setSystemTime(T0);
+    api = { attempt: vi.fn(), saveAnswers: vi.fn(() => of(okNow())), submit: vi.fn(() => of(submitted)), pause: vi.fn(), resume: vi.fn() };
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: api }] });
+  });
+
+  afterEach(() => {
+    fixture?.destroy();
+    vi.useRealTimers();
+  });
+
+  it('shows a Pause button when the test allows it', async () => {
+    await open(state({ pause: pauseInfo() }));
+    expect(button('.pause-btn')).not.toBeNull();
+    expect(button('.pause-btn')!.disabled).toBe(false);
+    expect(button('.pause-btn')!.getAttribute('title')).toContain('3 pauses left');
+  });
+
+  it('has no Pause button when the test does not allow pausing', async () => {
+    await open(state({ pause: pauseInfo({ allowed: false }) }));
+    expect(button('.pause-btn')).toBeNull();
+    fixture.destroy();
+    await open(state());
+    expect(button('.pause-btn')).toBeNull();
+  });
+
+  it('disables Pause once every pause has been used', async () => {
+    await open(state({ pause: pauseInfo({ pauses_left: 0, pauses_used: 3 }) }));
+    expect(button('.pause-btn')!.disabled).toBe(true);
+    expect(button('.pause-btn')!.getAttribute('title')).toContain('used all');
+  });
+
+  it('pausing saves the latest answers first, then hides the questions and shows the frozen time', async () => {
+    const c = await open(state({ pause: pauseInfo() }));
+    c.select(1);
+    api['pause'].mockReturnValue(of(pausedState()));
+    await c.pauseTest();
+    await settle(0);
+    expect(api['saveAnswers']).toHaveBeenCalled();
+    expect(api['saveAnswers'].mock.invocationCallOrder[0]).toBeLessThan(api['pause'].mock.invocationCallOrder[0]);
+    expect(c.paused()).toBe(true);
+    expect(c.questions().length).toBe(0);
+    expect(html().textContent).toContain('Test paused');
+    expect(html().textContent).toContain('00:45');
+    expect(html().querySelector('.q-text')).toBeNull();
+    // the frozen time does not move
+    await settle(20_000);
+    expect(html().textContent).toContain('00:45');
+  });
+
+  it('does not pause when the answers cannot be saved', async () => {
+    const c = await open(state({ pause: pauseInfo() }));
+    c.select(1);
+    api['saveAnswers'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 0 })));
+    const p = c.pauseTest();
+    await settle(30_000);
+    await p;
+    expect(api['pause']).not.toHaveBeenCalled();
+    expect(c.paused()).toBe(false);
+  });
+
+  it('Resume restarts the test and brings the questions back', async () => {
+    const c = await open(pausedState());
+    expect(c.paused()).toBe(true);
+    expect(c.questions().length).toBe(0);
+    api['resume'].mockReturnValue(of(state({ pause: pauseInfo({ pauses_used: 1, pauses_left: 2 }) })));
+    await c.resumeTest();
+    await settle(0);
+    expect(api['resume']).toHaveBeenCalledWith('att5');
+    expect(c.paused()).toBe(false);
+    expect(c.questions().length).toBe(2);
+    expect(c.clock()).toBe('01:00');
+    expect(html().textContent).toContain('First?');
+  });
+
+  it('an attempt opened while paused stays paused and is not auto-submitted although the stored deadline has passed', async () => {
+    const c = await open(pausedState());
+    await settle(5_000);
+    expect(c.paused()).toBe(true);
+    expect(api['submit']).not.toHaveBeenCalled();
+    expect(html().textContent).toContain('Test paused');
+  });
+
+  it('counts down to the automatic restart and reloads the test when it arrives', async () => {
+    const autoAt = new Date(T0 + 5_000).toISOString();
+    const c = await open(pausedState({ pause: pauseInfo({ paused: true, paused_at: new Date(T0).toISOString(), auto_resume_at: autoAt, pauses_used: 1, pauses_left: 2 }) }));
+    expect(c.autoResumeIn()).toBe(5);
+    api['attempt'].mockReturnValue(of(state({ pause: pauseInfo({ pauses_used: 1, pauses_left: 2 }) })));
+    await settle(6_000);
+    expect(c.paused()).toBe(false);
+    expect(c.questions().length).toBe(2);
+  });
+
+  it('shows the server message and the real state when a pause is refused', async () => {
+    const notify = vi.spyOn(TestBed.inject(NotifyService), 'error').mockImplementation(() => undefined);
+    const c = await open(state({ pause: pauseInfo() }));
+    api['pause'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'You have used all 3 pauses for this test.' } })));
+    await c.pauseTest();
+    await settle(0);
+    expect(notify).toHaveBeenCalledWith('You have used all 3 pauses for this test.');
+    expect(c.paused()).toBe(false);
+  });
+
+  it('a save refused because the test is paused reloads into the paused screen', async () => {
+    const c = await open(state({ pause: pauseInfo() }));
+    api['saveAnswers'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 409, error: { detail: 'The test is paused.', paused: true } })));
+    api['attempt'].mockReturnValue(of(pausedState()));
+    c.select(1);
+    await settle(1_000);
+    expect(c.paused()).toBe(true);
+  });
+});
+
+
+describe('AttemptPage question picture', () => {
+  let fixture: ComponentFixture<AttemptPage>;
+  let api: Record<string, ReturnType<typeof vi.fn>>;
+
+  async function open(imageUrl: string | null) {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] });
+    vi.setSystemTime(T0);
+    const s = state();
+    s.sections![0].questions[0] = { ...s.sections![0].questions[0], image_url: imageUrl };
+    api = { attempt: vi.fn(() => of(s)), saveAnswers: vi.fn(() => of(okNow())), submit: vi.fn(() => of(submitted)) };
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: api }] });
+    fixture = TestBed.createComponent(AttemptPage);
+    fixture.componentRef.setInput('id', 'att5');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    return { c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+    vi.useRealTimers();
+  });
+
+  it('shows the picture of the question from its storage address', async () => {
+    const { el } = await open('https://cdn.example/storage/questions/fig.png');
+    const img = el.querySelector('img.zoomable') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://cdn.example/storage/questions/fig.png');
+    expect(img.getAttribute('alt')).toBe('Question image');
+    expect(img.getAttribute('title')).toBe('Tap to enlarge');
+  });
+
+  it('a question without a picture shows none', async () => {
+    const { el } = await open(null);
+    expect(el.querySelector('img.zoomable')).toBeNull();
+  });
+
+  it('tapping the picture, or pressing Enter on it, opens it at full size', async () => {
+    const { c, el } = await open('https://cdn.example/storage/questions/fig.png');
+    const zoom = vi.spyOn(c, 'zoom').mockImplementation(() => undefined);
+    const img = el.querySelector('img.zoomable') as HTMLImageElement;
+    img.click();
+    img.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(zoom).toHaveBeenCalledTimes(2);
+    expect(zoom).toHaveBeenCalledWith('https://cdn.example/storage/questions/fig.png');
+  });
+
+  it('the picture can be reached with the keyboard', async () => {
+    const { el } = await open('https://cdn.example/storage/questions/fig.png');
+    const img = el.querySelector('img.zoomable') as HTMLImageElement;
+    expect(img.getAttribute('tabindex')).toBe('0');
+    expect(img.getAttribute('role')).toBe('button');
+  });
+});

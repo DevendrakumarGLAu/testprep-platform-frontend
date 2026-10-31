@@ -20,7 +20,7 @@ import { NotifyService } from '../../../core/notify.service';
 import { openPicker } from '../../../shared/pickers';
 import { Question, Subject } from '../question-bank/qb.models';
 import { QuestionBankService } from '../question-bank/qb.service';
-import { AccessType, Batch, Exam, ExamCategory, ExamSection, TEST_TYPE_LABELS, TestType, fromLocalInput, toLocalInput } from './exam.models';
+import { AccessType, Batch, Exam, ExamCategory, ExamSection, TEST_TYPE_LABELS, TestType, fromLocalInput, toLocalInput, ExamPattern } from './exam.models';
 import { ExamService } from './exam.service';
 import { QuestionPicker } from './question-picker';
 import { StudentPicker } from './student-picker';
@@ -87,6 +87,13 @@ import { StudentPicker } from './student-picker';
               <mat-label>Instructions shown before the test</mat-label>
               <textarea matInput rows="4" formControlName="instructions"></textarea>
             </mat-form-field>
+            @if (pattern(); as p) {
+              <div class="pattern-bar">
+                <mat-icon>auto_fix_high</mat-icon>
+                <span><strong>{{ selectedCategory()?.name }}</strong> has a saved pattern: {{ patternSummary() }}</span>
+                <button mat-stroked-button type="button" (click)="applyPattern()" [disabled]="locked()">Use this pattern</button>
+              </div>
+            }
             <div class="grid">
               <mat-form-field appearance="outline">
                 <mat-label>Exam (for example SSC)</mat-label>
@@ -100,11 +107,28 @@ import { StudentPicker } from './student-picker';
                 <mat-hint>Students find the test under this exam</mat-hint>
               </mat-form-field>
               <mat-form-field appearance="outline">
+                <mat-label>Also show in these exams</mat-label>
+                <mat-select multiple formControlName="also_in">
+                  @for (c of otherCategories(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
+                </mat-select>
+                <mat-hint>One test, many exams: students of each exam see it, and the results stay together</mat-hint>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
                 <mat-label>Type of test</mat-label>
                 <mat-select formControlName="test_type">
                   @for (t of testTypes; track t.value) { <mat-option [value]="t.value">{{ t.label }}</mat-option> }
                 </mat-select>
               </mat-form-field>
+              @if (customTabs().length) {
+                <mat-form-field appearance="outline">
+                  <mat-label>Show in tab</mat-label>
+                  <mat-select formControlName="tab_key">
+                    <mat-option value="">By type of test</mat-option>
+                    @for (t of customTabs(); track t.key) { <mat-option [value]="t.key">{{ t.label }}</mat-option> }
+                  </mat-select>
+                  <mat-hint>Put this test in one of the exam's own tabs instead of the tab of its type</mat-hint>
+                </mat-form-field>
+              }
               @if (form.value.test_type === 'sectional') {
                 <mat-form-field appearance="outline">
                   <mat-label>Subject</mat-label>
@@ -212,26 +236,75 @@ import { StudentPicker } from './student-picker';
                 }
                 <mat-slide-toggle formControlName="shuffle_questions">Shuffle questions within sections</mat-slide-toggle>
                 <mat-slide-toggle formControlName="shuffle_options">Shuffle answer options</mat-slide-toggle>
+                @if (!live()) { <mat-slide-toggle formControlName="allow_pause">Let students pause the test</mat-slide-toggle> }
               </div>
+              @if (form.controls.allow_pause.value && !live()) {
+                <div class="grid">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Pauses allowed</mat-label>
+                    <input matInput type="number" min="0" max="20" formControlName="max_pauses" />
+                    <mat-hint>0 = unlimited</mat-hint>
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Longest pause (minutes)</mat-label>
+                    <input matInput type="number" min="1" max="120" formControlName="pause_minutes" />
+                    <mat-hint>The test restarts by itself after this</mat-hint>
+                  </mat-form-field>
+                </div>
+                <p class="neg-example">
+                  <mat-icon inline>info</mat-icon>
+                  While paused the timer stops and the questions are hidden. If a pause runs longer than this, the test restarts by
+                  itself and the timer keeps running.
+                </p>
+              }
             </mat-card-content>
           </mat-card>
 
           <mat-card appearance="outlined">
             <mat-card-header><mat-card-title>Schedule &amp; release</mat-card-title></mat-card-header>
             <mat-card-content>
+              <div class="live-box">
+                <mat-slide-toggle formControlName="is_live">Live test (everyone starts together)</mat-slide-toggle>
+                @if (live()) {
+                  <p class="neg-example">
+                    <mat-icon inline>sensors</mat-icon>
+                    Students join from the start time and everyone finishes at the same moment (start time + duration), so someone who joins
+                    late gets the time that is left. Pausing is off. Set the start time below; the end is worked out for you.
+                  </p>
+                  <mat-form-field appearance="outline" class="late">
+                    <mat-label>Students can still join for (minutes)</mat-label>
+                    <input matInput type="number" min="0" max="180" formControlName="late_join_minutes" />
+                    <mat-hint>After this many minutes from the start nobody new can join</mat-hint>
+                  </mat-form-field>
+                  @if (liveLink(); as link) {
+                    <div class="live-link">
+                      <strong>Link to share</strong>
+                      <div class="row">
+                        <input readonly [value]="link" aria-label="Link to share this live test" (focus)="$any($event.target).select()" />
+                        <button mat-stroked-button type="button" (click)="copyLink(link)"><mat-icon>content_copy</mat-icon> Copy link</button>
+                      </div>
+                      <span class="meta">Only registered students can open it: anyone not signed in is asked to log in first, and a test given to chosen students or batches stays closed to everyone else.</span>
+                    </div>
+                  } @else {
+                    <p class="meta">Save the test to get the link to share with students.</p>
+                  }
+                }
+              </div>
               <div class="grid">
                 <mat-form-field appearance="outline">
-                  <mat-label>Available from</mat-label>
+                  <mat-label>{{ live() ? 'Live test starts at' : 'Available from' }}</mat-label>
                   <input #startIn matInput type="datetime-local" formControlName="start_at" />
                   <button mat-icon-button matSuffix type="button" (click)="pickDate(startIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
-                  <mat-hint>Empty = available as soon as published</mat-hint>
+                  <mat-hint>{{ live() ? 'Required for a live test' : 'Empty = available as soon as published' }}</mat-hint>
                 </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Available until</mat-label>
-                  <input #endIn matInput type="datetime-local" formControlName="end_at" />
-                  <button mat-icon-button matSuffix type="button" (click)="pickDate(endIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
-                  <mat-hint>Empty = no end</mat-hint>
-                </mat-form-field>
+                @if (!live()) {
+                  <mat-form-field appearance="outline">
+                    <mat-label>Available until</mat-label>
+                    <input #endIn matInput type="datetime-local" formControlName="end_at" />
+                    <button mat-icon-button matSuffix type="button" (click)="pickDate(endIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
+                    <mat-hint>Empty = no end</mat-hint>
+                  </mat-form-field>
+                }
                 <mat-form-field appearance="outline">
                   <mat-label>Result release</mat-label>
                   <mat-select formControlName="result_release">
@@ -420,7 +493,9 @@ export class ExamForm {
     description: [''],
     instructions: [''],
     category: this.fb.control<number | null>(null),
+    also_in: this.fb.nonNullable.control<number[]>([]),
     test_type: this.fb.nonNullable.control<TestType>('full_test'),
+    tab_key: this.fb.nonNullable.control(''),
     subject: this.fb.control<number | null>(null),
     year: this.fb.control<number | null>(null),
     duration_minutes: [60, [Validators.required, Validators.min(1), Validators.max(600)]],
@@ -433,6 +508,11 @@ export class ExamForm {
     sectional_timing: [false],
     shuffle_questions: [false],
     shuffle_options: [false],
+    allow_pause: [true],
+    is_live: [false],
+    late_join_minutes: [10, [Validators.required, Validators.min(0), Validators.max(180)]],
+    max_pauses: [3, [Validators.required, Validators.min(0), Validators.max(20)]],
+    pause_minutes: [10, [Validators.required, Validators.min(1), Validators.max(120)]],
     start_at: [''],
     end_at: [''],
     result_release: ['immediate'],
@@ -452,6 +532,34 @@ export class ExamForm {
   marksPer = computed(() => Number(this.raw().marks_per_question) || 0);
   rule = computed(() => ({ option: this.raw().negative_option, value: Number(this.raw().negative_value) || 0 }));
   sectional = computed(() => !!this.raw().sectional_timing);
+  live = computed(() => !!this.raw().is_live);
+  /** The page students open for this live test; empty until the test is saved. */
+  liveLink = computed(() => {
+    const e = this.exam();
+    return this.live() && e?.public_id ? `${window.location.origin}/student/live/${e.public_id}` : '';
+  });
+  /** The exam's own tabs (added by the admin), which this test may be shown in. */
+  customTabs = computed(() => (this.selectedCategory()?.tabs ?? []).filter((t) => t.custom));
+  selectedCategory = computed(() => this.categories().find((c) => c.id === this.raw().category) ?? null);
+  /** Exams this test can also be shown in: every exam except its own. */
+  otherCategories = computed(() => this.categories().filter((c) => c.id !== this.raw().category));
+  /** The saved pattern of the chosen exam, or null when it has none. */
+  pattern = computed(() => {
+    const p = this.selectedCategory()?.pattern;
+    return p && Object.keys(p).length ? p : null;
+  });
+  patternSummary = computed(() => {
+    const p = this.pattern();
+    if (!p) return '';
+    const parts: string[] = [];
+    if (p.duration_minutes) parts.push(`${p.duration_minutes} min`);
+    if (p.marks_per_question) parts.push(`${p.marks_per_question} mark${p.marks_per_question === 1 ? '' : 's'} each`);
+    if (p.negative_option === 'off') parts.push('no negative marking');
+    else if (p.negative_option === 'fraction' || p.negative_option === 'fixed') parts.push(`negative ${p.negative_value ?? 0}${p.negative_option === 'fraction' ? ' of the marks' : ''}`);
+    if (p.sectional_timing) parts.push('timed sections');
+    if (p.sections?.length) parts.push(`${p.sections.length} section${p.sections.length === 1 ? '' : 's'}: ${p.sections.map((s) => s.name).join(', ')}`);
+    return parts.join(' · ');
+  });
   /** Minutes of all section time limits together. */
   sectionTotal = computed(() => this.sections().reduce((t, s) => t + (s.duration_minutes || 0), 0));
   ruleSetsNegative = computed(() => this.rule().option === 'fraction' || this.rule().option === 'fixed');
@@ -485,13 +593,23 @@ export class ExamForm {
 
   private static LOCKED_FIELDS = [
     'duration_minutes', 'marks_per_question', 'passing_marks', 'max_attempts', 'unanswered_penalty',
-    'negative_option', 'negative_value', 'sectional_timing', 'shuffle_questions', 'shuffle_options',
+    'negative_option', 'negative_value', 'sectional_timing', 'shuffle_questions', 'shuffle_options', 'is_live', 'late_join_minutes',
   ] as const;
 
   constructor() {
     this.api.categories().subscribe((p) => this.categories.set(p.results.filter((c) => c.is_active)));
     this.qb.subjects().subscribe((p) => this.subjects.set(p.results.filter((s) => s.is_active)));
     this.api.batches({ is_active: true }).subscribe((p) => this.batches.set(p.results));
+    this.form.controls.is_live.valueChanges.subscribe((on) => {
+      if (on) this.form.controls.allow_pause.setValue(false); // a pause would give some students more time than others
+    });
+    this.form.controls.category.valueChanges.subscribe((id) => {
+      this.form.controls.tab_key.setValue(''); // a tab belongs to one exam
+      // A new test starts with its exam's usual settings. The id comes straight from the change, because the form's own
+      // value (this.raw) is only updated after this runs.
+      const p = this.categories().find((c) => c.id === id)?.pattern;
+      if (!this.id() && p && Object.keys(p).length) this.fill(p, true);
+    });
     effect(() => {
       const id = this.id();
       if (id) this.load(+id);
@@ -537,14 +655,16 @@ export class ExamForm {
   private apply(e: Exam) {
     this.exam.set(e);
     this.form.patchValue({
-      title: e.title, description: e.description, instructions: e.instructions, category: e.category,
-      test_type: e.test_type, subject: e.subject, year: e.year,
+      title: e.title, description: e.description, instructions: e.instructions, category: e.category, also_in: e.also_in ?? [],
+      test_type: e.test_type, tab_key: e.tab_key ?? '', subject: e.subject, year: e.year,
       duration_minutes: e.duration_minutes, passing_marks: +e.passing_marks, max_attempts: e.max_attempts,
       marks_per_question: +(e.marks_per_question ?? e.sections?.[0]?.questions?.[0]?.marks ?? 1),
       unanswered_penalty: +e.unanswered_penalty,
       negative_option: e.negative_marking_enabled ? e.negative_mode : 'off', negative_value: +e.negative_value,
       sectional_timing: e.sectional_timing,
       shuffle_questions: e.shuffle_questions, shuffle_options: e.shuffle_options,
+      allow_pause: e.allow_pause ?? true, max_pauses: e.max_pauses ?? 3, pause_minutes: e.pause_minutes ?? 10,
+      is_live: e.is_live ?? false, late_join_minutes: e.late_join_minutes ?? 10,
       start_at: toLocalInput(e.start_at), end_at: toLocalInput(e.end_at),
       result_release: e.result_release, result_release_at: toLocalInput(e.result_release_at),
       solution_release: e.solution_release,
@@ -569,8 +689,12 @@ export class ExamForm {
   // --- details ---
   saveDetails() {
     if (this.form.invalid) return this.form.markAllAsTouched();
-    this.saving.set(true);
     this.error.set('');
+    if (this.form.getRawValue().is_live && !this.form.getRawValue().start_at) {
+      this.error.set('A live test needs a start time.');
+      return;
+    }
+    this.saving.set(true);
     const v = this.form.getRawValue();
     const { negative_option: option, negative_value: nv, ...rest } = v;
     const body: Record<string, unknown> = {
@@ -600,6 +724,34 @@ export class ExamForm {
         this.error.set(apiErrorMessage(err));
       },
     });
+  }
+
+  /** Fills the settings from the chosen exam's saved pattern. Title, description and questions are never touched. */
+  applyPattern() {
+    const p = this.pattern();
+    if (p) this.fill(p, false);
+  }
+
+  private fill(p: ExamPattern, quiet: boolean) {
+    if (this.locked()) return;
+    const v: Record<string, unknown> = {};
+    for (const k of ['duration_minutes', 'marks_per_question', 'passing_marks', 'max_attempts', 'sectional_timing'] as const) {
+      if (p[k] !== undefined) v[k] = p[k];
+    }
+    if (p.negative_option) v['negative_option'] = p.negative_option;
+    if (p.negative_value !== undefined) v['negative_value'] = p.negative_value;
+    this.form.patchValue(v);
+    // Sections of the pattern are only used while the test has no questions yet, so nothing already built is lost.
+    if (p.sections?.length && this.sections().every((s) => !s.questions.length)) {
+      this.sections.set(p.sections.map((s) => ({ name: s.name, duration_minutes: s.duration_minutes ?? null, questions: [] })));
+    }
+    if (!quiet) this.notify.success('Pattern applied. Check the settings, then save.');
+  }
+
+  copyLink(link: string) {
+    const done = () => this.notify.success('Link copied');
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(done, () => this.notify.error('Could not copy. Select the link and copy it.'));
+    else this.notify.error('Could not copy. Select the link and copy it.');
   }
 
   addCategory(ev: Event) {

@@ -255,3 +255,29 @@ table.plain {
 mat-button-toggle-group {
   flex-wrap: wrap;
 }
+
+img.zoomable {
+  cursor: zoom-in;
+}
+
+.opts.retry li {
+  cursor: pointer;
+
+  &:hover:not(.correct):not(.wrong) {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+}
+
+.retry-result {
+  margin: 8px 0;
+  font-weight: 600;
+  color: var(--mat-sys-error);
+
+  &.ok {
+    color: #2e7d32;
+  }
+}

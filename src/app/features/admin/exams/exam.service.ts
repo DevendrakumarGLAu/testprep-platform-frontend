@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { Page, User } from '../../../core/models';
 import { ResultData } from '../../../shared/result.models';
-import { AdminAttempt, Batch, Exam, ExamCategory, ExamPreview, ResultsSummary } from './exam.models';
+import { AdminAttempt, Batch, Exam, ExamCategory, ExamGroup, ExamPreview, ResultsSummary } from './exam.models';
 
 type Query = Record<string, string | number | boolean | null | undefined>;
 
@@ -70,6 +70,15 @@ export class ExamService {
     return this.http.get<ResultData>(`${this.api}/attempts/${attemptId}/`);
   }
 
+  groups(): Observable<Page<ExamGroup>> {
+    return this.http.get<Page<ExamGroup>>(`${this.api}/exam-groups/`, { params: { page_size: 100 } });
+  }
+  saveGroup(body: Partial<ExamGroup>, id?: number) {
+    return id ? this.http.patch<ExamGroup>(`${this.api}/exam-groups/${id}/`, body) : this.http.post<ExamGroup>(`${this.api}/exam-groups/`, body);
+  }
+  deleteGroup(id: number) {
+    return this.http.delete(`${this.api}/exam-groups/${id}/`);
+  }
   categories(): Observable<Page<ExamCategory>> {
     return this.http.get<Page<ExamCategory>>(`${this.api}/exam-categories/`, { params: { page_size: 100 } });
   }

@@ -80,7 +80,7 @@ describe('Saved questions page', () => {
   it('explains an empty list, and shows how my reports were answered', () => {
     const api = {
       saved: vi.fn(() => of({ count: 0, subjects: [], results: [] })),
-      myReports: vi.fn(() => of({ results: [{ id: 1, question: 'Which river?', exam_title: 'Mock 1', reason: 'The marked answer is wrong', message: '', status: 'resolved', status_label: 'Fixed', admin_note: 'Key corrected', created_at: '', resolved_at: '' }] })),
+      myReports: vi.fn(() => of({ results: [{ id: 1, question: 'Which river?', exam_title: 'Mock 1', reason: 'The marked answer is wrong', message: '', status: 'resolved', status_label: 'Fixed', admin_note: 'Key corrected', image_url: 'https://cdn.example/storage/reports/a.png', created_at: '', resolved_at: '' }] })),
     };
     const { f } = open(api);
     const t = text(f);
@@ -88,6 +88,28 @@ describe('Saved questions page', () => {
     expect(t).toContain('Problems I reported');
     expect(t).toContain('Fixed');
     expect(t).toContain('Key corrected');
+    const img = f.nativeElement.querySelector('img.thumb') as HTMLImageElement;
+    expect(img.getAttribute('src')).toBe('https://cdn.example/storage/reports/a.png');
+  });
+
+  it('opens the picture I sent at full size', () => {
+    const api = {
+      saved: vi.fn(() => of({ count: 0, subjects: [], results: [] })),
+      myReports: vi.fn(() => of({ results: [{ id: 1, question: 'Q', exam_title: 'M', reason: 'Typo', message: '', status: 'open', status_label: 'Open', admin_note: '', image_url: 'https://cdn.example/storage/reports/a.png', created_at: '', resolved_at: '' }] })),
+    };
+    const { f, c } = open(api);
+    const zoom = vi.spyOn(c, 'zoom').mockImplementation(() => undefined);
+    (f.nativeElement.querySelector('img.thumb') as HTMLImageElement).click();
+    expect(zoom).toHaveBeenCalledWith('https://cdn.example/storage/reports/a.png');
+  });
+
+  it('a report without a picture shows no thumbnail', () => {
+    const api = {
+      saved: vi.fn(() => of({ count: 0, subjects: [], results: [] })),
+      myReports: vi.fn(() => of({ results: [{ id: 1, question: 'Q', exam_title: 'M', reason: 'Typo', message: '', status: 'open', status_label: 'Open', admin_note: '', image_url: null, created_at: '', resolved_at: '' }] })),
+    };
+    const { f } = open(api);
+    expect(f.nativeElement.querySelector('img.thumb')).toBeNull();
   });
 });
 
@@ -125,7 +147,7 @@ describe('Result page: save and report buttons', () => {
 
   it('shows Save and Report under each reviewed question', () => {
     const { f } = open({ result: vi.fn(() => of(result())) });
-    expect(buttons(f).map((b) => b.textContent!.trim())).toEqual(['bookmark_border Save', 'flag Report a problem']);
+    expect(buttons(f).map((b) => b.textContent!.trim())).toEqual(['replay Re-attempt', 'bookmark_border Save', 'flag Report a problem']);
   });
 
   it('saves and un-saves a question', async () => {
@@ -138,20 +160,20 @@ describe('Result page: save and report buttons', () => {
     await c.toggleSave(1);
     f.detectChanges();
     expect(api.saveQuestion).toHaveBeenCalledWith('att1', 1);
-    expect(buttons(f)[0].textContent).toContain('Saved');
+    expect(buttons(f)[1].textContent).toContain('Saved');
     await c.toggleSave(1);
     expect(api.unsaveQuestion).toHaveBeenCalledWith('att1', 1);
     expect(notify.success).toHaveBeenCalledTimes(2);
   });
 
   it('sends a report and then shows it as waiting', async () => {
-    const api = { result: vi.fn(() => of(result())), reportQuestion: vi.fn(() => of({ id: 1, status: 'open', updated: false })) };
-    const { f, c } = open(api, { reason: 'typo', message: 'Spelling of Ganga' });
+    const api = { result: vi.fn(() => of(result())), reportQuestion: vi.fn(() => of({ id: 1, status: 'open', updated: false, image_url: null })) };
+    const { f, c } = open(api, { reason: 'typo', message: 'Spelling of Ganga', image: null });
     await c.reportQuestion(1);
     f.detectChanges();
-    expect(api.reportQuestion).toHaveBeenCalledWith('att1', 1, 'typo', 'Spelling of Ganga');
-    expect(buttons(f)[1].textContent).toContain('Reported, waiting for review');
-    expect(buttons(f)[1].disabled).toBe(true);
+    expect(api.reportQuestion).toHaveBeenCalledWith('att1', 1, 'typo', 'Spelling of Ganga', null);
+    expect(buttons(f)[2].textContent).toContain('Reported, waiting for review');
+    expect(buttons(f)[2].disabled).toBe(true);
   });
 
   it('sends nothing when the report dialog is cancelled', async () => {
@@ -191,6 +213,79 @@ describe('Report dialog', () => {
     expect(c.error()).toContain('few words');
     c.message.set('The picture is missing');
     c.send();
-    expect(close).toHaveBeenCalledWith({ reason: 'other', message: 'The picture is missing' });
+    expect(close).toHaveBeenCalledWith({ reason: 'other', message: 'The picture is missing', image: null });
+  });
+
+  describe('picture', () => {
+    const png = (size = 100, type = 'image/png') => new File([new Uint8Array(size)], 'shot', { type });
+
+    async function dialog() {
+      const { MAT_DIALOG_DATA, MatDialogRef } = await import('@angular/material/dialog');
+      const close = vi.fn();
+      TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { number: 4 } }, { provide: MatDialogRef, useValue: { close } }] });
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+      const f = TestBed.createComponent(ReportDialog);
+      f.detectChanges();
+      return { f, c: f.componentInstance, close };
+    }
+    const paste = (files: File[]) => {
+      const ev = new Event('paste', { cancelable: true }) as ClipboardEvent;
+      Object.defineProperty(ev, 'clipboardData', { value: { files } });
+      document.dispatchEvent(ev);
+      return ev;
+    };
+    const choose = (input: { files: File[]; value: string }) => ({ target: input }) as unknown as Event;
+
+    it('only offers real picture types in the file chooser', async () => {
+      const { f } = await dialog();
+      expect((f.nativeElement.querySelector('input[type="file"]') as HTMLInputElement).getAttribute('accept')).toBe('image/jpeg,image/png,image/webp,image/gif');
+      expect(text(f)).toContain('paste a screenshot with Ctrl+V');
+    });
+
+    it('a chosen picture is previewed and sent with the report', async () => {
+      const { f, c, close } = await dialog();
+      const file = png();
+      const input = { files: [file], value: 'C:\\fakepath\\shot.png' };
+      c.pick(choose(input));
+      f.detectChanges();
+      expect(input.value).toBe('');
+      expect((f.nativeElement.querySelector('.picture img') as HTMLImageElement).getAttribute('src')).toBe('blob:shot');
+      c.reason.set('typo');
+      c.send();
+      expect(close).toHaveBeenCalledWith({ reason: 'typo', message: '', image: file });
+    });
+
+    it('a pasted screenshot is taken, and text or other files are left alone', async () => {
+      const { c } = await dialog();
+      const ev = paste([png()]);
+      expect(ev.defaultPrevented).toBe(true);
+      expect(c.image()).not.toBeNull();
+      c.remove();
+      expect(paste([png(10, 'text/plain')]).defaultPrevented).toBe(false);
+      expect(paste([]).defaultPrevented).toBe(false);
+      expect(c.image()).toBeNull();
+    });
+
+    it('refuses a wrong type or a picture over 2 MB', async () => {
+      const { c } = await dialog();
+      c.pick(choose({ files: [png(10, 'image/bmp')], value: 'x' }));
+      expect(c.error()).toBe('Use a JPG, PNG, WebP or GIF picture.');
+      c.pick(choose({ files: [png(2 * 1024 * 1024 + 1)], value: 'x' }));
+      expect(c.error()).toBe('The picture must be 2 MB or smaller.');
+      expect(c.image()).toBeNull();
+    });
+
+    it('can remove the picture again, and stops listening for pastes when closed', async () => {
+      const { f, c } = await dialog();
+      c.pick(choose({ files: [png()], value: 'x' }));
+      c.remove();
+      f.detectChanges();
+      expect(c.image()).toBeNull();
+      expect(f.nativeElement.querySelector('.picture img')).toBeNull();
+      f.destroy();
+      paste([png()]);
+      expect(c.image()).toBeNull();
+    });
   });
 });

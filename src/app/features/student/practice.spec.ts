@@ -67,26 +67,24 @@ describe('ActivityCards', () => {
     last_7_days: Array.from({ length: 7 }, (_, i) => ({ date: `2026-10-${17 + i}`, questions: i })), ...a,
   });
 
-  it('shows the streak, the goal progress and a week chart', () => {
+  it('shows the goal progress and a week chart (the streak is in the page header)', () => {
     setup({ dailyQuiz: vi.fn(() => of({ available: true, done: false, in_progress: false, size: 10 })) });
     const f = TestBed.createComponent(ActivityCards);
     f.componentRef.setInput('activity', activity({}));
     f.detectChanges();
     const t = text(f);
-    expect(t).toContain('3 days');
-    expect(t).toContain('Best streak: 7');
+    expect(t).not.toContain('Best streak');
     expect(t).toContain('12 / 20 questions');
     expect(t).toContain('8 to go today');
     expect(f.nativeElement.querySelectorAll('.week i').length).toBe(7);
     expect(f.componentInstance.goalPercent()).toBe(60);
   });
 
-  it('encourages a first day and congratulates a reached goal', () => {
+  it('congratulates a reached goal', () => {
     setup({ dailyQuiz: vi.fn(() => of({ available: false, done: false, in_progress: false, size: 10 })) });
     const f = TestBed.createComponent(ActivityCards);
     f.componentRef.setInput('activity', activity({ streak: 0, today: 20, goal_reached: true }));
     f.detectChanges();
-    expect(text(f)).toContain('Answer a question today to start a streak.');
     expect(text(f)).toContain('Goal reached');
     expect(f.componentInstance.goalPercent()).toBe(100);
   });

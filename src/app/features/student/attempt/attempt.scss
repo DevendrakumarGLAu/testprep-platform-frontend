@@ -162,6 +162,10 @@ img {
   max-height: 280px;
   display: block;
   margin-bottom: 12px;
+
+  &.zoomable {
+    cursor: zoom-in;
+  }
 }
 
 .options {
@@ -320,6 +324,11 @@ img {
     }
   }
 
+  .hint {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9em;
+  }
+
   .pass {
     color: var(--mat-sys-tertiary);
   }
@@ -366,4 +375,12 @@ img {
   .bar {
     padding: 8px 12px;
   }
+}
+
+.paused .big {
+  color: var(--mat-sys-tertiary);
+}
+
+.pause-btn mat-icon {
+  margin-right: 2px;
 }

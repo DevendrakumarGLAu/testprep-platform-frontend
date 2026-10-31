@@ -11,7 +11,7 @@ const exam = (over: Partial<Exam> = {}): Exam => ({
   id: 7, public_id: 'abc', title: 'Mock', description: '', instructions: '', category: null, category_name: null,
   test_type: 'full_test', subject: null, subject_name: null, year: null, thumbnail_url: null, duration_minutes: 60,
   passing_marks: '0', marks_per_question: '2', negative_marking_enabled: true, negative_mode: 'question', negative_value: '0', unanswered_penalty: '0',
-  shuffle_questions: false, shuffle_options: false, max_attempts: 1, start_at: null, end_at: null, access_type: 'public',
+  shuffle_questions: false, shuffle_options: false, also_in: [], is_live: false, late_join_minutes: 10, allow_pause: true, max_pauses: 3, pause_minutes: 10, max_attempts: 1, start_at: null, end_at: null, access_type: 'public',
   assigned_student_ids: [], assigned_batch_ids: [], status: 'draft', published_at: null, version: 1, locked: false,
   result_release: 'immediate', result_release_at: null, results_released: false, solution_release: 'with_result',
   solutions_released: false, total_marks: '0.00', question_count: 0, created_at: '', updated_at: '', ...over,
@@ -194,5 +194,297 @@ describe('ExamForm negative marking rule', () => {
     const { c } = await open(exam({ sectional_timing: true, duration_minutes: 30 }));
     expect(c.form.getRawValue().sectional_timing).toBe(true);
     expect(c.form.controls.duration_minutes.disabled).toBe(true);
+  });
+});
+
+describe('ExamForm exam pattern and shared exams', () => {
+  const cgl = {
+    id: 3, name: 'SSC CGL', description: '', subjects: [], subject_names: [], group: 1, group_name: 'SSC', is_active: true, exam_count: 0,
+    pattern: {
+      duration_minutes: 60, marks_per_question: 2, passing_marks: 0, negative_option: 'fixed', negative_value: 0.5, max_attempts: 0,
+      sectional_timing: false,
+      sections: [{ name: 'General Intelligence', duration_minutes: null }, { name: 'English', duration_minutes: null }],
+    },
+  };
+  const mts = { id: 4, name: 'SSC MTS', description: '', subjects: [], subject_names: [], group: 1, group_name: 'SSC', is_active: true, exam_count: 0, pattern: {} };
+  const chsl = { id: 5, name: 'SSC CHSL', description: '', subjects: [], subject_names: [], group: 1, group_name: 'SSC', is_active: true, exam_count: 0, pattern: {} };
+
+  async function open(e: Exam | null = null) {
+    const api = {
+      categories: vi.fn(() => of({ results: [cgl, mts, chsl] })),
+      batches: vi.fn(() => of({ results: [] })),
+      get: vi.fn(() => of(e)),
+      save: vi.fn((_body: unknown) => of(exam())),
+      saveStructure: vi.fn(() => of(exam())),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'admin/tests/:id', children: [] }, { path: 'admin/tests', children: [] }]),
+        { provide: ExamService, useValue: api },
+        { provide: QuestionBankService, useValue: { subjects: () => of({ results: [] }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExamForm);
+    if (e) fixture.componentRef.setInput('id', String(e.id));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, api, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+  const settle = async (fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+
+  it('a new test takes the usual settings of the exam that is picked', async () => {
+    const { fixture, c, el } = await open();
+    c.form.patchValue({ title: 'Mine', category: 3 });
+    await settle(fixture);
+    const v = c.form.getRawValue();
+    expect([v.duration_minutes, v.marks_per_question, v.max_attempts, v.negative_option, v.negative_value]).toEqual([60, 2, 0, 'fixed', 0.5]);
+    expect(v.title).toBe('Mine'); // only settings are filled in
+    expect(c.sections().map((s) => s.name)).toEqual(['General Intelligence', 'English']);
+    expect(el.querySelector('.pattern-bar')?.textContent).toContain('SSC CGL has a saved pattern');
+    expect(el.querySelector('.pattern-bar')?.textContent).toContain('60 min');
+  });
+
+  it('an exam without a saved pattern changes nothing and shows no pattern bar', async () => {
+    const { fixture, c, el } = await open();
+    c.form.patchValue({ category: 4 });
+    await settle(fixture);
+    expect(c.form.getRawValue().duration_minutes).toBe(60);
+    expect(c.form.getRawValue().marks_per_question).toBe(1);
+    expect(el.querySelector('.pattern-bar')).toBeNull();
+  });
+
+  it('an existing test is only changed when the button is pressed', async () => {
+    const { fixture, c, el } = await open(exam({ category: 3, duration_minutes: 30, marks_per_question: '1' }));
+    expect(c.form.getRawValue().duration_minutes).toBe(30);
+    (el.querySelector('.pattern-bar button') as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(c.form.getRawValue().duration_minutes).toBe(60);
+    expect(c.form.getRawValue().marks_per_question).toBe(2);
+  });
+
+  it('never replaces sections that already hold questions', async () => {
+    const { fixture, c } = await open();
+    c.sections.set([{ name: 'Mine', questions: [{ question: 1, text: 'Q', marks: '1', negative_marks: '0' }] }]);
+    c.form.patchValue({ category: 3 });
+    await settle(fixture);
+    expect(c.sections().map((s) => s.name)).toEqual(['Mine']);
+    expect(c.form.getRawValue().duration_minutes).toBe(60); // the settings still apply
+  });
+
+  it('does not touch a published test', async () => {
+    const { fixture, c, el } = await open(exam({ category: 3, duration_minutes: 30, status: 'published', locked: true }));
+    expect((el.querySelector('.pattern-bar button') as HTMLButtonElement).disabled).toBe(true);
+    c.applyPattern();
+    await settle(fixture);
+    expect(c.form.getRawValue().duration_minutes).toBe(30);
+  });
+
+  it('offers every other exam under "Also show in" and sends the choice when saving', async () => {
+    const { fixture, api, c } = await open(exam({ id: 9, category: 3 }));
+    expect(c.otherCategories().map((x) => x.name)).toEqual(['SSC MTS', 'SSC CHSL']);
+    c.form.patchValue({ also_in: [4, 5] });
+    c.saveDetails();
+    await settle(fixture);
+    const body = api['save'].mock.calls[0][0] as Record<string, unknown>;
+    expect(body['also_in']).toEqual([4, 5]);
+  });
+
+  it('loads the exams a test is already shared with', async () => {
+    const { c } = await open(exam({ id: 9, category: 3, also_in: [5] }));
+    expect(c.form.getRawValue().also_in).toEqual([5]);
+  });
+});
+
+describe('ExamForm live test', () => {
+  async function open(e: Exam | null = null) {
+    const api = {
+      categories: vi.fn(() => of({ results: [] })),
+      batches: vi.fn(() => of({ results: [] })),
+      get: vi.fn(() => of(e)),
+      save: vi.fn((_body: unknown) => of(exam())),
+      saveStructure: vi.fn(() => of(exam())),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'admin/tests/:id', children: [] }, { path: 'admin/tests', children: [] }]),
+        { provide: ExamService, useValue: api },
+        { provide: QuestionBankService, useValue: { subjects: () => of({ results: [] }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExamForm);
+    if (e) fixture.componentRef.setInput('id', String(e.id));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, api, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+  const settle = async (fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+  const text = (el: HTMLElement) => el.textContent!.replace(/\s+/g, ' ');
+
+  it('switching it on shows the live settings, a start-time label, and hides the end time and the pause option', async () => {
+    const { fixture, c, el } = await open();
+    expect(el.querySelector('.live-box .late')).toBeNull();
+    expect(text(el)).toContain('Available until');
+    c.form.patchValue({ is_live: true });
+    await settle(fixture);
+    expect(el.querySelector('.live-box .late')).not.toBeNull();
+    expect(text(el)).toContain('Live test starts at');
+    expect(text(el)).not.toContain('Available until');
+    expect(text(el)).not.toContain('Let students pause the test');
+    expect(text(el)).toContain('everyone finishes at the same moment');
+  });
+
+  it('switching it on turns pausing off', async () => {
+    const { fixture, c } = await open();
+    expect(c.form.getRawValue().allow_pause).toBe(true);
+    c.form.patchValue({ is_live: true });
+    await settle(fixture);
+    expect(c.form.getRawValue().allow_pause).toBe(false);
+  });
+
+  it('a new live test says the link comes after saving', async () => {
+    const { fixture, c, el } = await open();
+    c.form.patchValue({ is_live: true });
+    await settle(fixture);
+    expect(text(el)).toContain('Save the test to get the link to share');
+    expect(el.querySelector('.live-link')).toBeNull();
+  });
+
+  it('a saved live test shows its link inside the student area, and says who can open it', async () => {
+    const { el, c } = await open(exam({ id: 9, public_id: 'abc123', is_live: true, status: 'draft' }));
+    expect(c.liveLink()).toBe(`${window.location.origin}/student/live/abc123`);
+    expect((el.querySelector('.live-link input') as HTMLInputElement).value).toBe(`${window.location.origin}/student/live/abc123`);
+    expect(text(el)).toContain('Only registered students can open it');
+  });
+
+  it('copies the link', async () => {
+    const write = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: write }, configurable: true });
+    const { fixture, el } = await open(exam({ id: 9, public_id: 'abc123', is_live: true }));
+    (el.querySelector('.live-link button') as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(write).toHaveBeenCalledWith(`${window.location.origin}/student/live/abc123`);
+  });
+
+  it('refuses to save a live test without a start time, and does not call the server', async () => {
+    const { fixture, api, c, el } = await open();
+    c.form.patchValue({ title: 'Live one', is_live: true, start_at: '' });
+    c.saveDetails();
+    await settle(fixture);
+    expect(api.save).not.toHaveBeenCalled();
+    expect(text(el)).toContain('A live test needs a start time.');
+  });
+
+  it('saves the live settings with the start time', async () => {
+    const { fixture, api, c } = await open();
+    c.form.patchValue({ title: 'Live one', is_live: true, late_join_minutes: 15, start_at: '2026-12-01T10:00' });
+    c.saveDetails();
+    await settle(fixture);
+    const body = api.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(body['is_live']).toBe(true);
+    expect(body['late_join_minutes']).toBe(15);
+    expect(typeof body['start_at']).toBe('string');
+  });
+
+  it('a normal test is saved as not live', async () => {
+    const { fixture, api, c } = await open();
+    c.form.patchValue({ title: 'Plain' });
+    c.saveDetails();
+    await settle(fixture);
+    expect((api.save.mock.calls[0][0] as Record<string, unknown>)['is_live']).toBe(false);
+  });
+
+  it('cannot be switched on or off once the test is published', async () => {
+    const { c } = await open(exam({ id: 9, is_live: true, status: 'published', locked: true }));
+    expect(c.form.controls.is_live.disabled).toBe(true);
+    expect(c.form.controls.late_join_minutes.disabled).toBe(true);
+  });
+
+  it('the late-join window must be between 0 and 180 minutes', async () => {
+    const { c } = await open();
+    c.form.patchValue({ late_join_minutes: 181 });
+    expect(c.form.controls.late_join_minutes.valid).toBe(false);
+    c.form.patchValue({ late_join_minutes: 0 });
+    expect(c.form.controls.late_join_minutes.valid).toBe(true);
+  });
+});
+
+describe('ExamForm tab of the exam', () => {
+  const cat = (id: number, name: string, tabs: unknown[] = []) => ({
+    id, name, description: '', subjects: [], subject_names: [], group: null, group_name: null, is_active: true, exam_count: 0, pattern: {}, tabs,
+  });
+  const ca = { key: 'cabc12', label: 'Current affairs', visible: true, custom: true };
+  const std = [{ key: 'full', label: 'Full tests', visible: true, custom: false }];
+  const cats = [cat(3, 'SSC CGL', [ca, ...std]), cat(4, 'SSC MTS', std)];
+
+  async function open(e: Exam | null = null) {
+    const api = {
+      categories: vi.fn(() => of({ results: cats })), batches: vi.fn(() => of({ results: [] })), get: vi.fn(() => of(e)),
+      save: vi.fn((_b: unknown) => of(exam())), saveStructure: vi.fn(() => of(exam())),
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: 'admin/tests/:id', children: [] }, { path: 'admin/tests', children: [] }]),
+        { provide: ExamService, useValue: api },
+        { provide: QuestionBankService, useValue: { subjects: () => of({ results: [] }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExamForm);
+    if (e) fixture.componentRef.setInput('id', String(e.id));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, api, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+  const settle = async (fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+  };
+  const hasTabField = (el: HTMLElement) => el.textContent!.includes('Show in tab');
+
+  it('offers the exam\'s own tabs, and only when it has some', async () => {
+    const { fixture, c, el } = await open();
+    expect(hasTabField(el)).toBe(false);
+    c.form.patchValue({ category: 3 });
+    await settle(fixture);
+    expect(c.customTabs().map((t) => t.key)).toEqual(['cabc12']);
+    expect(hasTabField(el)).toBe(true);
+    c.form.patchValue({ category: 4 });
+    await settle(fixture);
+    expect(hasTabField(el)).toBe(false);
+  });
+
+  it('sends the chosen tab, and starts empty (by type)', async () => {
+    const { fixture, c, api } = await open();
+    expect(c.form.getRawValue().tab_key).toBe('');
+    c.form.patchValue({ title: 'Weekly', category: 3, tab_key: 'cabc12' });
+    await settle(fixture);
+    c.saveDetails();
+    expect((api.save.mock.calls[0][0] as { tab_key: string }).tab_key).toBe('cabc12');
+  });
+
+  it('forgets the tab when the exam is changed, because a tab belongs to one exam', async () => {
+    const { fixture, c } = await open();
+    c.form.patchValue({ category: 3 });
+    await settle(fixture);
+    c.form.patchValue({ tab_key: 'cabc12' });
+    c.form.patchValue({ category: 4 });
+    await settle(fixture);
+    expect(c.form.getRawValue().tab_key).toBe('');
+  });
+
+  it('shows the tab a saved test is in', async () => {
+    const { c } = await open(exam({ category: 3, tab_key: 'cabc12' }));
+    expect(c.form.getRawValue().tab_key).toBe('cabc12');
   });
 });
