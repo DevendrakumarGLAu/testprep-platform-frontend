@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { NgTemplateOutlet } from '@angular/common';
+import { Location, NgTemplateOutlet } from '@angular/common';
 import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,13 +12,13 @@ import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { apiErrorMessage } from '../../../core/models';
-import { environment } from '../../../../environments/environment';
-import { protectExam } from '../../../shared/protect';
+import { isProtected, protectExam } from '../../../shared/protect';
 import { NotifyService } from '../../../core/notify.service';
 import { LangSwitch, Lang, LanguageService, pick } from '../../../shared/language';
 import { AnswerPatch, AttemptQuestion, AttemptSectionState, AttemptState, PauseInfo, ResultSummary, formatDuration } from '../student.models';
 import { StudentService } from '../student.service';
 import { ImageViewer } from '../../../shared/image-viewer';
+import { ConfirmDialog } from '../../../shared/confirm-dialog';
 
 interface SubmitDialogData {
   total: number;
@@ -127,7 +127,10 @@ function clockOf(s: number): string {
             @if (pauseNote()) { <p class="hint">{{ pauseNote() }}</p> }
             <div class="actions">
               <button mat-flat-button (click)="resumeTest()" [disabled]="busy()"><mat-icon>play_arrow</mat-icon> Resume test</button>
+              <a mat-stroked-button routerLink="/student/dashboard"><mat-icon>home</mat-icon> Go to dashboard</a>
+              <a mat-button routerLink="/student/tests">My tests</a>
             </div>
+            <p class="hint">You can leave now. Open this test again from the dashboard or the test page and press Resume.</p>
           </mat-card-content>
         </mat-card>
       </main>
@@ -147,6 +150,9 @@ function clockOf(s: number): string {
         <mat-sidenav-content>
           <header class="bar">
             <div class="title-wrap">
+              <button mat-icon-button class="back" type="button" (click)="leave()" aria-label="Go back. Your answers stay saved" title="Go back">
+                <mat-icon>arrow_back</mat-icon>
+              </button>
               <div class="title">{{ title() }}</div>
             </div>
             <div class="right">
@@ -271,6 +277,7 @@ export class AttemptPage {
   mobile = toSignal(inject(BreakpointObserver).observe('(max-width: 900px)').pipe(map((r) => r.matches)), { initialValue: false });
   private notify = inject(NotifyService);
   private dialog = inject(MatDialog);
+  private location = inject(Location);
 
   loading = signal(true);
   /** True for a test whose sections each have their own timer and open one after another. */
@@ -306,7 +313,8 @@ export class AttemptPage {
     if (!p) return '';
     if (p.pauses_left === 0) return 'You have used all your pauses.';
     const left = p.pauses_left === null ? 'Unlimited pauses' : `${p.pauses_left} pause${p.pauses_left === 1 ? '' : 's'} left`;
-    return `Stop the clock for up to ${p.max_minutes} minutes. ${left}.`;
+    const how = p.max_minutes ? `Stop the clock for up to ${p.max_minutes} minutes` : 'Stop the clock and come back whenever you like';
+    return `${how}. ${left}.`;
   });
   pauseNote = computed(() => {
     const p = this.pause();
@@ -434,12 +442,13 @@ export class AttemptPage {
   };
 
   constructor() {
-    inject(DestroyRef).onDestroy(protectExam(document, environment.production));
+    inject(DestroyRef).onDestroy(protectExam(document, isProtected()));
     this.tickTimer = setInterval(() => this.now.set(Date.now()), 1000);
     this.timeTimer = setInterval(() => this.accrue(), 10_000);
     document.addEventListener('visibilitychange', this.onVisibility);
     window.addEventListener('beforeunload', this.guard);
     inject(DestroyRef).onDestroy(() => {
+      this.pauseOnExit();
       clearInterval(this.tickTimer);
       clearInterval(this.timeTimer);
       document.removeEventListener('visibilitychange', this.onVisibility);
@@ -606,6 +615,54 @@ export class AttemptPage {
   /** Opens the question picture at full size. */
   zoom(src: string) {
     ImageViewer.open(this.dialog, src);
+  }
+
+  /** True when going back can pause the test: it allows pausing and no pause limit has been reached. */
+  canAutoPause = computed(() => !!this.pause()?.allowed && !this.pauseBlocked());
+  private leaving = false;
+
+  /**
+   * The back arrow. When the test allows pausing it pauses the test (answers saved, clock stopped) and goes back, so nothing is lost
+   * and the student resumes any time. When it does not (a live test, or no pauses left) the student is asked first, because the
+   * clock keeps running while they are away.
+   */
+  async leave() {
+    if (this.canAutoPause()) {
+      this.leaving = true;
+      await this.pauseTest();
+      if (this.paused() || this.finished()) return this.goBack();
+      this.leaving = false; // the pause did not happen (offline, or the server said no): stay and say why
+      return;
+    }
+    const sure = await firstValueFrom(
+      this.dialog.open(ConfirmDialog, {
+        data: {
+          title: 'Leave the test for now?',
+          message: this.pause()?.allowed
+            ? 'Your answers are saved and the test is not submitted. The timer keeps running while you are away. To stop the clock, use Pause instead.'
+            : 'Your answers are saved and the test is not submitted. The timer keeps running while you are away, so come back soon.',
+          confirmLabel: 'Leave',
+        },
+      }).afterClosed(),
+    );
+    if (!sure) return;
+    await this.flush();
+    this.goBack();
+  }
+
+  private goBack() {
+    if (window.history.length > 1) this.location.back();
+    else this.router.navigateByUrl('/student/tests');
+  }
+
+  /**
+   * Leaving the page any other way (the browser or phone back button, a menu link) pauses the test too, when it can, so the clock
+   * does not run while the student is somewhere else. Best effort: closing the tab cannot do this, and then the clock keeps running.
+   */
+  private pauseOnExit() {
+    if (this.leaving || this.paused() || this.finished() || !this.q() || !this.canAutoPause()) return;
+    const id = this.id();
+    void this.flushAll().then((saved) => (saved ? firstValueFrom(this.api.pause(id)).catch(() => undefined) : undefined));
   }
 
   select(optionId: number) {

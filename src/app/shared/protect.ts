@@ -4,6 +4,30 @@
  */
 type Teardown = () => void;
 
+let protectionOn = false;
+
+/** Whether the protections below are on for this session. Decided once at start-up by `loadProtection`. */
+export function isProtected(): boolean {
+  return protectionOn;
+}
+
+/**
+ * Decides, before the app starts, whether to protect. The deployment can say so in /flags.json (written at build time from the
+ * PROTECT_APP environment variable: `{"protect": false}` leaves the browser tools usable on that site). Without the file, or when
+ * it cannot be read, the production build protects and a development build does not.
+ */
+export async function loadProtection(production: boolean, load: () => Promise<Response> = () => fetch('flags.json', { cache: 'no-store' })): Promise<boolean> {
+  protectionOn = production;
+  try {
+    const res = await load();
+    const flags = res.ok ? await res.json() : null;
+    if (typeof flags?.protect === 'boolean') protectionOn = flags.protect;
+  } catch {
+    // no usable file: keep the default
+  }
+  return protectionOn;
+}
+
 const BLOCKED_KEYS = (e: KeyboardEvent) => {
   const k = e.key.toLowerCase();
   const mod = e.ctrlKey || e.metaKey;

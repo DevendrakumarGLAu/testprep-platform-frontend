@@ -247,14 +247,14 @@ import { StudentPicker } from './student-picker';
                   </mat-form-field>
                   <mat-form-field appearance="outline">
                     <mat-label>Longest pause (minutes)</mat-label>
-                    <input matInput type="number" min="1" max="120" formControlName="pause_minutes" />
-                    <mat-hint>The test restarts by itself after this</mat-hint>
+                    <input matInput type="number" min="0" max="120" formControlName="pause_minutes" />
+                    <mat-hint>0 = no limit: the student can resume any time</mat-hint>
                   </mat-form-field>
                 </div>
                 <p class="neg-example">
                   <mat-icon inline>info</mat-icon>
-                  While paused the timer stops and the questions are hidden. If a pause runs longer than this, the test restarts by
-                  itself and the timer keeps running.
+                  While paused the timer stops and the questions are hidden. With a limit, a pause that runs longer restarts the test by
+                  itself and the timer keeps running. With 0 the student stays paused until they resume.
                 </p>
               }
             </mat-card-content>
@@ -511,8 +511,8 @@ export class ExamForm {
     allow_pause: [true],
     is_live: [false],
     late_join_minutes: [10, [Validators.required, Validators.min(0), Validators.max(180)]],
-    max_pauses: [3, [Validators.required, Validators.min(0), Validators.max(20)]],
-    pause_minutes: [10, [Validators.required, Validators.min(1), Validators.max(120)]],
+    max_pauses: [0, [Validators.required, Validators.min(0), Validators.max(20)]],
+    pause_minutes: [0, [Validators.required, Validators.min(0), Validators.max(120)]],
     start_at: [''],
     end_at: [''],
     result_release: ['immediate'],
@@ -663,7 +663,7 @@ export class ExamForm {
       negative_option: e.negative_marking_enabled ? e.negative_mode : 'off', negative_value: +e.negative_value,
       sectional_timing: e.sectional_timing,
       shuffle_questions: e.shuffle_questions, shuffle_options: e.shuffle_options,
-      allow_pause: e.allow_pause ?? true, max_pauses: e.max_pauses ?? 3, pause_minutes: e.pause_minutes ?? 10,
+      allow_pause: e.allow_pause ?? true, max_pauses: e.max_pauses ?? 0, pause_minutes: e.pause_minutes ?? 0,
       is_live: e.is_live ?? false, late_join_minutes: e.late_join_minutes ?? 10,
       start_at: toLocalInput(e.start_at), end_at: toLocalInput(e.end_at),
       result_release: e.result_release, result_release_at: toLocalInput(e.result_release_at),

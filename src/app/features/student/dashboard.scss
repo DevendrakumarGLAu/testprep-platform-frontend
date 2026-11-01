@@ -81,6 +81,9 @@
   }
 
   .on-hero {
+    background-image: none; /* the app-wide gradient on filled buttons would make this blue on blue */
+    background-color: #fff;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
     --mat-button-filled-container-color: #fff;
     --mat-button-filled-label-text-color: var(--mat-sys-primary);
     --mat-button-filled-hover-state-layer-opacity: 0.06;

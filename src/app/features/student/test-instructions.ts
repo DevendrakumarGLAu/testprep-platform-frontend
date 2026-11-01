@@ -97,8 +97,9 @@ import { StudentService } from './student.service';
             <div class="warn pause-rule">
               <mat-icon inline>pause_circle</mat-icon>
               You can pause this test{{ t.max_pauses ? ' up to ' + t.max_pauses + (t.max_pauses === 1 ? ' time' : ' times') : '' }}. The timer stops and the
-              questions are hidden while you are paused, for at most {{ t.pause_minutes }} minutes each time. After that the test
-              restarts by itself and the timer keeps running.
+              questions are hidden while you are paused.
+              @if (t.pause_minutes) { For at most {{ t.pause_minutes }} minutes each time. After that the test restarts by itself and the timer keeps running. }
+              @else { You can come back and resume whenever you like, and you will have the same time left. }
             </div>
           }
           <div class="warn">

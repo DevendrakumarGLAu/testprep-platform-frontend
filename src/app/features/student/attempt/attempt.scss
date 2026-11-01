@@ -1,7 +1,41 @@
 :host {
   display: block;
   min-height: 100vh;
+  max-width: 100vw;
   background: var(--mat-sys-surface-container-low);
+}
+
+/* Long words, links and wide pictures wrap or shrink instead of pushing the page sideways. */
+.main,
+.main mat-card,
+.main mat-card-content,
+.q-text,
+.options,
+.opt {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.q-text,
+.opt {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* The radio's own label refuses to wrap by default, which is what made long options run off the screen. */
+.opt ::ng-deep .mdc-form-field {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.opt ::ng-deep .mdc-label {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-top: 11px;
+  padding-bottom: 11px;
 }
 
 .shell {
@@ -14,6 +48,17 @@
   width: min(86vw, 320px);
 }
 
+/* The heading stays put and only the list of question numbers scrolls, however many questions there are. */
+.palette-drawer ::ng-deep .mat-drawer-inner-container {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-head {
+  flex: none;
+}
+
 .drawer-head {
   display: flex;
   align-items: center;
@@ -22,6 +67,10 @@
 }
 
 .palette.in-drawer {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   position: static;
   border: 0;
   background: transparent;
@@ -30,6 +79,14 @@
 
 .title-wrap {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.back {
+  flex: none;
+  margin-left: -8px;
 }
 
 .bar {
@@ -78,6 +135,7 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
+  box-sizing: border-box;
   gap: 16px;
   padding: 16px 20px;
   max-width: 1280px;
@@ -159,7 +217,9 @@
 
 img {
   max-width: 100%;
+  height: auto;
   max-height: 280px;
+  object-fit: contain;
   display: block;
   margin-bottom: 12px;
 
@@ -210,6 +270,9 @@ img {
   align-self: start;
   position: sticky;
   top: 72px;
+  max-height: calc(100vh - 88px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .counts,
@@ -364,8 +427,35 @@ img {
 
 @media (max-width: 900px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     padding: 12px;
+  }
+
+  /* The title takes the first line, the clock and buttons wrap under it, so the bar never needs to scroll. */
+  .title-wrap {
+    flex: 1 1 0;
+  }
+
+  .bar .title {
+    overflow-wrap: anywhere;
+  }
+
+  .bar .right {
+    gap: 8px 12px;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .nav button {
+    flex: 1 1 auto;
+  }
+
+  .nav .spacer {
+    display: none;
+  }
+
+  .q-head {
+    gap: 6px 12px;
   }
 
   .palette {

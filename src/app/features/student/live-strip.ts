@@ -8,8 +8,9 @@ import { StudentExam } from './student.models';
 import { StudentService } from './student.service';
 
 /**
- * Live tests that have not finished yet, soonest first, with a countdown and a button to join. Shown at the top of the Tests page
- * for all exams, and on an exam's page for just that exam. Shows nothing when there is none.
+ * Live tests that have not finished yet, soonest first, with a countdown and a button to join. They sit in their own "Live tests" tab
+ * (on the Tests page for all exams, and on an exam's page for just that exam), so a long list never pushes the exams down. Given
+ * `list` it shows that; otherwise it loads the list itself. Without `inTab` it shows nothing when there is no live test.
  */
 @Component({
   selector: 'app-live-strip',
@@ -26,11 +27,15 @@ import { StudentService } from './student.service';
     .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.9em; }
     .when { font-weight: 700; font-variant-numeric: tabular-nums; }
     .when.now { color: var(--mat-sys-error); }
+    .empty { padding: 16px 0; color: var(--mat-sys-on-surface-variant); }
   `,
   template: `
+    @if (inTab() && !items().length) {
+      <p class="empty">No live tests right now. They will appear here.</p>
+    }
     @if (items().length) {
       <section aria-label="Live tests">
-        <h2><span class="dot"></span> Live tests</h2>
+        @if (!inTab()) { <h2><span class="dot"></span> Live tests</h2> }
         <div class="list">
           @for (e of items(); track e.id) {
             <mat-card appearance="outlined" class="live-card">
@@ -54,6 +59,10 @@ import { StudentService } from './student.service';
 export class LiveStrip {
   /** Only live tests of this exam (public id). Empty = every exam. */
   category = input<string>();
+  /** The live tests to show, when the page already has them. Empty or missing: the strip loads them. */
+  list = input<StudentExam[] | null>(null);
+  /** Shown inside a tab: no heading of its own, and it says so when there is nothing. */
+  inTab = input(false);
   private api = inject(StudentService);
 
   items = signal<StudentExam[]>([]);
@@ -63,6 +72,8 @@ export class LiveStrip {
     const tick = setInterval(() => this.now.set(Date.now()), 1000);
     inject(DestroyRef).onDestroy(() => clearInterval(tick));
     effect(() => {
+      const given = this.list();
+      if (given) return this.items.set(given);
       const category = this.category();
       untracked(() => this.api.exams({ live: 1, category: category ?? null }).subscribe({ next: (l) => this.items.set(l), error: () => this.items.set([]) }));
     });

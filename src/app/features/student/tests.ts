@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTabsModule } from '@angular/material/tabs';
 import { RouterLink } from '@angular/router';
 import { debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../core/models';
@@ -22,7 +23,7 @@ import { TestCard } from './test-card';
  */
 @Component({
   selector: 'app-student-tests',
-  imports: [RouterLink, ReactiveFormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule, MatProgressBarModule, TestCard, LiveStrip],
+  imports: [RouterLink, ReactiveFormsModule, MatCardModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule, MatProgressBarModule, MatTabsModule, TestCard, LiveStrip],
   styles: `
     .intro { color: var(--mat-sys-on-surface-variant); max-width: 680px; margin: 0 0 12px; }
     .search { min-width: min(360px, 100%); }
@@ -38,6 +39,9 @@ import { TestCard } from './test-card';
     .counts { color: var(--mat-sys-on-surface-variant); font-size: 0.9em; }
     .empty { padding: 32px; text-align: center; color: var(--mat-sys-on-surface-variant); }
     h3.heading { margin: 20px 0 0; }
+    .dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--mat-sys-error); animation: pulse 1.2s infinite; }
+    @keyframes pulse { 50% { opacity: 0.25; } }
+    .tab { padding-top: 12px; }
   `,
   template: `
     <h1>Tests</h1>
@@ -54,7 +58,9 @@ import { TestCard } from './test-card';
       <div class="cards">@for (e of results(); track e.id) { <app-test-card [exam]="e" /> }</div>
       @if (!loading() && results().length === 0) { <div class="empty">No tests match "{{ term() }}".</div> }
     } @else {
-      <app-live-strip />
+      <mat-tab-group animationDuration="0" class="tests-tabs">
+        <mat-tab label="Exams">
+          <div class="tab">
       <div class="grid">
         @for (g of families(); track g.family.id) {
           <mat-card appearance="outlined" class="family">
@@ -88,6 +94,15 @@ import { TestCard } from './test-card';
       @if (!loading() && families().length === 0 && single().length === 0) {
         <div class="empty">No tests are available yet. Check back soon.</div>
       }
+          </div>
+        </mat-tab>
+        <mat-tab>
+          <ng-template mat-tab-label>
+            @if (live().length) { <span class="dot"></span> }Live tests ({{ live().length }})
+          </ng-template>
+          <div class="tab"><app-live-strip [list]="live()" [inTab]="true" /></div>
+        </mat-tab>
+      </mat-tab-group>
     }
   `,
 })
@@ -101,6 +116,8 @@ export class StudentTests {
   private exams = signal<PrepExam[]>([]);
   private known = signal<PrepFamily[]>([]);
   results = signal<StudentExam[]>([]);
+  /** Live tests that have not finished yet; they get their own tab. */
+  live = signal<StudentExam[]>([]);
 
   /** Families in the instructor's order, each with its exams. */
   families = computed(() =>
@@ -113,6 +130,7 @@ export class StudentTests {
   single = computed(() => this.exams().filter((e) => !e.group || !this.known().some((f) => f.id === e.group!.id)));
 
   constructor() {
+    this.api.exams({ live: 1 }).subscribe({ next: (l) => this.live.set(l), error: () => this.live.set([]) });
     this.api.prep().subscribe({
       next: (r) => {
         this.exams.set(r.exams);

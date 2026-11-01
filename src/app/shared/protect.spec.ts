@@ -1,4 +1,4 @@
-import { protectApp, protectExam } from './protect';
+import { isProtected, loadProtection, protectApp, protectExam } from './protect';
 
 const press = (init: KeyboardEventInit) => {
   const e = new KeyboardEvent('keydown', { cancelable: true, bubbles: true, ...init });
@@ -46,5 +46,30 @@ describe('production protection', () => {
     const e = new Event('copy', { cancelable: true });
     document.dispatchEvent(e);
     expect(e.defaultPrevented).toBe(false);
+  });
+});
+
+describe('protection switch', () => {
+  const file = (body: unknown, ok = true) => () => Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
+
+  it('follows the build when there is no flags file', async () => {
+    expect(await loadProtection(true, file(null, false))).toBe(true);
+    expect(await loadProtection(false, file(null, false))).toBe(false);
+    expect(isProtected()).toBe(false);
+  });
+
+  it('lets the deployment turn protection off in production', async () => {
+    expect(await loadProtection(true, file({ protect: false }))).toBe(false);
+    expect(isProtected()).toBe(false);
+  });
+
+  it('lets the deployment turn protection on outside production', async () => {
+    expect(await loadProtection(false, file({ protect: true }))).toBe(true);
+  });
+
+  it('ignores a file it cannot read, such as the app page served for a missing file', async () => {
+    const html = () => Promise.resolve({ ok: true, json: () => Promise.reject(new Error('not json')) } as Response);
+    expect(await loadProtection(true, html)).toBe(true);
+    expect(await loadProtection(true, () => Promise.reject(new Error('offline')))).toBe(true);
   });
 });

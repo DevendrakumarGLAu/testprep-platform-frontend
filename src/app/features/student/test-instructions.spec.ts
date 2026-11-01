@@ -68,3 +68,35 @@ describe('TestInstructions language choice', () => {
     expect(TestBed.inject(LanguageService).lang()).toBe('hi');
   });
 });
+
+describe('TestInstructions pause rule', () => {
+  async function text(over: Record<string, unknown>) {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: { exam: vi.fn(() => of({ ...exam(['en']), allow_pause: true, ...over })), start: vi.fn() } },
+        { provide: NotifyService, useValue: { error: vi.fn() } },
+      ],
+    });
+    const fixture = TestBed.createComponent(TestInstructions);
+    fixture.componentRef.setInput('id', 'ex1');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return (fixture.nativeElement as HTMLElement).querySelector('.pause-rule')?.textContent?.replace(/\s+/g, ' ') ?? '';
+  }
+
+  it('with no limit says the student can resume whenever they like', async () => {
+    const t = await text({ max_pauses: 0, pause_minutes: 0 });
+    expect(t).toContain('whenever you like');
+    expect(t).not.toContain('at most');
+    expect(t).not.toContain('restarts by itself');
+  });
+
+  it('with a limit still explains it', async () => {
+    const t = await text({ max_pauses: 3, pause_minutes: 10 });
+    expect(t).toContain('up to 3 times');
+    expect(t).toContain('at most 10 minutes');
+    expect(t).toContain('restarts by itself');
+  });
+});

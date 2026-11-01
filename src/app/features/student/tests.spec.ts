@@ -127,3 +127,49 @@ describe('Student tests page: pick an exam first', () => {
     expect(el.textContent).toContain('No tests match "zzz"');
   });
 });
+
+describe('Student tests page: live tests have their own tab', () => {
+  const liveTest = (id: string, title: string): StudentExam => ({ ...test(id, title), is_live: true, start_at: '2026-12-01T10:00:00Z' } as StudentExam);
+
+  async function open(live: StudentExam[]) {
+    const api = {
+      prep: vi.fn(() => of({ preparing: [], families: [], exams: [prepExam('bank', 'Banking', 2)] } as PrepResponse)),
+      exams: vi.fn((f: Record<string, unknown> = {}) => of(f['live'] ? live : [])),
+    };
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: api }] });
+    const fixture = TestBed.createComponent(StudentTests);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, api, el: fixture.nativeElement as HTMLElement };
+  }
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('[role="tab"]')].map((t) => t.textContent!.replace(/\s+/g, ' ').trim());
+
+  it('has an Exams tab first and a Live tests tab with the count, so many live tests never push the exams down', async () => {
+    const { el } = await open([liveTest('l1', 'Live A'), liveTest('l2', 'Live B'), liveTest('l3', 'Live C')]);
+    expect(tabs(el)).toEqual(['Exams', 'Live tests (3)']);
+    expect(el.querySelector('mat-card.single')?.textContent).toContain('Banking'); // exams are on the tab that opens first
+  });
+
+  it('shows the live tests inside their tab', async () => {
+    const { fixture, el } = await open([liveTest('l1', 'Live A'), liveTest('l2', 'Live B')]);
+    (el.querySelectorAll<HTMLElement>('[role="tab"]')[1]).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const cards = el.querySelectorAll('mat-card.live-card');
+    expect(cards.length).toBe(2);
+    expect(el.textContent).toContain('Live A');
+  });
+
+  it('says so when there is no live test, and asks the server only once', async () => {
+    const { fixture, el, api } = await open([]);
+    expect(tabs(el)).toEqual(['Exams', 'Live tests (0)']);
+    (el.querySelectorAll<HTMLElement>('[role="tab"]')[1]).click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('No live tests right now');
+    expect(api.exams.mock.calls.filter((c) => (c[0] as Record<string, unknown>)?.['live']).length).toBe(1);
+  });
+});

@@ -240,3 +240,40 @@ describe('PrepHub tabs the admin added', () => {
     expect(label(tabs(root).find((t) => t.getAttribute('aria-selected') === 'true')!)).toBe('Current affairs (2)');
   });
 });
+
+describe('PrepHub live tab', () => {
+  const liveOne = (id: string) => test(id, 'Live ' + id, { is_live: true, start_at: '2026-12-01T10:00:00Z' } as Partial<StudentExam>);
+
+  async function mountLive(live: StudentExam[], type: string | null = null) {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: { hub: vi.fn(() => of(hub)), exams: vi.fn(() => of(live)) } },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap(type ? { type } : {}) } } },
+      ],
+    });
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockImplementation(() => Promise.resolve(true));
+    const fixture = TestBed.createComponent(PrepHub);
+    fixture.componentRef.setInput('id', 'ssc');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('adds a Live tests tab after the others when the exam has live tests, instead of a strip above them', async () => {
+    const root = await mountLive([liveOne('a'), liveOne('b')]);
+    expect(tabs(root).map(label)).toEqual(['Full tests (2)', 'Mini mocks (1)', 'Previous year (2)', 'Subject wise (2)', 'Live tests (2)']);
+    expect(root.querySelector('app-live-strip section h2')).toBeNull(); // no heading and no strip pushing the tabs down
+  });
+
+  it('has no Live tab when there is none', async () => {
+    const root = await mountLive([]);
+    expect(tabs(root).map(label)).toEqual(['Full tests (2)', 'Mini mocks (1)', 'Previous year (2)', 'Subject wise (2)']);
+  });
+
+  it('opens the Live tab from the address', async () => {
+    const root = await mountLive([liveOne('a')], 'live');
+    expect(label(tabs(root).find((t) => t.getAttribute('aria-selected') === 'true')!)).toBe('Live tests (1)');
+  });
+});

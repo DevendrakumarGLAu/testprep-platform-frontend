@@ -1,4 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { By } from '@angular/platform-browser';
 import { MatSidenav } from '@angular/material/sidenav';
@@ -821,6 +822,14 @@ describe('AttemptPage pausing', () => {
     expect(button('.pause-btn')!.getAttribute('title')).toContain('3 pauses left');
   });
 
+  it('with no pause limit the Pause button says the student can come back any time', async () => {
+    await open(state({ pause: pauseInfo({ max_minutes: 0, pauses_left: null }) }));
+    const title = button('.pause-btn')!.getAttribute('title')!;
+    expect(title).toContain('come back whenever you like');
+    expect(title).toContain('Unlimited pauses');
+    expect(title).not.toContain('minutes');
+  });
+
   it('has no Pause button when the test does not allow pausing', async () => {
     await open(state({ pause: pauseInfo({ allowed: false }) }));
     expect(button('.pause-btn')).toBeNull();
@@ -969,5 +978,144 @@ describe('AttemptPage question picture', () => {
     const img = el.querySelector('img.zoomable') as HTMLImageElement;
     expect(img.getAttribute('tabindex')).toBe('0');
     expect(img.getAttribute('role')).toBe('button');
+  });
+});
+
+describe('AttemptPage back arrow', () => {
+  let fixture: ComponentFixture<AttemptPage>;
+  let api: Record<string, ReturnType<typeof vi.fn>>;
+  let back: ReturnType<typeof vi.fn>;
+
+  const pauseInfo = (over: Record<string, unknown> = {}) => ({ allowed: true, paused: false, paused_at: null, auto_resume_at: null, max_minutes: 0, pauses_used: 0, pauses_left: null, ...over });
+  const pausedReply = (): AttemptState => state({ paused: true, sections: [], remaining_seconds: 45, pause: pauseInfo({ paused: true, paused_at: new Date(T0).toISOString() }) } as Partial<AttemptState>);
+
+  async function open(pause: Record<string, unknown> | undefined, dialogAnswer = true) {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] });
+    vi.setSystemTime(T0);
+    api = {
+      attempt: vi.fn(() => of(state({ pause: pause as never }))), saveAnswers: vi.fn(() => of(okNow())), submit: vi.fn(() => of(submitted)),
+      pause: vi.fn(() => of(pausedReply())),
+    };
+    back = vi.fn();
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: api }, { provide: Location, useValue: { back } }] });
+    fixture = TestBed.createComponent(AttemptPage);
+    fixture.componentRef.setInput('id', 'att5');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    const dialog = (c as unknown as { dialog: { open: (...a: unknown[]) => unknown } }).dialog;
+    const opened = vi.spyOn(dialog, 'open').mockReturnValue({ afterClosed: () => of(dialogAnswer) } as never);
+    window.history.pushState({}, '', '/somewhere'); // there is a page to go back to
+    return { c, opened, el: fixture.nativeElement as HTMLElement };
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+    vi.useRealTimers();
+  });
+
+  it('shows a back arrow in the top bar', async () => {
+    const { el } = await open(pauseInfo());
+    const b = el.querySelector('button.back') as HTMLButtonElement;
+    expect(b.textContent).toContain('arrow_back');
+    expect(b.getAttribute('aria-label')).toContain('Go back');
+  });
+
+  describe('when the test allows pausing', () => {
+    it('pauses the test and goes back, without asking and without submitting', async () => {
+      const { c, opened } = await open(pauseInfo());
+      await c.leave();
+      expect(api['pause']).toHaveBeenCalledTimes(1);
+      expect(opened).not.toHaveBeenCalled();
+      expect(back).toHaveBeenCalled();
+      expect(api['submit']).not.toHaveBeenCalled();
+      expect(c.paused()).toBe(true);
+    });
+
+    it('stays on the test and says why when the pause did not happen', async () => {
+      const { c } = await open(pauseInfo());
+      api['pause'].mockReturnValue(throwError(() => new HttpErrorResponse({ status: 403, error: { detail: 'Not allowed.' } })));
+      await c.leave();
+      expect(back).not.toHaveBeenCalled();
+      expect(c.paused()).toBe(false);
+    });
+
+    it('leaving the page any other way (the phone back button) pauses it too', async () => {
+      const { c } = await open(pauseInfo());
+      fixture.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api['pause']).toHaveBeenCalledTimes(1);
+      expect(c).toBeTruthy();
+    });
+
+    it('does not pause a second time after the arrow already did, or once the test is submitted', async () => {
+      const first = await open(pauseInfo());
+      await first.c.leave();
+      fixture.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api['pause']).toHaveBeenCalledTimes(1);
+      TestBed.resetTestingModule();
+      const second = await open(pauseInfo());
+      second.c.finished.set({ result: null, autoSubmitted: false } as never);
+      fixture.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api['pause']).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the test cannot be paused (a live test, or no pauses left)', () => {
+    it('asks first, then saves and goes back without submitting', async () => {
+      const { c, opened } = await open(pauseInfo({ allowed: false }));
+      const flush = vi.spyOn(c, 'flush').mockResolvedValue(true);
+      await c.leave();
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(((opened.mock.calls[0][1]) as { data: { message: string } }).data.message).toContain('timer keeps running');
+      expect(flush).toHaveBeenCalled();
+      expect(back).toHaveBeenCalled();
+      expect(api['pause']).not.toHaveBeenCalled();
+      expect(api['submit']).not.toHaveBeenCalled();
+    });
+
+    it('stays on the test when the student cancels', async () => {
+      const { c } = await open(pauseInfo({ allowed: false }), false);
+      const flush = vi.spyOn(c, 'flush');
+      await c.leave();
+      expect(flush).not.toHaveBeenCalled();
+      expect(back).not.toHaveBeenCalled();
+    });
+
+    it('does not try to pause when the page is left by another route', async () => {
+      await open(pauseInfo({ allowed: false }));
+      fixture.destroy();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api['pause']).not.toHaveBeenCalled();
+    });
+
+    it('a test with every pause used counts as unpausable', async () => {
+      const { c } = await open(pauseInfo({ pauses_left: 0 }));
+      expect(c.canAutoPause()).toBe(false);
+    });
+  });
+});
+
+describe('AttemptPage paused screen', () => {
+  it('offers the dashboard and My tests as well as Resume', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] });
+    vi.setSystemTime(T0);
+    const paused = state({ paused: true, sections: [], remaining_seconds: 45, pause: { allowed: true, paused: true, paused_at: new Date(T0).toISOString(), auto_resume_at: null, max_minutes: 0, pauses_used: 1, pauses_left: null } } as Partial<AttemptState>);
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: { attempt: vi.fn(() => of(paused)), pause: vi.fn(), resume: vi.fn() } }] });
+    const fixture = TestBed.createComponent(AttemptPage);
+    fixture.componentRef.setInput('id', 'att5');
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const links = [...el.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    expect(links).toContain('/student/dashboard');
+    expect(links).toContain('/student/tests');
+    expect(el.textContent).toContain('Resume test');
+    fixture.destroy();
+    vi.useRealTimers();
   });
 });

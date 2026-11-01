@@ -34,6 +34,8 @@ const STANDARD_LABELS: Record<HubTab, string> = { full: 'Full tests', mini: 'Min
     .fill { height: 100%; background: var(--mat-sys-primary); }
     .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 8px 0 20px; }
     .tab { padding-top: 16px; }
+    .live-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--mat-sys-error); animation: pulse 1.2s infinite; }
+    @keyframes pulse { 50% { opacity: 0.25; } }
     h3 { margin: 16px 0 0; }
     h3 .count { font-weight: 400; font-size: 0.8em; }
     .empty { padding: 16px; color: var(--mat-sys-on-surface-variant); }
@@ -58,7 +60,6 @@ const STANDARD_LABELS: Record<HubTab, string> = { full: 'Full tests', mini: 'Min
           {{ d.preparing ? 'Preparing' : 'Prepare for this exam' }}
         </button>
       </div>
-      <app-live-strip [category]="d.exam.id" />
       <div class="progress">
         <div class="bar"><div class="fill" [style.width.%]="d.progress.total ? (d.progress.attempted * 100) / d.progress.total : 0"></div></div>
         <span class="muted">{{ d.progress.attempted }} of {{ d.progress.total }} tests attempted</span>
@@ -111,6 +112,12 @@ const STANDARD_LABELS: Record<HubTab, string> = { full: 'Full tests', mini: 'Min
             </div>
           </mat-tab>
         }
+        @if (live().length) {
+          <mat-tab>
+            <ng-template mat-tab-label><span class="live-dot"></span>Live tests ({{ live().length }})</ng-template>
+            <div class="tab"><app-live-strip [list]="live()" [inTab]="true" /></div>
+          </mat-tab>
+        }
       </mat-tab-group>
     }
   `,
@@ -128,6 +135,8 @@ export class PrepHub {
 
   loading = signal(true);
   d = signal<PrepHubData | null>(null);
+  /** Live tests of this exam that have not finished yet; they get a tab of their own after the others. */
+  live = signal<StudentExam[]>([]);
   private chosen = signal<number | null>(null);
 
   /** The tabs the admin set up for this exam, hidden ones left out. An answer without tab settings means the four standard tabs. */
@@ -157,6 +166,7 @@ export class PrepHub {
     if (picked !== null && picked < list.length) return picked;
     const wanted = list.findIndex((t) => t.key === this.route.snapshot.queryParamMap.get('type'));
     if (wanted >= 0) return wanted;
+    if (this.route.snapshot.queryParamMap.get('type') === 'live' && this.live().length) return list.length;
     if (!this.d()) return 0;
     const first = list.findIndex((t) => this.count(t.key) > 0);
     return first < 0 ? 0 : first;
@@ -183,13 +193,14 @@ export class PrepHub {
 
   pick(i: number) {
     this.chosen.set(i);
-    this.router.navigate([], { queryParams: { type: this.tabList()[i]?.key }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.router.navigate([], { queryParams: { type: this.tabList()[i]?.key ?? 'live' }, queryParamsHandling: 'merge', replaceUrl: true });
   }
 
   private load(id: string) {
     this.loading.set(true);
     this.api.hub(id).subscribe({
       next: (d) => {
+        this.api.exams({ live: 1, category: id }).subscribe({ next: (l) => this.live.set(l), error: () => this.live.set([]) });
         this.d.set(d);
         this.loading.set(false);
       },
