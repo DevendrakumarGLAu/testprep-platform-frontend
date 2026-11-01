@@ -188,10 +188,18 @@ export class TestSeriesPage {
 
   constructor() {
     this.examApi.categories().subscribe((p) => (this.categories = p.results.filter((c) => c.is_active)));
-    this.examApi.list({ page_size: 200, ordering: 'title' }).subscribe((p) => (this.exams = p.results));
+    // this.examApi.list({ page_size: 200, ordering: 'title' }).subscribe((p) => (this.exams = p.results));
+    this.loadAllExams(1, []);
     this.load();
   }
 
+  private loadAllExams(page: number, acc: Exam[]) {
+    this.examApi.list({ page_size: 100, page, ordering: 'title' }).subscribe((p) => {
+      const all = [...acc, ...p.results];
+      if (p.next) this.loadAllExams(page + 1, all);
+      else this.exams = all;
+    });
+  }
   load() {
     this.loading.set(true);
     this.api.series().subscribe({
