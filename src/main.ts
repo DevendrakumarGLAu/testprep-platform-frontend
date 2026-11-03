@@ -4,10 +4,12 @@ import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { environment } from './environments/environment';
 import { loadProtection, protectApp } from './app/shared/protect';
+import { scrollableTabs } from './app/shared/scroll-tabs';
 
 loadProtection(environment.protect)
   .then((on) => {
     protectApp(document, on);
+    scrollableTabs(document);
     return bootstrapApplication(App, appConfig);
   })
   .then(() => {

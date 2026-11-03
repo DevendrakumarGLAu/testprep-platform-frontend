@@ -158,3 +158,18 @@ body.exam-locked {
 @media print {
   body.exam-locked * { display: none !important; }
 }
+
+// Tab headers scroll by mouse wheel, drag or touch swipe instead of through the paging arrows.
+.mat-mdc-tab-header {
+  .mat-mdc-tab-header-pagination { display: none !important; }
+
+  .mat-mdc-tab-label-container {
+    overflow-x: auto !important;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    &::-webkit-scrollbar { display: none; }
+  }
+
+  .mat-mdc-tab-list { transform: none !important; }
+}
