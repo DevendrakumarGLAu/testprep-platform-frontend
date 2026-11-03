@@ -1,0 +1,152 @@
+<div class="head">
+  <h1 class="h3">Question bank</h1>
+  <span class="head-actions">
+    <button type="button" class="btn btn-outline-primary" (click)="findDuplicates()"><i class="bi bi-copy" aria-hidden="true"></i> Find duplicates</button>
+    <a class="btn btn-outline-primary" routerLink="/admin/questions/import"><i class="bi bi-upload" aria-hidden="true"></i> Import questions</a>
+    <a class="btn btn-primary" routerLink="/admin/questions/new"><i class="bi bi-plus-lg" aria-hidden="true"></i> New question</a>
+  </span>
+</div>
+
+<div class="filters">
+  <div class="field search">
+    <label for="ql-search" class="form-label">Search question text</label>
+    <div class="input-group">
+      <input id="ql-search" type="search" class="form-control" [formControl]="search" />
+      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+    </div>
+  </div>
+  <div class="field">
+    <label for="ql-subject" class="form-label">Subject</label>
+    <select id="ql-subject" class="form-select" (change)="pickSubject($any($event.target).value)">
+      <option value="" [selected]="subject() === null">All</option>
+      @for (s of subjects(); track s.id) { <option [value]="s.id" [selected]="subject() === s.id">{{ s.name }}</option> }
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-topic" class="form-label">Topic</label>
+    <select id="ql-topic" class="form-select" [disabled]="!subject()" (change)="pickTopic($any($event.target).value)">
+      <option value="" [selected]="topic() === null">All</option>
+      @for (t of topicOptions(); track t.id) { <option [value]="t.id" [selected]="topic() === t.id">{{ t.name }}</option> }
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-difficulty" class="form-label">Difficulty</label>
+    <select id="ql-difficulty" class="form-select" (change)="difficulty.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="difficulty() === ''">All</option>
+      <option value="easy" [selected]="difficulty() === 'easy'">Easy</option>
+      <option value="medium" [selected]="difficulty() === 'medium'">Medium</option>
+      <option value="hard" [selected]="difficulty() === 'hard'">Hard</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-status" class="form-label">Status</label>
+    <select id="ql-status" class="form-select" (change)="status.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="status() === ''">All</option>
+      <option value="true" [selected]="status() === 'true'">Active</option>
+      <option value="false" [selected]="status() === 'false'">Inactive</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-review" class="form-label">Review</label>
+    <select id="ql-review" class="form-select" (change)="review.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="review() === ''">All</option>
+      <option value="needs_review" [selected]="review() === 'needs_review'">Needs review</option>
+      <option value="approved" [selected]="review() === 'approved'">Approved</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-tag" class="form-label">Tag</label>
+    <select id="ql-tag" class="form-select" (change)="tag.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="tag() === ''">All</option>
+      @for (t of tags(); track t) { <option [value]="t" [selected]="tag() === t">{{ t }}</option> }
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-age" class="form-label">Question date</label>
+    <select id="ql-age" class="form-select" (change)="age.set($any($event.target).value); pageIndex.set(0)">
+      @for (a of agePresets; track a.value) { <option [value]="a.value" [selected]="age() === a.value">{{ a.label }}</option> }
+    </select>
+  </div>
+  <div class="field">
+    <label for="ql-sort" class="form-label">Sort by</label>
+    <select id="ql-sort" class="form-select" (change)="ordering.set($any($event.target).value); pageIndex.set(0)">
+      <option value="-created_at" [selected]="ordering() === '-created_at'">Newest first</option>
+      <option value="-question_date" [selected]="ordering() === '-question_date'">Question date (latest)</option>
+      <option value="question_date" [selected]="ordering() === 'question_date'">Question date (oldest)</option>
+      <option value="created_at" [selected]="ordering() === 'created_at'">Oldest first</option>
+      <option value="-updated_at" [selected]="ordering() === '-updated_at'">Recently edited</option>
+      <option value="difficulty" [selected]="ordering() === 'difficulty'">Difficulty</option>
+    </select>
+  </div>
+</div>
+
+@if (selection.hasValue()) {
+  <div class="bulk">
+    <strong>{{ selection.selected.length }} selected</strong>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulk('activate')">Activate</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulk('deactivate')">Deactivate</button>
+    <div class="dropdown-wrap">
+      <button type="button" class="btn btn-link btn-sm" (click)="diffMenu.set(!diffMenu())" aria-haspopup="menu" [attr.aria-expanded]="diffMenu()">Set difficulty <i class="bi bi-chevron-down" aria-hidden="true"></i></button>
+      @if (diffMenu()) {
+        <div class="dropdown-menu show" role="menu">
+          <button type="button" class="dropdown-item" role="menuitem" (click)="setDifficulty('easy')">Easy</button>
+          <button type="button" class="dropdown-item" role="menuitem" (click)="setDifficulty('medium')">Medium</button>
+          <button type="button" class="dropdown-item" role="menuitem" (click)="setDifficulty('hard')">Hard</button>
+        </div>
+      }
+    </div>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulk('set_review_status', 'approved')">Approve</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulk('set_review_status', 'needs_review')">Needs review</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulkValue('date')">Set date…</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulkValue('subject')">Move to subject…</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="bulkTag()">Add tag…</button>
+    @if (total() > rows().length) { <button type="button" class="btn btn-link btn-sm" (click)="selectAllMatching()">Select all {{ total() }} matching</button> }
+    <button type="button" class="btn btn-link btn-sm" (click)="selection.clear()">Clear</button>
+  </div>
+}
+
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading questions"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>
+          <input class="form-check-input" type="checkbox" (change)="$any($event.target).checked ? selectPage() : selection.clear()"
+            [checked]="allSelected()" [indeterminate]="selection.hasValue() && !allSelected()" aria-label="Select all on page" />
+        </th>
+        <th>ID</th><th>Question</th><th>Question date</th><th>Used in</th><th>Subject / topic</th><th>Difficulty</th><th>Review</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (q of rows(); track q.id) {
+        <tr>
+          <td><input class="form-check-input" type="checkbox" (change)="selection.toggle(q.id)" [checked]="selection.isSelected(q.id)" aria-label="Select question" /></td>
+          <td class="qid">#{{ q.id }}</td>
+          <td class="text" [title]="q.text || q.text_hi"><span [class.off]="!q.is_active">{{ q.text || q.text_hi }}</span></td>
+          <td class="qdate">{{ q.question_date || '—' }}<div class="age">{{ ageOf(q.question_date) }}</div></td>
+          <td class="usage"><app-usage-tags [usedIn]="q.used_in" /></td>
+          <td>{{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }}</td>
+          <td>{{ q.difficulty }}</td>
+          <td>
+            @if (q.review_status === 'needs_review') {
+              <span class="needs" [attr.title]="q.open_reports + ' open student report(s)'">Needs review{{ q.open_reports ? ' (' + q.open_reports + ')' : '' }}</span>
+            } @else { <span class="ok">Approved</span> }
+          </td>
+          <td>{{ q.is_active ? 'Active' : 'Inactive' }}</td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="preview(q)" aria-label="Preview" title="Preview"><i class="bi bi-eye" aria-hidden="true"></i></button>
+            <a class="btn btn-link" [routerLink]="['/admin/questions', q.id]" aria-label="Edit" title="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-link" (click)="duplicate(q)" aria-label="Duplicate" title="Duplicate"><i class="bi bi-copy" aria-hidden="true"></i></button>
+            @if (q.is_active) {
+              <button type="button" class="btn btn-link" (click)="archive(q)" aria-label="Archive" title="Archive"><i class="bi bi-archive" aria-hidden="true"></i></button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No questions match your filters.</div> }
+</div>
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 20, 50]" (page)="onPage($event)" />

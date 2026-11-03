@@ -1,0 +1,36 @@
+:host {
+  display: block;
+  max-width: 900px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+a.series-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+h2 {
+  margin: 2px 0;
+}
+
+.meta,
+p {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 4px 0;
+}

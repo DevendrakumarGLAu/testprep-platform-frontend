@@ -1,0 +1,45 @@
+:host {
+  display: block;
+  max-width: 900px;
+}
+
+.search {
+  width: min(420px, 100%);
+  margin-bottom: 12px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+a.note-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+
+  &:hover {
+    border-color: var(--mat-sys-primary);
+  }
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+h2 {
+  margin: 4px 0;
+}
+
+p {
+  margin: 4px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}

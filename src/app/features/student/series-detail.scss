@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.back {
+  padding-left: 0;
+  text-decoration: none;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.meter {
+  max-width: 420px;
+}

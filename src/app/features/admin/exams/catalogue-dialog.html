@@ -1,0 +1,95 @@
+<h2 class="h5 title">{{ data.exam ? 'Edit exam' : 'New exam' }}</h2>
+<div class="content">
+  <form [formGroup]="form" id="cat-form" (ngSubmit)="save()" novalidate>
+    <div class="mb-3">
+      <label for="cd-name" class="form-label">Name</label>
+      <input id="cd-name" class="form-control" [class.is-invalid]="form.controls.name.invalid && (form.controls.name.touched || form.controls.name.dirty)" formControlName="name" placeholder="SSC, Banking, Railways…" />
+      @if (form.controls.name.invalid && (form.controls.name.touched || form.controls.name.dirty)) { <div class="invalid-feedback">Required</div> }
+    </div>
+    <div class="mb-3">
+      <label for="cd-desc" class="form-label">Description</label>
+      <textarea id="cd-desc" class="form-control" rows="3" formControlName="description"></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="cd-group" class="form-label">Family (for example SSC)</label>
+      <div class="input-group">
+        <select id="cd-group" class="form-select" formControlName="group" aria-describedby="cd-group-hint">
+          <option [ngValue]="null">None</option>
+          @for (g of groups(); track g.id) { <option [ngValue]="g.id">{{ g.name }}</option> }
+        </select>
+        <button type="button" class="btn btn-outline-secondary" (click)="addGroup($event)" aria-label="New family" title="New family"><i class="bi bi-plus-lg" aria-hidden="true"></i></button>
+      </div>
+      <div id="cd-group-hint" class="form-text">Students pick the family first, then the exam: SSC &rsaquo; MTS, CHSL, CGL</div>
+    </div>
+    <div class="mb-3">
+      <span id="cd-subjects-label" class="form-label d-block">Sections (subjects)</span>
+      <fieldset class="checklist" aria-labelledby="cd-subjects-label">
+        @for (s of data.subjects; track s.id) {
+          <div class="form-check">
+            <input [id]="'cd-sub-' + s.id" class="form-check-input" type="checkbox" [checked]="hasSubject(s.id)" (change)="toggleSubject(s.id, $any($event.target).checked)" />
+            <label [for]="'cd-sub-' + s.id" class="form-check-label">{{ s.name }}</label>
+          </div>
+        }
+      </fieldset>
+      <div class="form-text">For SSC: Maths, GK, Reasoning, English. Students see one subject-test group per section.</div>
+    </div>
+    <h3 class="h6">Tabs students see inside this exam</h3>
+    <p class="note">Choose which tabs show, rename them and change their order. The four standard tabs hold one type of test each. Add your own tab (for example Current affairs) and then pick it on a test to put that test there.</p>
+    @for (t of tabs(); track t.key; let i = $index) {
+      <div class="tab-row" [class.off]="!t.visible">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch" [checked]="t.visible" (change)="setTab(i, { visible: $any($event.target).checked })" [attr.aria-label]="'Show ' + t.label" />
+        </div>
+        <div class="tab-name">
+          <label [for]="'cd-tab-' + i" class="form-label visually-hidden">{{ tabKind(t) }}</label>
+          <input [id]="'cd-tab-' + i" class="form-control" maxlength="30" [value]="t.label" [placeholder]="tabKind(t)" (input)="setTab(i, { label: $any($event.target).value })" />
+        </div>
+        <button type="button" class="btn btn-link" (click)="moveTab(i, -1)" [disabled]="i === 0" aria-label="Move tab up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-link" (click)="moveTab(i, 1)" [disabled]="i === tabs().length - 1" aria-label="Move tab down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+        @if (t.custom) { <button type="button" class="btn btn-link" (click)="removeTab(i)" aria-label="Delete this tab"><i class="bi bi-trash" aria-hidden="true"></i></button> }
+      </div>
+    }
+    <div>
+      <button type="button" class="btn btn-outline-primary" (click)="askForTab()" [disabled]="tabs().length >= maxTabs"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a tab</button>
+      @if (hasCustomTabs()) { <p class="note">Deleting a tab of your own is safe: its tests go back to the tab of their type.</p> }
+    </div>
+    <h3 class="h6">Usual pattern of this exam</h3>
+    <p class="note">New tests under this exam start with these settings, and you can still change them. Leave a box empty to skip it.</p>
+    <div class="two">
+      <div class="mb-3"><label for="cd-dur" class="form-label">Time (minutes)</label><input id="cd-dur" class="form-control" type="number" min="1" max="600" formControlName="p_duration" /></div>
+      <div class="mb-3"><label for="cd-marks" class="form-label">Marks per question</label><input id="cd-marks" class="form-control" type="number" min="0" step="0.25" formControlName="p_marks" /></div>
+      <div class="mb-3"><label for="cd-pass" class="form-label">Passing marks</label><input id="cd-pass" class="form-control" type="number" min="0" formControlName="p_passing" /></div>
+      <div class="mb-3"><label for="cd-att" class="form-label">Attempts allowed</label><input id="cd-att" class="form-control" type="number" min="0" max="50" formControlName="p_attempts" aria-describedby="cd-att-hint" /><div id="cd-att-hint" class="form-text">0 = unlimited</div></div>
+      <div class="mb-3">
+        <label for="cd-neg" class="form-label">Negative marking</label>
+        <select id="cd-neg" class="form-select" formControlName="p_neg">
+          <option value="">Do not set</option>
+          <option value="off">None</option>
+          <option value="fraction">A fraction of the marks (1/4 = 0.25)</option>
+          <option value="fixed">Fixed marks per wrong answer</option>
+        </select>
+      </div>
+      @if (form.controls.p_neg.value === 'fraction' || form.controls.p_neg.value === 'fixed') {
+        <div class="mb-3"><label for="cd-negv" class="form-label">Deduction</label><input id="cd-negv" class="form-control" type="number" min="0" step="0.05" formControlName="p_negvalue" /></div>
+      }
+    </div>
+    <div class="form-check form-switch mb-3">
+      <input id="cd-sectional" class="form-check-input" type="checkbox" role="switch" formControlName="p_sectional" />
+      <label for="cd-sectional" class="form-check-label">Time each section separately</label>
+    </div>
+    <div class="mb-3">
+      <label for="cd-sections" class="form-label">Sections of a full test</label>
+      <textarea id="cd-sections" class="form-control" rows="5" formControlName="p_sections" aria-describedby="cd-sections-hint" placeholder="General Intelligence | 15&#10;General Awareness | 15&#10;Quantitative Aptitude | 15&#10;English | 15"></textarea>
+      <div id="cd-sections-hint" class="form-text">One section per line. Add the minutes after a bar when each section has its own time.</div>
+    </div>
+    <div class="form-check form-switch mb-3">
+      <input id="cd-active" class="form-check-input" type="checkbox" role="switch" formControlName="is_active" />
+      <label for="cd-active" class="form-check-label">Visible to students</label>
+    </div>
+    @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+  </form>
+</div>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="cat-form" [disabled]="saving()">Save</button>
+</div>

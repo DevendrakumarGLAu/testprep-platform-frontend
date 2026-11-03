@@ -1,0 +1,18 @@
+<a class="btn btn-link back" routerLink="/student/notes"><i class="bi bi-arrow-left" aria-hidden="true"></i> All notes</a>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the note"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (note(); as n) {
+  <div class="head">
+    <h1 class="h3" [attr.lang]="lang()">{{ say(n.title, n.title_hi) }}</h1>
+    <app-lang-switch [languages]="languages()" />
+  </div>
+  <p class="meta">{{ n.category || 'All exams' }}{{ n.subject ? ' · ' + n.subject : '' }}{{ n.note_date ? ' · ' + (n.note_date | date: 'MMMM y') : '' }}</p>
+  <div [attr.lang]="lang()">
+    @for (l of blocks(); track $index) {
+      @if (l.bullet) { <ul><li>{{ l.text }}</li></ul> } @else { <p>{{ l.text }}</p> }
+    }
+  </div>
+} @else if (!loading()) {
+  <p>This note is not available.</p>
+}

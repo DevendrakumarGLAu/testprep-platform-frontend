@@ -1,18 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
+import { BsPager, PageChange } from '../../../shared/bs-pager/bs-pager';
 import { UsageTags } from '../../../shared/usage-tags';
 import { AGE_PRESETS, ageLabel, ageRange, isOld } from '../../../shared/question-age';
 import { MAX_QUESTIONS_PER_TEST, PickedQuestion, Question, Subject } from '../question-bank/qb.models';
@@ -27,110 +20,16 @@ export interface PickerData {
 /** Pick active questions from the bank. Selection survives paging and filtering. */
 @Component({
   selector: 'app-question-picker',
-  imports: [
-    ReactiveFormsModule, MatDialogModule, MatButtonModule, MatCheckboxModule, MatFormFieldModule, MatInputModule,
-    MatSelectModule, MatPaginatorModule, MatProgressBarModule, MatIconModule, UsageTags,
-  ],
-  styles: `
-    .filters { display: flex; gap: 12px; flex-wrap: wrap; }
-    .bulk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; }
-    .bulk .spacer { flex: 1; }
-    .rand { width: 110px; }
-    .count { color: var(--mat-sys-on-surface-variant); margin: 0 0 8px; font-size: 0.9em; }
-    .filters mat-form-field { flex: 1; min-width: 160px; }
-    mat-dialog-content { min-width: min(760px, 88vw); }
-    .item { display: flex; align-items: flex-start; gap: 4px; padding: 4px 0; border-bottom: 1px solid var(--mat-sys-outline-variant); }
-    .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.85em; }
-    .old { color: var(--mat-sys-error); font-weight: 500; margin-left: 4px; }
-    .empty { padding: 24px; text-align: center; color: var(--mat-sys-on-surface-variant); }
-  `,
-  template: `
-    <h2 mat-dialog-title>Add questions from the bank</h2>
-    <mat-dialog-content>
-      <div class="filters">
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Search</mat-label>
-          <input matInput [formControl]="search" />
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Subject</mat-label>
-          <mat-select [value]="subject()" (selectionChange)="subject.set($event.value); pageIndex.set(0)">
-            <mat-option [value]="null">All</mat-option>
-            @for (s of subjects(); track s.id) { <mat-option [value]="s.id">{{ s.name }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Question date</mat-label>
-          <mat-select [value]="age()" (selectionChange)="age.set($event.value); pageIndex.set(0)">
-            @for (a of agePresets; track a.value) { <mat-option [value]="a.value">{{ a.label }}</mat-option> }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Used in tests</mat-label>
-          <mat-select [value]="usage()" (selectionChange)="usage.set($event.value); pageIndex.set(0)">
-            <mat-option value="">Any</mat-option>
-            <mat-option value="no">Not used in any test yet</mat-option>
-            <mat-option value="yes">Already used in a test</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Difficulty</mat-label>
-          <mat-select [value]="difficulty()" (selectionChange)="difficulty.set($event.value); pageIndex.set(0)">
-            <mat-option value="">All</mat-option>
-            <mat-option value="easy">Easy</mat-option>
-            <mat-option value="medium">Medium</mat-option>
-            <mat-option value="hard">Hard</mat-option>
-          </mat-select>
-        </mat-form-field>
-      </div>
-      @if (data.excludeIds.length) {
-        <mat-checkbox [checked]="showInTest()" (change)="showInTest.set($event.checked); pageIndex.set(0)">
-          Also show the {{ data.excludeIds.length }} questions already in this test
-        </mat-checkbox>
-      }
-      <div class="bulk">
-        <mat-checkbox [checked]="pageAllSelected()" [indeterminate]="pageSomeSelected()" (change)="togglePage($event.checked)" [disabled]="rows().length === 0">
-          Select this page
-        </mat-checkbox>
-        <button mat-button (click)="selectAllMatching()" [disabled]="busy() || total() === 0">Select all {{ total() }} matching</button>
-        <span class="spacer"></span>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="rand">
-          <mat-label>Random</mat-label>
-          <input matInput type="number" min="1" [max]="limit" [formControl]="randomCount" />
-        </mat-form-field>
-        <button mat-stroked-button (click)="addRandom()" [disabled]="busy()"><mat-icon>shuffle</mat-icon> Add random</button>
-      </div>
-      <p class="count">{{ selected().size }} selected · {{ remaining() }} more allowed in this test (limit {{ limit }})</p>
-      @if (loading() || busy()) { <mat-progress-bar mode="indeterminate" /> }
-      @for (q of rows(); track q.id) {
-        <div class="item">
-          <mat-checkbox [checked]="selected().has(q.id)" [disabled]="inTest(q.id)" (change)="toggle(q, $event.checked)" [attr.aria-label]="'Select question ' + q.id" />
-          <div>
-            <div>{{ q.text || q.text_hi }}</div>
-            <div class="meta">
-              <strong>#{{ q.id }}</strong> · {{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }} · {{ q.difficulty }}
-              · {{ q.question_date ? q.question_date + ' (' + ageOf(q.question_date) + ')' : 'no date' }}
-              @if (old(q.question_date)) { <span class="old">older than 2 years</span> }
-              <app-usage-tags [usedIn]="q.used_in" [currentId]="data.examId" [inCurrent]="inTest(q.id)" />
-            </div>
-          </div>
-        </div>
-      } @empty {
-        @if (!loading()) { <div class="empty">No available questions match.</div> }
-      }
-      <mat-paginator [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50, 100]" (page)="onPage($event)" />
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button [mat-dialog-close]="chosen()" [disabled]="selected().size === 0">Add {{ selected().size || '' }} selected</button>
-    </mat-dialog-actions>
-  `,
+  imports: [ReactiveFormsModule, UsageTags, BsPager],
+  templateUrl: './question-picker.html',
+  styleUrl: './question-picker.scss',
+  host: { class: 'bs' },
 })
 export class QuestionPicker {
   private api = inject(QuestionBankService);
   private qapi = this.api;
   protected data = inject<PickerData>(MAT_DIALOG_DATA);
+  private ref = inject<MatDialogRef<QuestionPicker, PickedQuestion[]>>(MatDialogRef);
 
   search = new FormControl('', { nonNullable: true });
   private term = toSignal(this.search.valueChanges.pipe(debounceTime(300), distinctUntilChanged()), { initialValue: '' });
@@ -187,7 +86,20 @@ export class QuestionPicker {
   pageAllSelected = computed(() => this.pickable().length > 0 && this.pickable().every((r) => this.selected().has(r.id)));
   pageSomeSelected = computed(() => !this.pageAllSelected() && this.pickable().some((r) => this.selected().has(r.id)));
 
-  onPage(e: PageEvent) {
+  pickSubject(value: string) {
+    this.subject.set(value ? Number(value) : null);
+    this.pageIndex.set(0);
+  }
+
+  add() {
+    this.ref.close(this.chosen());
+  }
+
+  cancel() {
+    this.ref.close(undefined);
+  }
+
+  onPage(e: PageChange) {
     this.pageSize.set(e.pageSize);
     this.pageIndex.set(e.pageIndex);
   }

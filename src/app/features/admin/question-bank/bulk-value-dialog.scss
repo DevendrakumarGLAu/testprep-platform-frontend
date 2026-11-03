@@ -1,0 +1,24 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(400px, 86vw);
+}
+
+.title {
+  margin: 0 0 12px;
+}
+
+.note {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-link {
+  text-decoration: none;
+}

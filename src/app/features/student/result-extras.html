@@ -1,0 +1,48 @@
+<div class="tools no-print">
+  <button type="button" class="btn btn-outline-primary" (click)="share()" [disabled]="!card()"><i class="bi bi-share"></i> Share my score</button>
+  <button type="button" class="btn btn-outline-primary" (click)="print()"><i class="bi bi-printer"></i> Print or save as PDF</button>
+</div>
+@if (wrong() > 0) {
+  <div class="card">
+    <div class="card-body redo">
+      <i class="bi bi-arrow-repeat fs-4"></i>
+      <span>You missed <strong>{{ wrong() }}</strong> question{{ wrong() === 1 ? '' : 's' }}. Try them again as a short practice set.</span>
+      <button type="button" class="btn btn-primary" (click)="redo()" [disabled]="busy()">Redo my mistakes</button>
+    </div>
+  </div>
+}
+@if (board(); as b) {
+  <div class="card">
+    <div class="card-header">
+      <div class="fw-semibold">Leaderboard</div>
+      <div class="muted small">{{ b.participants }} student{{ b.participants === 1 ? '' : 's' }} attempted this test</div>
+    </div>
+    <div class="card-body">
+      @if (b.me; as me) {
+        <div class="rank">
+          <div><div class="big">#{{ me.rank }}</div><div class="muted">your rank of {{ b.participants }}</div></div>
+          @if (me.percentile !== undefined) {
+            <div><div class="big">{{ me.percentile }}</div><div class="muted">percentile</div></div>
+          }
+          <div>
+            <strong>{{ me.score }} / {{ me.total_marks }}</strong>
+            <div class="muted">
+              @if (b.participants > 1) { Better than {{ me.better_than_percent }}% of students } @else { You are the first to attempt it }
+              · your best attempt
+            </div>
+          </div>
+        </div>
+      }
+      <div class="table-wrap">
+        <table class="table table-sm">
+          <thead><tr><th>Rank</th><th>Student</th><th>Score</th><th>Time</th></tr></thead>
+          <tbody>
+            @for (r of b.top; track r.rank + r.name) {
+              <tr [class.me]="r.is_me"><td>{{ r.rank }}</td><td>{{ r.name }}{{ r.is_me ? ' (you)' : '' }}</td><td>{{ r.score }} / {{ r.total_marks }}</td><td>{{ r.time_taken_seconds === null ? '' : seconds(r.time_taken_seconds) }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

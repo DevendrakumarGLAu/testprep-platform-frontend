@@ -67,7 +67,7 @@ describe('ResultView', () => {
     expect(el.querySelector('li.correct')).toBeNull();
     expect(el.querySelector('.expl')).toBeNull();
     expect(el.querySelector('.tag')).toBeNull();
-    expect(el.querySelector('mat-button-toggle-group')).toBeNull(); // no filtering by correctness either
+    expect(el.querySelector('.filters')).toBeNull(); // no filtering by correctness either
   });
 });
 
@@ -121,6 +121,45 @@ describe('formatting helpers', () => {
   });
 });
 
+
+describe('ResultView as a Bootstrap page', () => {
+  it('is built with Bootstrap and has no Material component', () => {
+    const el = render(data(true));
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelectorAll('.card').length).toBeGreaterThan(3);
+    expect(el.querySelector('mat-card, mat-icon, mat-button-toggle-group, [mat-button]')).toBeNull();
+  });
+
+  it('shows the verdict, with a class for passed and not passed', () => {
+    expect(render(data(true)).querySelector('.verdict.fail')!.textContent).toContain('Not passed');
+  });
+
+  it('filters the questions with a Bootstrap button group', () => {
+    const fixture = TestBed.createComponent(ResultView);
+    fixture.componentRef.setInput('data', data(true));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const filter = (label: string) => Array.from(el.querySelectorAll<HTMLButtonElement>('.filters button')).find((b) => b.textContent!.includes(label))!;
+    expect(Array.from(el.querySelectorAll('.filters button')).map((b) => b.textContent!.trim())).toEqual(['All (1)', 'Correct (1)', 'Incorrect (1)', 'Unanswered (0)']);
+    expect(el.querySelectorAll('.card.q').length).toBe(1);
+    filter('Correct').click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.card.q').length).toBe(0);
+    expect(filter('Correct').classList.contains('active')).toBe(true);
+    filter('Incorrect').click();
+    fixture.detectChanges();
+    expect(el.querySelectorAll('.card.q').length).toBe(1);
+    expect(el.querySelector('.card.q')!.classList.contains('incorrect')).toBe(true);
+  });
+
+  it('offers a language dropdown only when the test has both languages', () => {
+    const d = data(true);
+    expect(render(d).querySelector('app-lang-switch select')).toBeNull();
+    const both = { ...d, questions: [{ ...d.questions[0], text_hi: 'फ्रांस की राजधानी?' }] };
+    TestBed.resetTestingModule();
+    expect(render(both).querySelector('app-lang-switch select.form-select')).not.toBeNull();
+  });
+});
 
 describe('ResultView question picture', () => {
   const withPicture = () => {

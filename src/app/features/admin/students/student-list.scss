@@ -1,0 +1,87 @@
+:host {
+  display: block;
+}
+
+.head {
+  margin-bottom: 8px;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.field {
+  min-width: 160px;
+
+  &.search {
+    min-width: 240px;
+  }
+}
+
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-secondary-container);
+  flex-wrap: wrap;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--mat-sys-on-surface);
+  --bs-table-border-color: var(--mat-sys-outline-variant);
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+
+  .btn-link {
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.off {
+  color: var(--mat-sys-error);
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.chip {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--mat-sys-surface-container-high);
+  font-size: 0.8em;
+  margin-right: 4px;
+}

@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.bs-tabs-strip {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.nav-tabs {
+  --bs-nav-tabs-link-active-bg: transparent;
+  --bs-nav-tabs-link-active-color: var(--mat-sys-primary);
+  --bs-nav-tabs-link-active-border-color: transparent;
+  --bs-nav-tabs-link-hover-border-color: transparent;
+  --bs-nav-link-color: var(--mat-sys-on-surface-variant);
+  --bs-nav-link-hover-color: var(--mat-sys-primary);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.nav-link {
+  white-space: nowrap;
+  font-weight: 500;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+}
+
+.nav-link.active {
+  border-bottom-color: var(--mat-sys-primary);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--mat-sys-error);
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}

@@ -1,0 +1,136 @@
+<div class="head">
+  <h1 class="h3">Pop-ups</h1>
+  <button type="button" class="btn btn-primary" (click)="open(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New pop-up</button>
+</div>
+<p class="muted">An announcement or a new launch that opens in a pop-up the next time a student visits. Each student sees it once, until they close it or use its button.</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading pop-ups"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Title</th><th>For</th><th>Shows until</th><th>Seen by</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (p of rows(); track p.id) {
+        <tr>
+          <td>{{ p.title }}</td>
+          <td>{{ audienceText(p) }}</td>
+          <td>{{ p.ends_at ? (p.ends_at | date: 'medium') : 'No end' }}</td>
+          <td>{{ p.seen_count }} of {{ p.audience_size }}</td>
+          <td><span class="state" [class]="'state state-' + p.state">{{ label(p.state) }}</span></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="toggle(p)" [attr.aria-label]="p.is_active ? 'Switch off' : 'Switch on'" [title]="p.is_active ? 'Switch off' : 'Switch on'">
+              <i class="bi" [class]="p.is_active ? 'bi-toggle-on' : 'bi-toggle-off'" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="btn btn-link" (click)="open(p)" aria-label="Edit pop-up" title="Edit pop-up"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="deleting.set(p)" aria-label="Delete pop-up" title="Delete pop-up"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+@if (!loading() && rows().length === 0) { <p class="muted">No pop-ups yet. Create the first one.</p> }
+
+@if (editing()) {
+  <app-bs-modal [title]="editing() === 'new' ? 'New pop-up' : 'Edit pop-up'" size="lg" (closed)="editing.set(null)">
+    <form [formGroup]="form" id="popup-form" (ngSubmit)="save()" novalidate>
+      <div class="mb-3">
+        <label for="pp-title" class="form-label">Title</label>
+        <input id="pp-title" class="form-control" formControlName="title" maxlength="120" placeholder="New: weekly study plan" />
+      </div>
+      <div class="mb-3">
+        <label for="pp-body" class="form-label">Message</label>
+        <textarea id="pp-body" class="form-control" rows="4" maxlength="800" formControlName="body" placeholder="Tell students what is new and why it helps."></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="pp-image" class="form-label">Picture <span class="text-body-secondary">(optional, JPG, PNG, WebP or GIF, up to 2 MB)</span></label>
+        @if (filePreview() || currentImage(); as src) {
+          <div class="thumb-row">
+            <img class="thumb" [src]="src" alt="Picture preview" />
+            <button type="button" class="btn btn-outline-secondary btn-sm" (click)="filePreview() ? clearFile() : dropCurrentImage()">Remove picture</button>
+          </div>
+        }
+        <input id="pp-image" class="form-control" type="file" accept="image/jpeg,image/png,image/webp,image/gif" (change)="pick($event)" />
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-8">
+          <label for="pp-link" class="form-label">Button link <span class="text-body-secondary">(optional)</span></label>
+          <input id="pp-link" class="form-control" formControlName="link" maxlength="300" placeholder="/student/plan or https://..." />
+        </div>
+        <div class="col-12 col-md-4">
+          <label for="pp-label" class="form-label">Button text</label>
+          <input id="pp-label" class="form-control" formControlName="button_label" maxlength="30" />
+        </div>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+          <label for="pp-audience" class="form-label">Show to</label>
+          <select id="pp-audience" class="form-select" formControlName="audience">
+            <option value="all">All students</option>
+            <option value="exam">Students preparing for an exam</option>
+            <option value="batch">A batch</option>
+          </select>
+        </div>
+        @if (form.controls.audience.value === 'exam') {
+          <div class="col-12 col-md-6">
+            <label for="pp-exam" class="form-label">Exam</label>
+            <select id="pp-exam" class="form-select" formControlName="category">
+              <option [ngValue]="null">Choose...</option>
+              @for (c of categories(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+            </select>
+          </div>
+        }
+        @if (form.controls.audience.value === 'batch') {
+          <div class="col-12 col-md-6">
+            <label for="pp-batch" class="form-label">Batch</label>
+            <select id="pp-batch" class="form-select" formControlName="batch">
+              <option [ngValue]="null">Choose...</option>
+              @for (b of batches(); track b.id) { <option [ngValue]="b.id">{{ b.name }}</option> }
+            </select>
+          </div>
+        }
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+          <label for="pp-start" class="form-label">Start showing <span class="text-body-secondary">(blank = now)</span></label>
+          <input id="pp-start" class="form-control" type="datetime-local" formControlName="starts_at" />
+        </div>
+        <div class="col-12 col-md-6">
+          <label for="pp-end" class="form-label">Stop showing <span class="text-body-secondary">(blank = never)</span></label>
+          <input id="pp-end" class="form-control" type="datetime-local" formControlName="ends_at" />
+        </div>
+      </div>
+      <div class="form-check form-switch mb-3">
+        <input id="pp-active" class="form-check-input" type="checkbox" role="switch" formControlName="is_active" />
+        <label for="pp-active" class="form-check-label">Switched on</label>
+      </div>
+      @if (form.controls.title.value.trim()) {
+        <div class="preview" aria-label="Preview">
+          <div class="small text-body-secondary mb-1">What students will see</div>
+          <div class="card">
+            @if (filePreview() || currentImage(); as src) { <img class="card-img-top banner" [src]="src" alt="" /> }
+            <div class="card-body">
+            <h2 class="h6">{{ form.controls.title.value }}</h2>
+            @if (form.controls.body.value) { <p class="mb-2 pre">{{ form.controls.body.value }}</p> }
+            @if (form.controls.link.value) { <span class="btn btn-primary btn-sm disabled">{{ form.controls.button_label.value || 'Open' }}</span> }
+          </div></div>
+        </div>
+      }
+      @if (error()) { <div class="alert alert-danger py-2 mt-3" role="alert">{{ error() }}</div> }
+    </form>
+    <ng-container footer>
+      <button type="button" class="btn btn-link" (click)="editing.set(null)">Cancel</button>
+      <button type="submit" class="btn btn-primary" form="popup-form" [disabled]="saving()">Save</button>
+    </ng-container>
+  </app-bs-modal>
+}
+
+@if (deleting(); as d) {
+  <app-bs-modal title="Delete this pop-up?" size="sm" (closed)="deleting.set(null)">
+    <p class="mb-0">"{{ d.title }}" will be removed and no student will see it.</p>
+    <ng-container footer>
+      <button type="button" class="btn btn-link" (click)="deleting.set(null)">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </ng-container>
+  </app-bs-modal>
+}

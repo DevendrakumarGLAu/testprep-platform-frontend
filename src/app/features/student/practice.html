@@ -1,0 +1,54 @@
+<h1 class="h3">Practice</h1>
+<div class="top"><app-daily-quiz-card /></div>
+
+@if (focus(); as f) {
+  <div class="card focus">
+    <div class="card-body">
+      <h2 class="h5 card-title"><i class="bi bi-bullseye" aria-hidden="true"></i> Today's focus: {{ f.name }}</h2>
+      <p class="muted">Your study plan asks you to practise {{ f.name }} today. We pick questions from all its topics, the ones you got wrong before first.</p>
+      <div class="actions">
+        <div class="size">
+          <label for="focus-count" class="form-label">Questions</label>
+          <select id="focus-count" class="form-select" (change)="count.set(+$any($event.target).value)">
+            @for (n of sizes; track n) { <option [value]="n" [selected]="count() === n">{{ n }}</option> }
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary" (click)="startFocus()" [disabled]="busy()"><i class="bi bi-play-fill" aria-hidden="true"></i> Practise {{ f.name }}</button>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h5 card-title">Practise your weak topics</h2>
+    @if (loading()) {
+      <div class="progress loader" role="progressbar" aria-label="Loading your topics"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+    }
+    @if (data(); as d) {
+      @if (!d.all.length) {
+        <p class="muted">Take a test first. After a few answers in a topic we can show where you need practice.</p>
+        <a class="btn btn-primary" routerLink="/student/tests">Browse tests</a>
+      } @else {
+        <p class="muted">{{ d.rule }} Pick the topics to include; if you pick none, your 3 weakest are used.</p>
+        @for (t of d.all; track rowKey(t)) {
+          <div class="topic">
+            <input class="form-check-input" type="checkbox" [checked]="chosen().has(rowKey(t))" (change)="toggle(t, $any($event.target).checked)" [attr.aria-label]="'Include ' + t.topic" />
+            <div class="name">{{ t.topic }}<small>{{ t.subject }} · {{ t.correct }} of {{ t.answered }} right</small></div>
+            <div class="meter"><div class="fill" [class.ok]="t.accuracy >= 60" [style.width.%]="t.accuracy"></div></div>
+            <strong>{{ t.accuracy }}%</strong>
+          </div>
+        }
+        <div class="actions">
+          <div class="size">
+            <label for="practice-count" class="form-label">Questions</label>
+            <select id="practice-count" class="form-select" (change)="count.set(+$any($event.target).value)">
+              @for (n of sizes; track n) { <option [value]="n" [selected]="count() === n">{{ n }}</option> }
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" (click)="start()" [disabled]="busy()"><i class="bi bi-play-fill" aria-hidden="true"></i> Start practice ({{ summary() }})</button>
+        </div>
+      }
+    }
+  </div>
+</div>

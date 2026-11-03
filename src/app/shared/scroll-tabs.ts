@@ -3,7 +3,7 @@
  * swipes natively (see styles.scss). A chosen tab is brought into view. One set of listeners on the document covers every tab group.
  */
 export function scrollableTabs(doc: Document) {
-  const strip = (t: EventTarget | null) => (t as HTMLElement | null)?.closest?.('.mat-mdc-tab-label-container') as HTMLElement | null;
+  const strip = (t: EventTarget | null) => (t as HTMLElement | null)?.closest?.('.mat-mdc-tab-label-container, .bs-tabs-strip') as HTMLElement | null;
 
   doc.addEventListener(
     'wheel',
@@ -34,6 +34,6 @@ export function scrollableTabs(doc: Document) {
   doc.addEventListener('click', (e) => { if (drag?.moved) { e.stopPropagation(); e.preventDefault(); } }, true);
 
   doc.addEventListener('click', () =>
-    setTimeout(() => doc.querySelectorAll<HTMLElement>('.mat-mdc-tab-header [aria-selected="true"]').forEach((t) => t.scrollIntoView({ block: 'nearest', inline: 'nearest' })), 50),
+    setTimeout(() => doc.querySelectorAll<HTMLElement>('.mat-mdc-tab-header [aria-selected="true"], .bs-tabs-strip [aria-selected="true"]').forEach((t) => t.scrollIntoView({ block: 'nearest', inline: 'nearest' })), 50),
   );
 }

@@ -1,0 +1,100 @@
+<div class="container-fluid px-0">
+  <h1 class="h3 mb-1">Batch progress</h1>
+  <p class="text-body-secondary mb-3">See who has fallen behind and who is improving. Students at the top need help first.</p>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-5">
+          <label for="bp-batch" class="form-label">Batch</label>
+          <select id="bp-batch" class="form-select" [ngModel]="batchId()" (ngModelChange)="choose($event)">
+            @for (b of batches(); track b.id) { <option [ngValue]="b.id">{{ b.name }}</option> }
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label for="bp-days" class="form-label">Look at the last</label>
+          <select id="bp-days" class="form-select" [ngModel]="days()" (ngModelChange)="setDays($event)">
+            @for (w of windows; track w) { <option [ngValue]="w">{{ w }} days</option> }
+          </select>
+        </div>
+        <div class="col-6 col-md-4 d-flex justify-content-md-end">
+          <button class="btn btn-outline-primary" (click)="download()" [disabled]="!data()"><i class="bi bi-download me-1"></i> Download CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) { <div class="alert alert-danger">{{ error() }}</div> }
+
+  @if (batches().length === 0 && !error()) {
+    <div class="card"><div class="card-body text-center text-body-secondary py-5">Make a batch and add students to see their progress here.</div></div>
+  }
+
+  @if (loading() && !data()) {
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+  }
+
+  @if (data(); as d) {
+    <div class="row g-2 mb-3">
+      @for (s of statuses; track s) {
+        <div class="col-6 col-md">
+          <button type="button" class="card w-100 text-start summary" [class.picked]="filter() === s" (click)="toggleFilter(s)" [attr.aria-pressed]="filter() === s">
+            <span class="card-body py-2 px-3 d-block">
+              <span class="d-flex align-items-center gap-2"><i class="bi {{ icon(s) }}"></i><span class="fs-4 fw-semibold">{{ d.counts[s] }}</span></span>
+              <span class="small text-body-secondary">{{ label[s] }}</span>
+            </span>
+          </button>
+        </div>
+      }
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+      <div class="text-body-secondary small">
+        {{ d.students }} student{{ d.students === 1 ? '' : 's' }}
+        @if (d.average_percent !== null) { · batch average {{ d.average_percent }}% }
+        @if (filter()) { · showing "{{ label[filter() || 'steady'] }}". <button class="btn btn-link btn-sm p-0 align-baseline" (click)="filter.set('')">Show all</button> }
+      </div>
+      <input class="form-control form-control-sm w-auto" type="search" placeholder="Find a student" [ngModel]="search()" (ngModelChange)="search.set($event)" aria-label="Find a student" />
+    </div>
+
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr><th>Student</th><th>Status</th><th class="text-end">Tests</th><th style="min-width: 9rem">Average</th><th>Recent scores</th><th>Last active</th></tr>
+          </thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr>
+                <td><div class="fw-medium">{{ r.name }}</div><div class="small text-body-secondary">{{ r.username }}</div></td>
+                <td>
+                  <span class="badge" [class]="'badge ' + badge(r.status)">{{ label[r.status] }}</span>
+                  @for (why of r.reasons; track why) { <div class="small text-body-secondary mt-1">{{ why }}</div> }
+                </td>
+                <td class="text-end">{{ r.tests_taken }}</td>
+                <td>
+                  @if (r.average_percent !== null) {
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" role="progressbar" [attr.aria-valuenow]="r.average_percent" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" [class]="'progress-bar ' + tone(r.average_percent)" [style.width.%]="r.average_percent"></div></div>
+                      <span class="small fw-medium">{{ r.average_percent }}%</span>
+                    </div>
+                  } @else { <span class="text-body-secondary">-</span> }
+                </td>
+                <td>
+                  <app-sparkline [values]="r.series" [min]="0" [max]="100" />
+                  @if (r.trend !== null) { <span class="small ms-1" [class.text-success]="r.trend > 0" [class.text-danger]="r.trend < 0">{{ r.trend > 0 ? '+' : '' }}{{ r.trend }}</span> }
+                </td>
+                <td class="small">
+                  @if (r.last_active) { {{ r.last_active | date: 'd MMM' }}<div class="text-body-secondary">{{ r.days_inactive }} day{{ r.days_inactive === 1 ? '' : 's' }} ago</div> } @else { <span class="text-body-secondary">Never</span> }
+                  @if (r.plan_overdue) { <div class="text-danger">{{ r.plan_overdue }} plan task{{ r.plan_overdue === 1 ? '' : 's' }} missed</div> }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="6" class="text-center text-body-secondary py-4">No students match.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

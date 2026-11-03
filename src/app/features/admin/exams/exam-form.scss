@@ -64,11 +64,33 @@
   max-width: 960px;
 }
 
-mat-card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-top: 16px;
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+.card-title {
+  margin-bottom: 12px;
+}
+
+// A scrollable list of tick boxes, used where more than one thing can be chosen.
+.checklist {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0 0 4px;
+  padding: 8px 12px 8px 2rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
 }
 
 .grid {
@@ -91,8 +113,12 @@ mat-card-content {
     flex-wrap: wrap;
   }
 
-  .on {
-    background: var(--mat-sys-primary-container);
+  .neg-select {
+    min-width: 240px;
+  }
+
+  .neg-value {
+    min-width: 220px;
   }
 }
 
@@ -134,12 +160,27 @@ mat-card-content {
   align-items: center;
   gap: 4px;
 
-  mat-form-field {
+  .section-name {
     flex: 1;
+    min-width: 0;
+  }
+
+  .mins {
+    width: 110px;
+  }
+
+  .btn-link {
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 
 .q-row {
+  .btn-link {
+    color: var(--mat-sys-on-surface-variant);
+    padding: 4px 8px;
+    line-height: 1;
+  }
+
   display: flex;
   align-items: center;
   gap: 8px;
@@ -214,7 +255,6 @@ mat-card-content {
   border: 1px solid var(--mat-sys-outline-variant);
 
   .late {
-    display: block;
     max-width: 360px;
     margin-top: 8px;
   }
@@ -223,7 +263,7 @@ mat-card-content {
 .live-link {
   margin-top: 4px;
 
-  .row {
+  .link-row {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
@@ -233,10 +273,5 @@ mat-card-content {
   input {
     flex: 1;
     min-width: 220px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--mat-sys-outline);
-    background: var(--mat-sys-surface);
-    color: var(--mat-sys-on-surface);
   }
 }

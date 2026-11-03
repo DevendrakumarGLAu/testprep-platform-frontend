@@ -1,0 +1,16 @@
+:host {
+  display: inline-block;
+  color: var(--mat-sys-primary);
+  line-height: 0;
+}
+
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.none {
+  font-size: 0.8rem;
+  line-height: 1.2;
+  color: var(--mat-sys-on-surface-variant);
+}

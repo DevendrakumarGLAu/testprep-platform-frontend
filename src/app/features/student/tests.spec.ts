@@ -47,17 +47,17 @@ describe('Student tests page: pick an exam first', () => {
     ],
   };
 
-  const names = (el: HTMLElement) => [...el.querySelectorAll('mat-card h2')].map((h) => h.textContent!.trim());
+  const names = (el: HTMLElement) => [...el.querySelectorAll('.card h2')].map((h) => h.textContent!.trim());
 
   it('shows a card per family, in the instructor order, then exams that are in no family', async () => {
     const { el } = await open(base);
     expect(names(el)).toEqual(['SSC Exams', 'Railways', 'Banking']);
-    expect(el.querySelector('mat-card.family')?.textContent).toContain('Staff Selection Commission');
+    expect(el.querySelector('.card.family')?.textContent).toContain('Staff Selection Commission');
   });
 
   it('lists the exams of a family on its card with how many tests each has', async () => {
     const { el } = await open(base);
-    const links = [...el.querySelectorAll('mat-card.family')[0].querySelectorAll('a.exam-link')].map(
+    const links = [...el.querySelectorAll('.card.family')[0].querySelectorAll('a.exam-link')].map(
       (a) => `${a.querySelector('strong')!.textContent!.trim()} ${a.querySelector('span')!.textContent!.trim()}`,
     );
     expect(links).toEqual(['SSC CGL 12 tests', 'SSC CHSL 5 tests', 'SSC MTS 1 test']);
@@ -65,18 +65,18 @@ describe('Student tests page: pick an exam first', () => {
 
   it('opens the family on the exam that was clicked', async () => {
     const { el } = await open(base);
-    const link = el.querySelectorAll('mat-card.family')[0].querySelectorAll('a.exam-link')[1] as HTMLAnchorElement;
+    const link = el.querySelectorAll('.card.family')[0].querySelectorAll('a.exam-link')[1] as HTMLAnchorElement;
     expect(link.getAttribute('href')).toBe('/student/tests/family/g1?exam=chsl');
-    const openLink = el.querySelectorAll('mat-card.family')[0].querySelector('mat-card-actions a') as HTMLAnchorElement;
+    const openLink = el.querySelectorAll('.card.family')[0].querySelector('.card-footer a') as HTMLAnchorElement;
     expect(openLink.getAttribute('href')).toBe('/student/tests/family/g1');
     expect(openLink.textContent).toContain('Open SSC Exams');
   });
 
   it('an exam that is in no family opens straight to its tests', async () => {
     const { el } = await open(base);
-    const a = el.querySelector('mat-card.single mat-card-actions a') as HTMLAnchorElement;
+    const a = el.querySelector('.card.single .card-footer a') as HTMLAnchorElement;
     expect(a.getAttribute('href')).toBe('/student/tests/exam/bank');
-    expect(el.querySelector('mat-card.single')?.textContent).toContain('2 tests');
+    expect(el.querySelector('.card.single')?.textContent).toContain('2 tests');
   });
 
   it('does not show a family that has no exams to offer', async () => {
@@ -109,7 +109,7 @@ describe('Student tests page: pick an exam first', () => {
     expect(api.exams).toHaveBeenCalledWith({ search: 'maths' });
     expect(el.textContent).toContain('Search results');
     expect(el.querySelectorAll('app-test-card').length).toBe(1);
-    expect(el.querySelector('mat-card.family')).toBeNull();
+    expect(el.querySelector('.card.family')).toBeNull();
     c.search.setValue('');
     await new Promise((r) => setTimeout(r, 400));
     fixture.detectChanges();
@@ -148,7 +148,7 @@ describe('Student tests page: live tests have their own tab', () => {
   it('has an Exams tab first and a Live tests tab with the count, so many live tests never push the exams down', async () => {
     const { el } = await open([liveTest('l1', 'Live A'), liveTest('l2', 'Live B'), liveTest('l3', 'Live C')]);
     expect(tabs(el)).toEqual(['Exams', 'Live tests (3)']);
-    expect(el.querySelector('mat-card.single')?.textContent).toContain('Banking'); // exams are on the tab that opens first
+    expect(el.querySelector('.card.single')?.textContent).toContain('Banking'); // exams are on the tab that opens first
   });
 
   it('shows the live tests inside their tab', async () => {
@@ -157,7 +157,7 @@ describe('Student tests page: live tests have their own tab', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    const cards = el.querySelectorAll('mat-card.live-card');
+    const cards = el.querySelectorAll('.live-card');
     expect(cards.length).toBe(2);
     expect(el.textContent).toContain('Live A');
   });
@@ -171,5 +171,45 @@ describe('Student tests page: live tests have their own tab', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('No live tests right now');
     expect(api.exams.mock.calls.filter((c) => (c[0] as Record<string, unknown>)?.['live']).length).toBe(1);
+  });
+});
+
+describe('Student tests page: Bootstrap', () => {
+  async function open() {
+    const api = {
+      prep: vi.fn(() => of({ preparing: [], families: [], exams: [prepExam('bank', 'Banking', 2)] } as PrepResponse)),
+      exams: vi.fn((f: Record<string, unknown> = {}) => of(f['live'] ? [] : [])),
+    };
+    TestBed.configureTestingModule({ providers: [provideRouter([]), { provide: StudentService, useValue: api }] });
+    const fixture = TestBed.createComponent(StudentTests);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('is built with Bootstrap, with Bootstrap tabs, and has no Material component', async () => {
+    const { el } = await open();
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('app-bs-tabs .nav.nav-tabs')).not.toBeNull();
+    expect(el.querySelector('.input-group input.form-control')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-tab-group, mat-form-field, mat-icon, mat-progress-bar, [mat-flat-button]')).toBeNull();
+  });
+
+  it('marks the live tests tab with a dot only when there are live tests', async () => {
+    const { el } = await open();
+    expect(el.querySelector('[role="tab"] .dot')).toBeNull();
+  });
+
+  it('opens the Exams tab first and the other tab on a click', async () => {
+    const { fixture, el } = await open();
+    const tabs = () => Array.from(el.querySelectorAll<HTMLElement>('[role="tab"]'));
+    expect(tabs()[0].getAttribute('aria-selected')).toBe('true');
+    expect(el.querySelector('.card.single')).not.toBeNull();
+    tabs()[1].click();
+    fixture.detectChanges();
+    expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
+    expect(el.querySelector('.card.single')).toBeNull();
+    expect(el.textContent).toContain('No live tests right now');
   });
 });

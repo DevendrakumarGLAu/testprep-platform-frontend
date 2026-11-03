@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(520px, 86vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 12px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+h3 {
+  margin: 16px 0 4px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+
+  .btn-link {
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: none;
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--mat-dialog-container-color, var(--mat-sys-surface));
+}
+
+.footer .btn-link {
+  text-decoration: none;
+}

@@ -40,20 +40,31 @@ describe('LangSwitch', () => {
   }
 
   it('is hidden when the test has only one language', () => {
-    expect(render(['hi']).nativeElement.querySelector('mat-select')).toBeNull();
+    expect(render(['hi']).nativeElement.querySelector('select')).toBeNull();
   });
 
-  it('is a dropdown that shows the current language and updates the shared choice', async () => {
+  it('is a Bootstrap dropdown that shows the current language and updates the shared choice', async () => {
     const fixture = render(['en', 'hi']);
     await fixture.whenStable();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('mat-select')!.textContent).toContain(LANG_LABEL.en);
+    const select = el.querySelector('select.form-select') as HTMLSelectElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(Array.from(select.options).map((o) => o.textContent!.trim())).toEqual([LANG_LABEL.en, LANG_LABEL.hi]);
+    expect(select.selectedOptions[0].textContent!.trim()).toBe(LANG_LABEL.en);
     TestBed.inject(LanguageService).set('hi');
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    expect(el.querySelector('mat-select')!.textContent).toContain(LANG_LABEL.hi);
+    expect(select.selectedOptions[0].textContent!.trim()).toBe(LANG_LABEL.hi);
+  });
+
+  it('changing the dropdown changes the shared language', () => {
+    const fixture = render(['en', 'hi']);
+    const select = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+    select.value = 'hi';
+    select.dispatchEvent(new Event('change'));
+    expect(TestBed.inject(LanguageService).lang()).toBe('hi');
   });
 
   it('shows the first available language when the saved choice is not offered', () => {

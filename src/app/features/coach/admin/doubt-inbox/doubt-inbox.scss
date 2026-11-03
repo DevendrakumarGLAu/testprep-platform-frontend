@@ -1,0 +1,13 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.list {
+  max-height: calc(100vh - 17rem);
+  overflow-y: auto;
+}
+
+.list-group-item.current {
+  background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent);
+}

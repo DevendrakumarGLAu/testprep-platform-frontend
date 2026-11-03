@@ -1,0 +1,112 @@
+@if (user(); as u) {
+  <header class="who">
+    <div class="avatar" aria-hidden="true">{{ initials() }}</div>
+    <div>
+      <h1 class="h3">{{ fullName() }}</h1>
+      <p class="sub">{{ roleLabel() }} · member since {{ u.date_joined | date: 'mediumDate' }}</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5 card-title">My details</h2>
+        <form [formGroup]="details" (ngSubmit)="saveDetails()" novalidate>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label for="pf-first" class="form-label">First name</label>
+              <input id="pf-first" class="form-control" [class.is-invalid]="bad(details.controls.first_name)" formControlName="first_name" autocomplete="given-name" maxlength="150" />
+              @if (bad(details.controls.first_name)) { <div class="invalid-feedback">First name is required</div> }
+            </div>
+            <div class="col-6">
+              <label for="pf-last" class="form-label">Last name</label>
+              <input id="pf-last" class="form-control" formControlName="last_name" autocomplete="family-name" maxlength="150" />
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="pf-phone" class="form-label">Phone</label>
+            <input id="pf-phone" class="form-control" type="tel" [class.is-invalid]="bad(details.controls.phone)" formControlName="phone" autocomplete="tel" maxlength="20" />
+            @if (bad(details.controls.phone)) { <div class="invalid-feedback">Enter a valid phone number</div> }
+          </div>
+          @if (u.role === 'student') {
+            <div class="mb-3">
+              <label for="pf-goal" class="form-label">Daily goal (questions)</label>
+              <select id="pf-goal" class="form-select" formControlName="daily_goal_questions" aria-describedby="pf-goal-hint">
+                @for (n of goals; track n) { <option [ngValue]="n">{{ n }} questions a day</option> }
+              </select>
+              <div id="pf-goal-hint" class="form-text">Shown as a progress ring on your dashboard.</div>
+            </div>
+            <div class="form-check mb-3">
+              <input id="pf-weekly" class="form-check-input" type="checkbox" formControlName="weekly_summary" />
+              <label for="pf-weekly" class="form-check-label">Send me a weekly summary of my practice</label>
+            </div>
+          }
+          <div class="mb-3">
+            <label for="pf-username" class="form-label">Username</label>
+            <input id="pf-username" class="form-control" [value]="u.username" disabled />
+          </div>
+          <div class="mb-3">
+            <label for="pf-email" class="form-label">Email</label>
+            <input id="pf-email" class="form-control" [value]="u.email" disabled aria-describedby="pf-email-hint" />
+            <div id="pf-email-hint" class="form-text">
+              Username and email can only be changed by an administrator.
+              @if (u.email_verified) { Email confirmed. } @else { Email not confirmed yet. }
+            </div>
+          </div>
+          @if (detailsError()) { <div class="alert alert-danger py-2" role="alert">{{ detailsError() }}</div> }
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" [disabled]="savingDetails() || details.pristine">
+              @if (savingDetails()) { <span class="spinner-border spinner-border-sm" role="status" aria-label="Saving"></span> } @else { Save changes }
+            </button>
+            <button type="button" class="btn btn-link" (click)="resetDetails()" [disabled]="details.pristine">Undo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5 card-title">Appearance</h2>
+        <div class="btn-group" role="group" aria-label="Appearance">
+          @for (m of modes; track m) {
+            <button type="button" class="btn btn-outline-primary" [class.active]="theme.mode() === m" [attr.aria-pressed]="theme.mode() === m" (click)="theme.set(m)">{{ label[m] }}</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5 card-title">Change password</h2>
+        <form [formGroup]="password" (ngSubmit)="changePassword()" novalidate>
+          <div class="mb-3">
+            <label for="pf-old" class="form-label">Current password</label>
+            <input id="pf-old" class="form-control" type="password" [class.is-invalid]="bad(password.controls.old_password)" formControlName="old_password" autocomplete="current-password" />
+            @if (bad(password.controls.old_password)) { <div class="invalid-feedback">Enter your current password</div> }
+          </div>
+          <div class="mb-3">
+            <label for="pf-new" class="form-label">New password</label>
+            <input id="pf-new" class="form-control" type="password" [class.is-invalid]="bad(password.controls.new_password)" formControlName="new_password" autocomplete="new-password" aria-describedby="pf-new-hint" />
+            @if (bad(password.controls.new_password)) {
+              <div id="pf-new-hint" class="invalid-feedback">Password must be at least 8 characters</div>
+            } @else {
+              <div id="pf-new-hint" class="form-text">At least 8 characters, not too common</div>
+            }
+          </div>
+          <div class="mb-3">
+            <label for="pf-confirm" class="form-label">Confirm new password</label>
+            <input id="pf-confirm" class="form-control" type="password" [class.is-invalid]="bad(password.controls.confirm)" formControlName="confirm" autocomplete="new-password" />
+            @if (bad(password.controls.confirm) && password.controls.confirm.hasError('mismatch')) { <div class="invalid-feedback">Passwords do not match</div> }
+          </div>
+          <app-captcha />
+          @if (passwordError()) { <div class="alert alert-danger py-2" role="alert">{{ passwordError() }}</div> }
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" [disabled]="savingPassword()">
+              @if (savingPassword()) { <span class="spinner-border spinner-border-sm" role="status" aria-label="Updating"></span> } @else { Update password }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+}

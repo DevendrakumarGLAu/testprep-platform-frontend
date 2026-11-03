@@ -1,0 +1,103 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--mat-sys-surface-container-low);
+}
+
+header {
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+}
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--mat-sys-title-large);
+  font-weight: 700;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+}
+
+main {
+  padding: 32px 0 56px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.back,
+.btn-link {
+  text-decoration: none;
+}
+
+.back {
+  padding-left: 0;
+}
+
+h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 8px 0;
+}
+
+.lead {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.chip {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  font-size: 0.85rem;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9em;
+}
+
+.prem {
+  color: #b26a00;
+  margin-left: 6px;
+}
+
+.cta {
+  text-align: center;
+  margin-top: 28px;
+}
+
+.soon {
+  color: var(--mat-sys-on-surface-variant);
+}

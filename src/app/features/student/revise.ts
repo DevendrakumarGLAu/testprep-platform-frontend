@@ -1,11 +1,4 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
@@ -21,93 +14,10 @@ type Source = 'mistakes' | 'saved';
  */
 @Component({
   selector: 'app-revise',
-  imports: [RouterLink, MatButtonModule, MatButtonToggleModule, MatCardModule, MatFormFieldModule, MatIconModule, MatProgressBarModule, MatSelectModule, LangSwitch],
-  styles: `
-    :host { display: block; max-width: 760px; }
-    .bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-    .spacer { flex: 1; }
-    .exam { min-width: 220px; }
-    .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.85em; margin-bottom: 6px; }
-    .q { font: var(--mat-sys-title-large); margin: 4px 0 16px; white-space: pre-wrap; }
-    ol { padding-left: 24px; margin: 0 0 12px; }
-    li { margin-bottom: 6px; }
-    li.correct { color: #2e7d32; font-weight: 600; }
-    li.yours { color: var(--mat-sys-error); }
-    .mark { font-size: 0.8em; margin-left: 6px; }
-    .expl { background: var(--mat-sys-surface-container); padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; white-space: pre-wrap; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .done { text-align: center; padding: 24px 0; }
-    .done mat-icon { font-size: 48px; width: 48px; height: 48px; color: var(--mat-sys-primary); }
-  `,
-  template: `
-    <h1>Revise</h1>
-    <div class="bar">
-      <mat-button-toggle-group [value]="source()" (change)="choose($event.value)" aria-label="What to revise" hideSingleSelectionIndicator>
-        <mat-button-toggle value="mistakes">My mistakes</mat-button-toggle>
-        <mat-button-toggle value="saved">Saved questions</mat-button-toggle>
-      </mat-button-toggle-group>
-      @if (exams().length) {
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="exam">
-          <mat-label>Exam</mat-label>
-          <mat-select [value]="exam()" (selectionChange)="pickExam($event.value)">
-            <mat-option value="">All exams ({{ allCount() }})</mat-option>
-            @for (g of examGroups(); track g.name) {
-              <mat-optgroup [label]="g.name">
-                @for (e of g.exams; track e.id) { <mat-option [value]="e.id">{{ e.name }} ({{ e.count }})</mat-option> }
-              </mat-optgroup>
-            }
-          </mat-select>
-        </mat-form-field>
-      }
-      <span class="spacer"></span>
-      <app-lang-switch [languages]="languages" />
-    </div>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-
-    @if (!loading() && !total()) {
-      <mat-card appearance="outlined"><mat-card-content>
-        @if (exam()) {
-          <p>No cards from this exam in {{ source() === 'saved' ? 'your saved questions' : 'your mistakes' }}. Choose another exam, or all exams.</p>
-        } @else if (source() === 'saved') {
-          <p>You have not saved any questions yet. Save a question from a test review and it will appear here.</p>
-        } @else {
-          <p>No mistakes to revise. Questions you get wrong in a test show up here once its solutions are released, and leave once you answer them correctly.</p>
-        }
-        <a mat-stroked-button routerLink="/student/tests">Take a test</a>
-      </mat-card-content></mat-card>
-    } @else if (!loading() && !current()) {
-      <mat-card appearance="outlined"><mat-card-content class="done">
-        <mat-icon>celebration</mat-icon>
-        <h2>Round complete</h2>
-        <p>You went through {{ total() }} {{ total() === 1 ? 'card' : 'cards' }}.@if (more()) { There are {{ more() }} more waiting. }</p>
-        <button mat-flat-button (click)="load()">Start another round</button>
-      </mat-card-content></mat-card>
-    } @else if (current(); as c) {
-      <p class="meta" role="status">Card {{ done() + 1 }} of {{ total() }} · {{ remaining() }} left</p>
-      <mat-card appearance="outlined"><mat-card-content>
-        <div class="meta">{{ c.subject }}@if (c.exam_title) { · {{ c.exam_title }} }</div>
-        <div class="q">{{ say(c.text, c.text_hi) }}</div>
-        <ol type="A">
-          @for (o of c.options; track o.id) {
-            <li [class.correct]="shown() && o.is_correct" [class.yours]="shown() && !o.is_correct && o.id === c.your_option">
-              {{ say(o.text, o.text_hi) }}
-              @if (shown() && o.is_correct) { <span class="mark">Correct answer</span> }
-              @if (shown() && !o.is_correct && o.id === c.your_option) { <span class="mark">Your answer</span> }
-            </li>
-          }
-        </ol>
-        @if (shown()) {
-          @if (say(c.explanation, c.explanation_hi)) { <div class="expl">{{ say(c.explanation, c.explanation_hi) }}</div> }
-          <div class="actions">
-            <button mat-flat-button (click)="gotIt()"><mat-icon>check</mat-icon> Got it</button>
-            <button mat-stroked-button (click)="again()"><mat-icon>replay</mat-icon> Again</button>
-          </div>
-        } @else {
-          <button mat-flat-button (click)="shown.set(true)">Show answer</button>
-        }
-      </mat-card-content></mat-card>
-    }
-  `,
+  imports: [RouterLink, LangSwitch],
+  templateUrl: './revise.html',
+  styleUrl: './revise.scss',
+  host: { class: 'bs' },
 })
 export class Revise {
   private api = inject(StudentService);

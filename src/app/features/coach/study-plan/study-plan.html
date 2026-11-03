@@ -1,0 +1,203 @@
+<div class="container-xl px-0">
+  <h1 class="h3 mb-1">Study plan</h1>
+  <p class="text-body-secondary mb-4">Tell us your exam date. We will give you a few tasks every day: a test, revision of your mistakes, and practice.</p>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+  } @else if (error() && !plan() && !showForm()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  }
+
+  @if (showForm() && !loading()) {
+    <div class="card">
+      <div class="card-body p-4">
+        <h2 class="h5 mb-3">{{ plan() ? 'Change your plan' : 'Make your plan' }}</h2>
+        @if (plan()) {
+          <div class="alert alert-warning py-2">Saving makes a new plan from today. Tasks you ticked off in the old plan will not be kept.</div>
+        }
+        <form (ngSubmit)="save()" #f="ngForm" class="row g-3">
+          <div class="col-12 col-md-6">
+            <label for="plan-category" class="form-label">Which exam are you preparing for?</label>
+            <select id="plan-category" class="form-select" name="category" [(ngModel)]="form.category" (ngModelChange)="pickCategory()">
+              <option value="">Any test available to me</option>
+              @for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}</option> }
+            </select>
+            <div class="form-text">We pick tests from this exam first.</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="plan-name" class="form-label">Name of your goal</label>
+            <input id="plan-name" class="form-control" name="target_name" [(ngModel)]="form.target_name" maxlength="120" placeholder="For example SSC CGL 2026" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="plan-date" class="form-label">Date of your exam</label>
+            <input id="plan-date" type="date" class="form-control" name="exam_date" [(ngModel)]="form.exam_date" [min]="minDate" [max]="maxDate" required />
+            <div class="form-text">Up to 180 days from today.</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label for="plan-minutes" class="form-label">How long can you study each day?</label>
+            <select id="plan-minutes" class="form-select" name="daily_minutes" [(ngModel)]="form.daily_minutes">
+              @for (m of minutesChoices; track m) { <option [ngValue]="m">{{ m >= 60 ? (m / 60) + ' hour' + (m > 60 ? 's' : '') : m + ' minutes' }}</option> }
+            </select>
+          </div>
+          @if (error()) { <div class="col-12"><div class="alert alert-danger mb-0 py-2">{{ error() }}</div></div> }
+          <div class="col-12 d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4" [disabled]="busy()">
+              @if (busy()) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+              {{ plan() ? 'Save my new plan' : 'Make my plan' }}
+            </button>
+            @if (plan()) { <button type="button" class="btn btn-outline-secondary" (click)="cancelEdit()">Cancel</button> }
+          </div>
+        </form>
+      </div>
+    </div>
+  } @else if (plan(); as p) {
+    @let d = data()!;
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-lg-8">
+        <div class="card h-100">
+          <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+              <div>
+                <div class="text-body-secondary small">Your goal</div>
+                <h2 class="h4 mb-1">{{ p.target_name }}</h2>
+                <div class="text-body-secondary">Exam on {{ p.exam_date | date: 'EEEE, d MMMM y' }} · {{ p.daily_minutes }} minutes a day</div>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary btn-sm" (click)="edit()"><i class="bi bi-pencil me-1"></i> Change</button>
+                <button class="btn btn-outline-danger btn-sm" (click)="confirmDelete.set(true)"><i class="bi bi-trash me-1"></i> Delete</button>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="d-flex justify-content-between small mb-1"><span>{{ p.done }} of {{ p.total }} tasks done</span><span>{{ p.percent }}%</span></div>
+              <div class="progress" role="progressbar" [attr.aria-valuenow]="p.percent" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" [style.width.%]="p.percent"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-4">
+        <div class="card h-100 text-center">
+          <div class="card-body p-4 d-flex flex-column justify-content-center">
+            @if (p.finished) {
+              <div class="display-6">Done</div>
+              <div class="text-body-secondary">The exam date has passed. Make a new plan when you are ready.</div>
+            } @else {
+              <div class="display-3 fw-semibold text-primary lh-1">{{ p.days_left }}</div>
+              <div class="text-body-secondary">day{{ p.days_left === 1 ? '' : 's' }} to go</div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (p.overdue_count > 0) {
+      <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div><i class="bi bi-exclamation-triangle-fill me-2"></i>You have {{ p.overdue_count }} missed task{{ p.overdue_count === 1 ? '' : 's' }}.</div>
+        <button class="btn btn-sm btn-warning" (click)="catchUp()" [disabled]="busy()">Catch me up</button>
+      </div>
+    }
+
+    @if (d.subjects?.length) {
+      <div class="card mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <h2 class="h6 mb-0">Your subjects</h2>
+          <button class="btn btn-outline-primary btn-sm" (click)="refresh()" [disabled]="busy() || p.finished" title="Plan the coming days again, giving more time to the subjects you are weakest in">
+            <i class="bi bi-arrow-repeat me-1"></i> Update with my latest results
+          </button>
+        </div>
+        <ul class="list-group list-group-flush subjects">
+          @for (s of d.subjects; track s.id) {
+            <li class="list-group-item subject">
+              <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <strong>{{ s.name }}</strong>
+                @if (s.weak) { <span class="badge text-bg-danger">Needs work</span> }
+                <span class="ms-auto small text-body-secondary">
+                  @if (s.accuracy === null) { No answers yet } @else { {{ s.accuracy }}% right · {{ s.answered }} answered }
+                </span>
+              </div>
+              <div class="progress accuracy" role="progressbar" [attr.aria-label]="s.name + ' accuracy'" [attr.aria-valuenow]="s.accuracy ?? 0" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar" [class]="'progress-bar ' + tone(s)" [style.width.%]="s.accuracy ?? 0"></div>
+              </div>
+              <div class="small text-body-secondary mt-1">
+                {{ s.done }} of {{ s.tasks }} tasks done
+                @if (s.tests) { · {{ s.tests_done }} of {{ s.tests }} subject test{{ s.tests === 1 ? '' : 's' }} }
+                @if (s.next_date) { · next: {{ s.next_date | date: 'EEE, d MMM' }} }
+              </div>
+            </li>
+          }
+        </ul>
+        <div class="card-footer small text-body-secondary">Each day focuses on one subject. The ones you are weakest in come round more often.</div>
+      </div>
+    }
+
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0">Today</h2>
+        @if (todayMinutes() > 0) { <span class="badge text-bg-secondary">About {{ todayMinutes() }} minutes</span> }
+      </div>
+      <ul class="list-group list-group-flush">
+        @for (t of d.today; track t.id) {
+          <ng-container *ngTemplateOutlet="row; context: { $implicit: t }" />
+        } @empty {
+          <li class="list-group-item text-body-secondary">Nothing planned for today. Rest, or take any test you like.</li>
+        }
+      </ul>
+    </div>
+
+    @if (d.overdue.length) {
+      <div class="card mb-3 border-warning">
+        <div class="card-header"><h2 class="h6 mb-0">Missed</h2></div>
+        <ul class="list-group list-group-flush">
+          @for (t of d.overdue; track t.id) {
+            <ng-container *ngTemplateOutlet="row; context: { $implicit: t }" />
+          }
+        </ul>
+      </div>
+    }
+
+    @if (d.upcoming.length) {
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="h6 mb-0">Coming up</h2></div>
+        <ul class="list-group list-group-flush">
+          @for (day of d.upcoming; track day.date) {
+            <li class="list-group-item">
+              <div class="fw-medium mb-1">{{ day.date | date: 'EEEE, d MMM' }}</div>
+              @for (t of day.tasks; track t.id) {
+                <div class="d-flex align-items-center gap-2 small text-body-secondary py-1">
+                  <i class="bi {{ icon(t.kind) }}"></i><span>{{ t.title }}</span>
+                  @if (t.subject) { <span class="badge text-bg-light border subject-tag">{{ t.subject }}</span> }
+                  @if (t.minutes) { <span class="ms-auto">{{ t.minutes }} min</span> }
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    }
+  }
+</div>
+
+<ng-template #row let-t>
+  <li class="list-group-item d-flex align-items-center gap-3 task" [class.done]="t.done">
+    <input class="form-check-input mt-0 flex-shrink-0" type="checkbox" [checked]="t.done" (change)="toggle(t)" [attr.aria-label]="'Mark done: ' + t.title" />
+    <i class="bi {{ icon(t.kind) }} fs-5 text-primary flex-shrink-0"></i>
+    <div class="flex-grow-1 min-w-0">
+      <div class="title">{{ t.title }}</div>
+      <div class="small text-body-secondary">
+        @if (t.subject) { <span class="badge text-bg-light border subject-tag me-1">{{ t.subject }}</span> }
+        @if (t.overdue) { <span class="text-danger">{{ t.date | date: 'EEE, d MMM' }} · </span> }
+        @if (t.minutes) { {{ t.minutes }} minutes } @else { Good luck! }
+      </div>
+    </div>
+    @if (t.link && !t.done) { <a class="btn btn-sm btn-primary flex-shrink-0" [routerLink]="t.link">Start</a> }
+  </li>
+</ng-template>
+
+@if (confirmDelete()) {
+  <app-bs-modal title="Delete your study plan?" size="sm" (closed)="confirmDelete.set(false)">
+    <p class="mb-0">Your plan and what you ticked off will be removed. You can make a new one any time.</p>
+    <ng-container footer>
+      <button class="btn btn-outline-secondary" (click)="confirmDelete.set(false)">Keep it</button>
+      <button class="btn btn-danger" (click)="remove()">Delete</button>
+    </ng-container>
+  </app-bs-modal>
+}

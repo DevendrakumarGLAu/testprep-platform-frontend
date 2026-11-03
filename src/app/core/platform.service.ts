@@ -7,6 +7,9 @@ export interface PlatformInfo {
   platform_name: string;
   allow_registration: boolean;
   support_email: string;
+  /** How to reach the people running the site: a phone or WhatsApp number and the hours they answer. */
+  support_phone?: string;
+  support_hours?: string;
   /** True when the server can send email (forgot password, email confirmation). */
   email_enabled?: boolean;
 }

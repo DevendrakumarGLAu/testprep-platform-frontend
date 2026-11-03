@@ -1,0 +1,77 @@
+<app-auth-layout heading="Sign in" [sub]="'Welcome back to ' + platform.info().platform_name" [showSupport]="!!platform.info().email_enabled || !(platform.info().support_phone || platform.info().support_email)">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <div class="mb-3">
+      <label for="login-username" class="form-label">Username or email</label>
+      <input
+        id="login-username"
+        class="form-control"
+        [class.is-invalid]="invalid('username')"
+        formControlName="username"
+        autocomplete="username"
+      />
+      @if (invalid('username')) {
+        <div class="invalid-feedback">Username or email is required</div>
+      }
+    </div>
+
+    <div class="mb-3">
+      <label for="login-password" class="form-label">Password</label>
+      <div class="input-group has-validation">
+        <input
+          id="login-password"
+          class="form-control"
+          [class.is-invalid]="invalid('password')"
+          [type]="hide() ? 'password' : 'text'"
+          formControlName="password"
+          autocomplete="current-password"
+        />
+        <button
+          class="btn btn-outline-secondary"
+          type="button"
+          (click)="hide.set(!hide())"
+          [attr.aria-label]="hide() ? 'Show password' : 'Hide password'"
+          [attr.aria-pressed]="!hide()"
+        >
+          <i class="bi" [class.bi-eye]="hide()" [class.bi-eye-slash]="!hide()"></i>
+        </button>
+        @if (invalid('password')) {
+          <div class="invalid-feedback">Password is required</div>
+        }
+      </div>
+    </div>
+
+    <app-captcha />
+
+    <p class="forgot">
+      @if (platform.info().email_enabled) {
+        <a routerLink="/forgot-password">Forgot password?</a>
+      } @else {
+        @if (platform.info().support_phone || platform.info().support_email) {
+          <app-support-line lead="Forgot your password? Contact us and we will reset it:" />
+        } @else {
+          <span>Forgot your password? Ask your administrator to reset it.</span>
+        }
+      }
+    </p>
+
+    @if (error()) {
+      <div class="alert alert-danger py-2" role="alert">{{ error() }}</div>
+    }
+
+    <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading()">
+      @if (loading()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-label="Signing in"></span>
+      } @else {
+        Sign in
+      }
+    </button>
+  </form>
+
+  <p class="switch">
+    @if (platform.info().allow_registration) {
+      New student? <a routerLink="/register">Create an account</a>
+    } @else {
+      Need an account? Ask your administrator.
+    }
+  </p>
+</app-auth-layout>

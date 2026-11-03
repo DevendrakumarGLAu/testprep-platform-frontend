@@ -1,0 +1,30 @@
+<div class="container-xl px-0">
+  <a routerLink="/student/doubts" class="btn btn-link px-0 mb-2"><i class="bi bi-arrow-left me-1"></i> My doubts</a>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+  } @else if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  } @else if (doubt(); as d) {
+    <app-doubt-conversation [doubt]="d" />
+
+    @if (d.status === 'resolved') {
+      <div class="alert alert-success"><i class="bi bi-check-circle-fill me-2"></i>You marked this doubt as resolved. Write below if you need more help and it will open again.</div>
+    } @else if (d.status === 'open') {
+      <div class="alert alert-warning py-2">Waiting for a teacher to answer.</div>
+    }
+
+    <div class="card">
+      <div class="card-body">
+        <label for="reply" class="form-label">Write back</label>
+        <textarea id="reply" class="form-control" rows="3" [(ngModel)]="reply" maxlength="1500" placeholder="Ask a follow-up question or say thank you"></textarea>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <button class="btn btn-primary" (click)="send()" [disabled]="busy()">Send</button>
+          @if (d.status !== 'resolved') {
+            <button class="btn btn-outline-success" (click)="resolve()" [disabled]="busy()"><i class="bi bi-check2 me-1"></i> My doubt is cleared</button>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

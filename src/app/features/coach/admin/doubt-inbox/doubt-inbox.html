@@ -1,0 +1,81 @@
+<div class="container-fluid px-0">
+  <h1 class="h3 mb-1">Student doubts</h1>
+  <p class="text-body-secondary mb-3">Questions students asked from their result reviews. Answer them here; the student gets a message in the bell.</p>
+
+  <div class="row g-3">
+    <div class="col-12 col-lg-5 col-xl-4" [class.d-none]="selected() !== null" [class.d-lg-block]="selected() !== null">
+      <ul class="nav nav-pills mb-2 flex-wrap gap-1">
+        @for (t of tabs; track t.value) {
+          <li class="nav-item">
+            <button class="nav-link py-1 px-3" [class.active]="filter() === t.value" (click)="pick(t.value)">{{ t.text }} <span class="badge text-bg-light ms-1">{{ count(t.value) }}</span></button>
+          </li>
+        }
+      </ul>
+      <form class="input-group mb-2" (ngSubmit)="load()">
+        <input class="form-control" name="search" [(ngModel)]="search" placeholder="Search a question, test or student" aria-label="Search doubts" />
+        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+      </form>
+
+      @if (loading()) {
+        <div class="d-flex justify-content-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+      } @else if (error()) {
+        <div class="alert alert-danger">{{ error() }}</div>
+      } @else if (inbox().results.length === 0) {
+        <div class="card"><div class="card-body text-center text-body-secondary py-4"><i class="bi bi-inbox display-6"></i><p class="mb-0 mt-2">No doubts here.</p></div></div>
+      } @else {
+        <div class="list-group list">
+          @for (r of inbox().results; track r.id) {
+            <button type="button" class="list-group-item list-group-item-action" [class.current]="selected()?.id === r.id" (click)="open(r)">
+              <div class="d-flex justify-content-between gap-2">
+                <span class="fw-medium">{{ r.student }}</span>
+                <span class="small text-body-secondary flex-shrink-0">{{ r.updated_at | date: 'd MMM, h:mm a' }}</span>
+              </div>
+              <div class="text-truncate small">{{ r.question_text }}</div>
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <span class="small text-body-secondary text-truncate">{{ r.exam_title }}</span>
+                <span class="badge flex-shrink-0" [class]="'badge ' + badge(r.status)">{{ label[r.status] }}</span>
+              </div>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="col-12 col-lg-7 col-xl-8" [class.d-none]="selected() === null" [class.d-lg-block]="true">
+      @if (opening()) {
+        <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+      } @else if (selected(); as d) {
+        <button class="btn btn-link px-0 d-lg-none mb-2" (click)="back()"><i class="bi bi-arrow-left me-1"></i> All doubts</button>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <h2 class="h5 mb-0">{{ d.student }}</h2>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Status">
+            <button class="btn btn-outline-secondary" [disabled]="d.status === 'open'" (click)="setStatus('open')">Reopen</button>
+            <button class="btn btn-outline-secondary" [disabled]="d.status === 'resolved'" (click)="setStatus('resolved')">Mark resolved</button>
+          </div>
+        </div>
+        <app-doubt-conversation [doubt]="d" />
+
+        <div class="card">
+          <div class="card-body">
+            <label for="answer" class="form-label">Your reply</label>
+            <textarea id="answer" class="form-control" rows="6" [(ngModel)]="reply" maxlength="1500" placeholder="Explain why the correct option is right and, if the student chose another, why it is wrong."></textarea>
+            @if (usedAi()) { <div class="form-text"><i class="bi bi-stars me-1"></i>This is an AI draft. Read it, correct anything wrong, then send. The student will see that AI helped.</div> }
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <button class="btn btn-primary" (click)="send()" [disabled]="busy()">
+                @if (busy()) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+                Send reply
+              </button>
+              <button class="btn btn-outline-primary" (click)="draft()" [disabled]="drafting() || !d.ai_available" [title]="d.ai_available ? '' : 'The AI helper is not set up on the server'">
+                @if (drafting()) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> } @else { <i class="bi bi-stars me-1"></i> }
+                Draft with AI
+              </button>
+            </div>
+            @if (!d.ai_available) { <div class="form-text">The AI helper is off. To use it, add ANTHROPIC_API_KEY on the server.</div> }
+          </div>
+        </div>
+      } @else {
+        <div class="card d-none d-lg-block"><div class="card-body text-center text-body-secondary py-5"><i class="bi bi-chat-left-text display-6"></i><p class="mb-0 mt-2">Choose a doubt to read and answer it.</p></div></div>
+      }
+    </div>
+  </div>
+</div>

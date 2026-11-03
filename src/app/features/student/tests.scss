@@ -1,0 +1,99 @@
+:host {
+  display: block;
+}
+
+.intro {
+  color: var(--mat-sys-on-surface-variant);
+  max-width: 680px;
+  margin: 0 0 12px;
+}
+
+.search {
+  max-width: 360px;
+  margin-bottom: 8px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 8px 0 24px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-body {
+  flex: 1;
+}
+
+.card-footer {
+  background: transparent;
+  border-top: 0;
+  padding: 0 1rem 1rem;
+}
+
+h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+
+.desc {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.exam-link {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-top: 6px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  background: var(--mat-sys-surface-container-high);
+
+  &:hover {
+    background: var(--mat-sys-secondary-container);
+  }
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9em;
+    white-space: nowrap;
+  }
+}
+
+.counts {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9em;
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h3.heading {
+  margin: 20px 0 0;
+}
+
+.tab {
+  padding-top: 12px;
+}

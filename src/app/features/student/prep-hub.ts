@@ -1,11 +1,8 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTabsModule } from '@angular/material/tabs';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { BsTab, BsTabs } from '../../shared/bs-tabs/bs-tabs';
 import { PrepHubData, StudentExam } from './student.models';
 import { LiveStrip } from './live-strip';
 import { StudentService } from './student.service';
@@ -24,103 +21,10 @@ const STANDARD_LABELS: Record<HubTab, string> = { full: 'Full tests', mini: 'Min
  */
 @Component({
   selector: 'app-prep-hub',
-  imports: [RouterLink, MatTabsModule, MatButtonModule, MatIconModule, MatProgressBarModule, TestCard, LiveStrip],
-  styles: `
-    .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
-    .muted { color: var(--mat-sys-on-surface-variant); }
-    .chip { display: inline-block; padding: 1px 10px; margin: 0 4px 4px 0; border-radius: 12px; background: var(--mat-sys-surface-container-high); font-size: 0.85em; }
-    .progress { max-width: 420px; margin: 12px 0; }
-    .bar { height: 8px; border-radius: 4px; background: var(--mat-sys-surface-container-high); overflow: hidden; }
-    .fill { height: 100%; background: var(--mat-sys-primary); }
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 8px 0 20px; }
-    .tab { padding-top: 16px; }
-    .live-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: var(--mat-sys-error); animation: pulse 1.2s infinite; }
-    @keyframes pulse { 50% { opacity: 0.25; } }
-    h3 { margin: 16px 0 0; }
-    h3 .count { font-weight: 400; font-size: 0.8em; }
-    .empty { padding: 16px; color: var(--mat-sys-on-surface-variant); }
-    .count { color: var(--mat-sys-on-surface-variant); margin-left: 4px; }
-    .soon { margin-left: 6px; padding: 1px 8px; border-radius: 10px; font-size: 0.75em; background: var(--mat-sys-secondary-container); }
-  `,
-  template: `
-    @if (!embedded()) { <a mat-button [routerLink]="back()"><mat-icon>arrow_back</mat-icon> All exams</a> }
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-    @if (d(); as d) {
-      <div class="head">
-        <div>
-          @if (!embedded()) {
-            @if (d.exam.group) { <div class="muted family">{{ d.exam.group.name }} &rsaquo;</div> }
-            <h1>{{ d.exam.name }}</h1>
-          }
-          @if (d.exam.description) { <p class="muted">{{ d.exam.description }}</p> }
-          <div>@for (s of d.exam.subjects; track s.id) { <span class="chip">{{ s.name }}</span> }</div>
-        </div>
-        <button mat-stroked-button (click)="togglePreparing()" [attr.aria-pressed]="d.preparing">
-          <mat-icon>{{ d.preparing ? 'check_circle' : 'add_circle_outline' }}</mat-icon>
-          {{ d.preparing ? 'Preparing' : 'Prepare for this exam' }}
-        </button>
-      </div>
-      <div class="progress">
-        <div class="bar"><div class="fill" [style.width.%]="d.progress.total ? (d.progress.attempted * 100) / d.progress.total : 0"></div></div>
-        <span class="muted">{{ d.progress.attempted }} of {{ d.progress.total }} tests attempted</span>
-      </div>
-
-      <mat-tab-group animationDuration="0" [selectedIndex]="tab()" (selectedIndexChange)="pick($event)">
-        @for (t of tabList(); track t.key) {
-          <mat-tab [label]="t.label + ' (' + count(t.key) + ')'">
-            <div class="tab">
-              @switch (t.key) {
-                @case ('full') {
-                  @if (d.full_tests.length) {
-                    <div class="cards">@for (x of d.full_tests; track x.id) { <app-test-card [exam]="x" /> }</div>
-                  } @else { <p class="empty">No full tests yet.</p> }
-                }
-                @case ('mini') {
-                  @if (d.mini_mocks.length) {
-                    <div class="cards">@for (x of d.mini_mocks; track x.id) { <app-test-card [exam]="x" /> }</div>
-                  } @else { <p class="empty">No mini mocks yet.</p> }
-                }
-                @case ('previous') {
-                  @for (y of years(); track y.year) {
-                    <h3>{{ y.year || 'Other' }}</h3>
-                    <div class="cards">@for (x of y.tests; track x.id) { <app-test-card [exam]="x" /> }</div>
-                  } @empty { <p class="empty">No previous year papers yet.</p> }
-                }
-                @case ('subject') {
-                  <!-- Every section of the exam (Maths, Reasoning...) under its own heading. Sections without tests say so. -->
-                  @for (g of d.subject_tests; track g.subject) {
-                    <h3>
-                      {{ g.subject_name }}
-                      @if (g.tests.length) { <span class="count">({{ g.tests.length }})</span> } @else { <span class="soon">Upcoming</span> }
-                    </h3>
-                    @if (g.tests.length) {
-                      <div class="cards">@for (x of g.tests; track x.id) { <app-test-card [exam]="x" /> }</div>
-                    } @else {
-                      <p class="empty">
-                        <mat-icon inline>schedule</mat-icon>
-                        {{ g.subject_name }} tests for {{ d.exam.name }} are coming soon.
-                      </p>
-                    }
-                  } @empty { <p class="empty">No subject tests yet.</p> }
-                }
-                @default {
-                  @if (customTests(t.key).length) {
-                    <div class="cards">@for (x of customTests(t.key); track x.id) { <app-test-card [exam]="x" /> }</div>
-                  } @else { <p class="empty">No tests in {{ t.label }} yet.</p> }
-                }
-              }
-            </div>
-          </mat-tab>
-        }
-        @if (live().length) {
-          <mat-tab>
-            <ng-template mat-tab-label><span class="live-dot"></span>Live tests ({{ live().length }})</ng-template>
-            <div class="tab"><app-live-strip [list]="live()" [inTab]="true" /></div>
-          </mat-tab>
-        }
-      </mat-tab-group>
-    }
-  `,
+  imports: [RouterLink, BsTabs, TestCard, LiveStrip],
+  templateUrl: './prep-hub.html',
+  styleUrl: './prep-hub.scss',
+  host: { class: 'bs' },
 })
 export class PrepHub {
   id = input.required<string>();
@@ -145,6 +49,15 @@ export class PrepHub {
     const all = set?.length ? set : HUB_TABS.map((key) => ({ key, label: STANDARD_LABELS[key], visible: true }));
     return all.filter((t) => t.visible).map((t) => ({ key: t.key, label: t.label || STANDARD_LABELS[t.key as HubTab] || 'Tests' }));
   });
+
+  /** The tabs as the tab strip shows them: each with its test count, and the live tests after them when there are some. */
+  strip = computed<BsTab[]>(() => [
+    ...this.tabList().map((t) => ({ key: t.key, label: `${t.label} (${this.count(t.key)})` })),
+    ...(this.live().length ? [{ key: 'live', label: `Live tests (${this.live().length})`, dot: true }] : []),
+  ]);
+
+  /** The key of the open tab ('live' for the live tests tab). */
+  openKey = computed(() => this.tabList()[this.tab()]?.key ?? 'live');
 
   /** How many tests a tab holds (the number in its title). */
   count(key: string) {

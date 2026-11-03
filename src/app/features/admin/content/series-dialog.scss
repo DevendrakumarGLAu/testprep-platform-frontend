@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(560px, 86vw);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 16px;
+}
+
+ol {
+  padding: 0;
+  margin: 4px 0 12px;
+  list-style: none;
+}
+
+li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .n {
+    width: 28px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .t {
+    flex: 1;
+  }
+
+  .btn-link {
+    padding: 4px 8px;
+    line-height: 1;
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: none;
+  }
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px 0;
+  background: var(--mat-dialog-container-color, var(--mat-sys-surface));
+}
+
+.footer .btn-link {
+  text-decoration: none;
+}

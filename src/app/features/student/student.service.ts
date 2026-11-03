@@ -54,7 +54,7 @@ export class StudentService {
     return this.http.get<WeakTopicsData>(`${this.api}/weak-topics/`);
   }
 
-  practiceWeak(topics: Pick<WeakTopic, 'topic_id' | 'subject_id'>[], count: number) {
+  practiceWeak(topics: (Pick<WeakTopic, 'topic_id' | 'subject_id'> & { whole_subject?: boolean })[], count: number) {
     return this.http.post<PracticeStart>(`${this.api}/practice/weak/`, { topics, count });
   }
 

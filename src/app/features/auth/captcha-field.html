@@ -1,0 +1,23 @@
+@if (enabled()) {
+  <div class="mb-3">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      @if (image()) {
+        <img class="pic rounded border bg-white" [src]="image()" alt="Captcha picture with 5 characters" width="180" height="56" />
+      }
+      <button class="btn btn-outline-secondary" type="button" (click)="refresh()" aria-label="Show a different picture">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+    <label for="captcha-answer" class="form-label">Type the characters you see</label>
+    <input
+      id="captcha-answer"
+      class="form-control"
+      [value]="answer()"
+      (input)="answer.set($any($event.target).value)"
+      autocomplete="off"
+      autocapitalize="characters"
+      spellcheck="false"
+      maxlength="8"
+    />
+  </div>
+}

@@ -1,0 +1,39 @@
+<h1 class="h3">My preparation</h1>
+<p class="intro">
+  Choose the exam you are preparing for. You will see its full tests, subject-wise tests and previous year papers together,
+  and you can attempt whichever you like.
+</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading exams"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@for (sec of sections(); track sec.key) {
+  @if (sec.title) {
+    <h2 class="h4 family">{{ sec.title }}</h2>
+    @if (sec.note) { <p class="family-note">{{ sec.note }}</p> }
+  }
+  <div class="grid">
+    @for (e of sec.exams; track e.id) {
+      <div class="card" [class.on]="e.preparing">
+        <div class="card-body">
+          <h2 class="h5">{{ e.name }}</h2>
+          @if (e.description) { <p>{{ e.description }}</p> }
+          <div>@for (s of e.subjects; track s) { <span class="chip">{{ s }}</span> }</div>
+          <div class="counts">
+            {{ e.counts.full_test }} full test{{ e.counts.full_test === 1 ? '' : 's' }} ·
+            {{ e.counts.mini_mock ?? 0 }} mini mock{{ e.counts.mini_mock === 1 ? '' : 's' }} ·
+            {{ e.counts.sectional }} subject test{{ e.counts.sectional === 1 ? '' : 's' }} ·
+            {{ e.counts.previous_year }} previous year paper{{ e.counts.previous_year === 1 ? '' : 's' }}
+          </div>
+        </div>
+        <div class="card-footer">
+          <a class="btn btn-primary" [routerLink]="['/student/prepare', e.id]">Open tests</a>
+          <button type="button" class="btn btn-link" (click)="toggle(e)" [disabled]="saving()" [attr.aria-pressed]="e.preparing">
+            <i class="bi" [class]="e.preparing ? 'bi-check-circle' : 'bi-plus-circle'" aria-hidden="true"></i>
+            {{ e.preparing ? 'Preparing' : 'Prepare for this' }}
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+}
+@if (!loading() && exams().length === 0) { <div class="empty">No exams are available yet. Check back soon.</div> }

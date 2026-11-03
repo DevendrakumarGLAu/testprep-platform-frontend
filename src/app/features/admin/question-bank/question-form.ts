@@ -1,19 +1,6 @@
-import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { DecimalPipe } from '@angular/common';
 import { Component, HostListener, computed, effect, inject, input, signal } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Router, RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
@@ -36,185 +23,10 @@ function optionsValid(control: AbstractControl): ValidationErrors | null {
 
 @Component({
   selector: 'app-question-form',
-  imports: [
-    DecimalPipe, ReactiveFormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatIconModule, MatRadioModule, MatButtonToggleModule, MatChipsModule, MatCheckboxModule, MatSlideToggleModule,
-    MatProgressBarModule,
-  ],
+  imports: [DecimalPipe, ReactiveFormsModule, RouterLink],
+  templateUrl: './question-form.html',
   styleUrl: './question-form.scss',
-  template: `
-    <div class="head">
-      <h1>{{ id() ? 'Edit question #' + id() : 'New question' }}</h1>
-      <a mat-button routerLink="/admin/questions"><mat-icon>arrow_back</mat-icon> Back to list</a>
-    </div>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-
-    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
-      <mat-card appearance="outlined">
-        <mat-card-content>
-          <div class="langbar">
-            <mat-button-toggle-group [value]="lang()" (change)="lang.set($event.value)" aria-label="Language you are editing" hideSingleSelectionIndicator>
-              <mat-button-toggle value="en">English <span class="ls" [class.ok]="status('en') === 'complete'" [class.bad]="status('en') === 'incomplete'">{{ statusLabel('en') }}</span></mat-button-toggle>
-              <mat-button-toggle value="hi">हिन्दी (Hindi) <span class="ls" [class.ok]="status('hi') === 'complete'" [class.bad]="status('hi') === 'incomplete'">{{ statusLabel('hi') }}</span></mat-button-toggle>
-            </mat-button-toggle-group>
-            <small>Write the question in English, Hindi or both. At least one language is required, and students can switch between the ones you provide.</small>
-          </div>
-          @if (lang() === 'en') {
-            <mat-form-field appearance="outline">
-              <mat-label>Question text (English)</mat-label>
-              <textarea matInput rows="4" formControlName="text" (blur)="checkDuplicates()"></textarea>
-            </mat-form-field>
-          } @else {
-            <mat-form-field appearance="outline">
-              <mat-label>प्रश्न (Hindi)</mat-label>
-              <textarea matInput rows="4" formControlName="text_hi" lang="hi" (blur)="checkDuplicates()"></textarea>
-            </mat-form-field>
-          }
-
-          @if (duplicates().length) {
-            <div class="dup" role="alert">
-              <strong><mat-icon inline>warning</mat-icon> Similar questions already exist</strong>
-              <ul>
-                @for (d of duplicates(); track d.id) {
-                  <li>#{{ d.id }} ({{ d.exact ? 'exact match' : (d.similarity * 100 | number: '1.0-0') + '% similar' }}): {{ d.text }}</li>
-                }
-              </ul>
-              <mat-checkbox formControlName="allow_duplicate">Save anyway</mat-checkbox>
-            </div>
-          }
-
-          <div class="grid">
-            <mat-form-field appearance="outline">
-              <mat-label>Subject</mat-label>
-              <mat-select formControlName="subject" (selectionChange)="form.controls.topic.setValue(null)">
-                @for (s of subjects(); track s.id) { <mat-option [value]="s.id">{{ s.name }}</mat-option> }
-              </mat-select>
-              <mat-error>Subject is required</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Topic</mat-label>
-              <mat-select formControlName="topic">
-                <mat-option [value]="null">None</mat-option>
-                @for (t of topicOptions(); track t.id) { <mat-option [value]="t.id">{{ t.name }}</mat-option> }
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Difficulty</mat-label>
-              <mat-select formControlName="difficulty">
-                <mat-option value="easy">Easy</mat-option>
-                <mat-option value="medium">Medium</mat-option>
-                <mat-option value="hard">Hard</mat-option>
-              </mat-select>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Question date</mat-label>
-              <input matInput type="date" formControlName="question_date" [max]="todayStr" />
-              <mat-hint>When the event happened or the question is current as of. Tests can then use only recent questions.</mat-hint>
-              <mat-error>Choose today or an earlier date</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Question type</mat-label>
-              <mat-select formControlName="question_type">
-                <mat-option value="single_mcq">Single-correct MCQ</mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="outlined">
-        <mat-card-header><mat-card-title>Options</mat-card-title></mat-card-header>
-        <mat-card-content>
-          <mat-radio-group [value]="correctIndex()" (change)="setCorrect($event.value)" aria-label="Correct option">
-            <div formArrayName="options">
-              @for (opt of options.controls; track opt; let i = $index) {
-                <div class="option" [formGroupName]="i">
-                  <mat-radio-button [value]="i" [attr.aria-label]="'Mark option ' + (i + 1) + ' correct'" />
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>{{ lang() === 'en' ? 'Option ' + letter(i) + ' (English)' : 'विकल्प ' + letter(i) + ' (Hindi)' }}</mat-label>
-                    <input matInput [formControlName]="lang() === 'en' ? 'text' : 'text_hi'" [attr.lang]="lang()" />
-                  </mat-form-field>
-                  <button mat-icon-button type="button" (click)="removeOption(i)" [disabled]="options.length <= MIN"
-                    aria-label="Remove option"><mat-icon>close</mat-icon></button>
-                </div>
-              }
-            </div>
-          </mat-radio-group>
-          @if (options.errors?.['oneCorrect'] && options.touched) { <p class="err">Select exactly one correct option.</p> }
-          @if (options.errors?.['duplicateOptions']) { <p class="err">Option texts must be unique.</p> }
-          <button mat-stroked-button type="button" (click)="addOption()" [disabled]="options.length >= MAX">
-            <mat-icon>add</mat-icon> Add option
-          </button>
-        </mat-card-content>
-      </mat-card>
-
-      <mat-card appearance="outlined">
-        <mat-card-content>
-          <mat-form-field appearance="outline">
-            <mat-label>Solution video link (optional)</mat-label>
-            <input matInput type="url" formControlName="video_url" placeholder="https://youtu.be/..." />
-            <mat-hint>Shown to students as "Watch solution" in their review.</mat-hint>
-          </mat-form-field>
-          @if (lang() === 'en') {
-            <mat-form-field appearance="outline">
-              <mat-label>Explanation / solution (English)</mat-label>
-              <textarea matInput rows="3" formControlName="explanation"></textarea>
-            </mat-form-field>
-          } @else {
-            <mat-form-field appearance="outline">
-              <mat-label>व्याख्या / हल (Hindi)</mat-label>
-              <textarea matInput rows="3" formControlName="explanation_hi" lang="hi"></textarea>
-            </mat-form-field>
-          }
-
-          <mat-form-field appearance="outline">
-            <mat-label>Tags</mat-label>
-            <mat-chip-grid #grid aria-label="Tags">
-              @for (t of tags(); track t) {
-                <mat-chip-row (removed)="removeTag(t)">{{ t }}<button matChipRemove aria-label="Remove tag"><mat-icon>cancel</mat-icon></button></mat-chip-row>
-              }
-            </mat-chip-grid>
-            <input placeholder="Type a tag and press Enter" [matChipInputFor]="grid"
-              [matChipInputSeparatorKeyCodes]="separators" (matChipInputTokenEnd)="addTag($event)" />
-          </mat-form-field>
-
-          <div class="image">
-            <strong>Image (optional, max 2 MB)</strong>
-            <span class="meta">JPG, PNG, WebP or GIF. A very large picture is made smaller for you. You can also paste a screenshot with Ctrl+V.</span>
-            @if (imageUrl()) {
-              <img [src]="imageUrl()" alt="Question image" />
-              <button mat-button type="button" (click)="removeImage()"><mat-icon>delete</mat-icon> Remove image</button>
-            } @else if (pendingPreview()) {
-              <img [src]="pendingPreview()" alt="Selected image preview" />
-            }
-            <input #file type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden (change)="pickImage($event)" />
-            <button mat-stroked-button type="button" (click)="file.click()"><mat-icon>image</mat-icon> Choose image</button>
-          </div>
-
-          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="review">
-            <mat-label>Review status</mat-label>
-            <mat-select formControlName="review_status">
-              <mat-option value="approved">Approved</mat-option>
-              <mat-option value="needs_review">Needs review</mat-option>
-            </mat-select>
-            <mat-hint>A test cannot be published while it holds a question that needs review.</mat-hint>
-          </mat-form-field>
-          @if (openReports() > 0) {
-            <p class="err"><mat-icon inline>flag</mat-icon> {{ openReports() }} open student report{{ openReports() === 1 ? '' : 's' }} on this question.
-              <a routerLink="/admin/question-reports">Open the reports</a></p>
-          }
-          <mat-slide-toggle formControlName="is_active">Active (available for tests)</mat-slide-toggle>
-          @if (source()) { <p class="meta">Source: {{ source() }} · Version {{ version() }}</p> }
-        </mat-card-content>
-      </mat-card>
-
-      @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-      <div class="actions">
-        <a mat-button routerLink="/admin/questions">Cancel</a>
-        <button mat-flat-button type="submit" [disabled]="saving()">{{ id() ? 'Save changes' : 'Create question' }}</button>
-      </div>
-    </form>
-  `,
+  host: { class: 'bs' },
 })
 export class QuestionForm {
   // Bound from the :id route param (withComponentInputBinding).
@@ -228,7 +40,6 @@ export class QuestionForm {
   readonly todayStr = today();
   readonly MIN = MIN_OPTIONS;
   readonly MAX = MAX_OPTIONS;
-  readonly separators = [ENTER, COMMA];
 
   loading = signal(false);
   saving = signal(false);
@@ -377,10 +188,23 @@ export class QuestionForm {
     this.options.updateValueAndValidity();
   }
 
-  addTag(e: MatChipInputEvent) {
-    const v = (e.value || '').trim().toLowerCase();
+  /** Enter or a comma ends a tag. */
+  tagKey(event: KeyboardEvent, input: HTMLInputElement) {
+    if (event.key !== 'Enter' && event.key !== ',') return;
+    event.preventDefault();
+    this.addTag(input);
+  }
+
+  /** Takes what is typed in the tag box as a tag (Enter, a comma or leaving the box) and empties the box. */
+  addTag(input: HTMLInputElement) {
+    const v = (input.value || '').trim().toLowerCase();
     if (v && !this.tags().includes(v)) this.tags.update((t) => [...t, v]);
-    e.chipInput.clear();
+    input.value = '';
+  }
+
+  /** Show a field's error once it has been touched or the person tried to save. */
+  bad(c: AbstractControl) {
+    return c.invalid && (c.touched || c.dirty);
   }
 
   removeTag(t: string) {

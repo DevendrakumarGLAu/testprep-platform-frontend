@@ -71,7 +71,7 @@ describe('NotificationBell', () => {
     f.detectChanges();
     http.expectOne(`${API}/unread-count/`).flush({ unread: 2 });
     f.detectChanges();
-    expect(f.nativeElement.querySelector('.mat-badge-content')?.textContent).toContain('2');
+    expect(f.nativeElement.querySelector('.badge')?.textContent).toContain('2');
     f.componentInstance.opened();
     http.expectOne(`${API}/`).flush({ unread: 2, results: [note(1, { title: 'New test: Mock' }), note(2, { read: true })] });
     const first = f.componentInstance.svc.items()[0];
@@ -104,7 +104,7 @@ describe('NotificationsPage', () => {
     f.detectChanges();
     expect(text(f)).toContain('Result ready');
     expect(text(f)).toContain('See how you did');
-    expect(f.nativeElement.querySelectorAll('mat-card.unread').length).toBe(1);
+    expect(f.nativeElement.querySelectorAll('.card.unread').length).toBe(1);
 
     TestBed.resetTestingModule();
     const http2 = setup();
@@ -113,5 +113,39 @@ describe('NotificationsPage', () => {
     http2.expectOne(`${API}/`).flush({ unread: 0, results: [] });
     empty.detectChanges();
     expect(text(empty)).toContain('all caught up');
+  });
+});
+
+describe('NotificationBell (Bootstrap)', () => {
+  it('opens a panel when the bell is pressed, and closes it on a click elsewhere', () => {
+    const http = setup();
+    const f = TestBed.createComponent(NotificationBell);
+    f.detectChanges();
+    http.expectOne(`${API}/unread-count/`).flush({ unread: 0 });
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.panel')).toBeNull();
+    el.querySelector<HTMLButtonElement>('button.bell')!.click();
+    http.expectOne(`${API}/`).flush({ unread: 0, results: [] });
+    f.detectChanges();
+    expect(el.querySelector('.panel')!.textContent).toContain('You are all caught up.');
+    document.body.click();
+    f.detectChanges();
+    expect(el.querySelector('.panel')).toBeNull();
+    expect(el.querySelector('mat-icon, mat-menu, [mat-icon-button]')).toBeNull();
+  });
+});
+
+describe('NotificationsPage (Bootstrap)', () => {
+  it('lists notifications as Bootstrap cards with an icon each', () => {
+    const http = setup();
+    const f = TestBed.createComponent(NotificationsPage);
+    f.detectChanges();
+    http.expectOne(`${API}/`).flush({ unread: 1, results: [note(1, { title: 'Result ready' })] });
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.card .bi')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-icon, mat-progress-bar, [mat-stroked-button]')).toBeNull();
   });
 });

@@ -1,11 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { MAT_DIALOG_DATA, MatDialog } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { vi } from 'vitest';
 import { ImageViewer } from './image-viewer';
 
 describe('ImageViewer', () => {
   it('shows the picture at full size with a close button and a scroll hint', () => {
-    TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { src: 'https://cdn.example/storage/questions/a.png', alt: 'Question image' } }] });
+    const close = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [{ provide: MAT_DIALOG_DATA, useValue: { src: 'https://cdn.example/storage/questions/a.png', alt: 'Question image' } }, { provide: MatDialogRef, useValue: { close } }],
+    });
     const f = TestBed.createComponent(ImageViewer);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
@@ -14,6 +17,10 @@ describe('ImageViewer', () => {
     expect(img.getAttribute('alt')).toBe('Question image');
     expect(el.querySelector('button[aria-label="Close picture"]')).not.toBeNull();
     expect(el.textContent).toContain('Scroll to see all of it');
+    expect(el.classList.contains('bs')).toBe(true);
+    el.querySelector<HTMLButtonElement>('button.btn-close')!.click();
+    expect(close).toHaveBeenCalled();
+    expect(el.querySelector('mat-icon, [mat-icon-button]')).toBeNull();
   });
 
   it('opens in a dialog with the address it was given', () => {

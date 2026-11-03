@@ -170,3 +170,77 @@ describe('ResultExtras', () => {
     expect(text(f)).not.toContain('Leaderboard');
   });
 });
+
+describe('Practice (Bootstrap)', () => {
+  const weak = (): WeakTopicsData =>
+    ({ rule: 'Topics under 60%.', all: [{ subject_id: 1, subject: 'Geo', topic_id: 5, topic: 'Rivers', answered: 10, correct: 3, accuracy: 30 }], weakest: [] }) as unknown as WeakTopicsData;
+
+  function open(practiceWeak = vi.fn(() => of({ attempt_id: 'p1' }))) {
+    const navigate = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: { weakTopics: () => of(weak()), dailyQuiz: () => of({ available: false, done: false, in_progress: false, size: 10 }), practiceWeak } },
+        { provide: NotifyService, useValue: { error: vi.fn() } },
+      ],
+    });
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockImplementation(navigate);
+    const f = TestBed.createComponent(Practice);
+    f.detectChanges();
+    return { f, el: f.nativeElement as HTMLElement, practiceWeak, navigate };
+  }
+
+  it('is a Bootstrap card with checkboxes and a native size list', () => {
+    const { el } = open();
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('input.form-check-input[type="checkbox"]')).not.toBeNull();
+    expect(el.querySelector('select.form-select')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-checkbox, mat-select, mat-form-field, [mat-flat-button]')).toBeNull();
+  });
+
+  it('starts a practice set from the ticked topics and the chosen size', () => {
+    const { f, el, practiceWeak, navigate } = open();
+    const box = el.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    box.click();
+    const select = el.querySelector('select.form-select') as HTMLSelectElement;
+    select.value = '25';
+    select.dispatchEvent(new Event('change'));
+    f.detectChanges();
+    expect(el.textContent).toContain('Start practice (1 topic)');
+    (el.querySelector('.actions button.btn-primary') as HTMLButtonElement).click();
+    expect(practiceWeak).toHaveBeenCalledWith([{ topic_id: 5, subject_id: 1 }], 25);
+    expect(navigate).toHaveBeenCalledWith(['/student/attempt', 'p1']);
+  });
+});
+
+describe('Practice focus subject (from a study plan task)', () => {
+  function open(inputs: Record<string, string>) {
+    const practiceWeak = vi.fn(() => of({ attempt_id: 'f1' }));
+    const navigate = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: { weakTopics: () => of({ rule: '', all: [], weak: [] }), dailyQuiz: () => of({ available: false, done: false, in_progress: false, size: 10 }), practiceWeak } },
+        { provide: NotifyService, useValue: { error: vi.fn() } },
+      ],
+    });
+    vi.spyOn(TestBed.inject(Router), 'navigate').mockImplementation(navigate);
+    const f = TestBed.createComponent(Practice);
+    for (const [k, v] of Object.entries(inputs)) f.componentRef.setInput(k, v);
+    f.detectChanges();
+    return { f, el: f.nativeElement as HTMLElement, practiceWeak, navigate };
+  }
+
+  it('shows no focus card without a subject in the address', () => {
+    expect(open({}).el.querySelector('.focus')).toBeNull();
+  });
+
+  it('shows the subject and starts a set from all its topics', () => {
+    const { f, el, practiceWeak, navigate } = open({ subject: '7', name: 'GK' });
+    expect(el.querySelector('.focus')!.textContent).toContain("Today's focus: GK");
+    (el.querySelector('.focus .btn-primary') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(practiceWeak).toHaveBeenCalledWith([{ topic_id: null, subject_id: 7, whole_subject: true }], 15);
+    expect(navigate).toHaveBeenCalledWith(['/student/attempt', 'f1']);
+  });
+});

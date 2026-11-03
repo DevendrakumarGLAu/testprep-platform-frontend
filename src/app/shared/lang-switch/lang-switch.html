@@ -1,0 +1,5 @@
+@if (languages().length > 1) {
+  <select class="form-select form-select-sm" [value]="current()" (change)="svc.set($any($event.target).value)" aria-label="Question language">
+    @for (l of languages(); track l) { <option [value]="l" [selected]="l === current()" [attr.lang]="l">{{ label[l] }}</option> }
+  </select>
+}

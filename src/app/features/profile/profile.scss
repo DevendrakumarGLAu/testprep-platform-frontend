@@ -38,24 +38,14 @@
   align-items: start;
 }
 
-mat-card-content {
-  padding-top: 16px;
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
 }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.row {
-  display: flex;
-  gap: 12px;
-
-  mat-form-field {
-    flex: 1;
-    min-width: 0;
-  }
+.card-title {
+  margin-bottom: 16px;
 }
 
 .actions {
@@ -64,7 +54,6 @@ form {
   margin-top: 8px;
 }
 
-.form-error {
-  color: var(--mat-sys-error);
-  margin: 4px 0;
+.btn-link {
+  text-decoration: none;
 }

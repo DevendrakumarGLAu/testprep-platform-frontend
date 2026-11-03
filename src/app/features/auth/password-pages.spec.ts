@@ -105,3 +105,122 @@ describe('password pages', () => {
     expect(fixture.componentInstance.state()).toBe('failed');
   });
 });
+
+describe('password pages: Bootstrap screens', () => {
+  let http: HttpTestingController;
+
+  function setup(emailEnabled = true) {
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])] });
+    http = TestBed.inject(HttpTestingController);
+    return (fixture: { detectChanges: () => void }) => {
+      fixture.detectChanges();
+      for (const r of http.match(() => true)) {
+        if (r.request.url.endsWith('/auth/captcha/')) r.flush({ enabled: false });
+        else if (r.request.url.endsWith('/platform/')) r.flush({ platform_name: 'T', allow_registration: true, support_email: '', email_enabled: emailEnabled });
+      }
+      fixture.detectChanges();
+    };
+  }
+
+  const NO_MATERIAL = 'mat-form-field, mat-error, mat-hint, mat-spinner, mat-icon, [mat-flat-button], [mat-stroked-button]';
+
+  afterEach(() => http.match(() => true));
+
+  it('forgot password: Bootstrap controls, an error under a bad address, and the success message', () => {
+    const settle = setup();
+    const f = TestBed.createComponent(ForgotPassword);
+    settle(f);
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector(NO_MATERIAL)).toBeNull();
+    expect(el.querySelector('#forgot-email.form-control')).not.toBeNull();
+    f.componentInstance.form.setValue({ email: 'nope' });
+    f.componentInstance.send();
+    f.detectChanges();
+    expect(el.querySelector('#forgot-email')!.classList.contains('is-invalid')).toBe(true);
+    expect(el.querySelector('.invalid-feedback')!.textContent).toContain('Enter a valid email address');
+    f.componentInstance.sent.set('A link has been sent.');
+    f.detectChanges();
+    expect(el.querySelector('.alert-success')!.textContent).toContain('A link has been sent.');
+    expect(el.querySelector('form')).toBeNull();
+  });
+
+  it('forgot password: says so when emails are not set up on the site', () => {
+    const settle = setup(false);
+    const f = TestBed.createComponent(ForgotPassword);
+    settle(f);
+    expect(f.nativeElement.querySelector('.alert-danger')!.textContent).toContain('Emails are not set up');
+  });
+
+  it('forgot password: shows the server error and keeps the form', () => {
+    const settle = setup();
+    const f = TestBed.createComponent(ForgotPassword);
+    settle(f);
+    f.componentInstance.form.setValue({ email: 'dan@x.com' });
+    f.componentInstance.send();
+    http.expectOne(`${AUTH}/forgot-password/`).flush({ detail: 'Too many requests.' }, { status: 429, statusText: 'Too Many' });
+    for (const r of http.match(() => true)) r.flush({ enabled: false }); // the captcha is refreshed after a failure
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.alert-danger')!.textContent).toContain('Too many requests.');
+    expect(f.nativeElement.querySelector('form')).not.toBeNull();
+  });
+
+  it('reset password: Bootstrap controls and clear messages for a short or mismatched password', () => {
+    const settle = setup();
+    const f = TestBed.createComponent(ResetPassword);
+    f.componentRef.setInput('uid', 'u1');
+    f.componentRef.setInput('token', 't1');
+    settle(f);
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector(NO_MATERIAL)).toBeNull();
+    expect(el.textContent).toContain('At least 8 characters, not too common');
+    f.componentInstance.save();
+    f.detectChanges();
+    expect(Array.from(el.querySelectorAll('.invalid-feedback')).map((m) => m.textContent!.trim())).toContain('Password must be at least 8 characters');
+    expect(el.textContent).not.toContain('At least 8 characters, not too common'); // the error replaces the hint
+    f.componentInstance.form.setValue({ password: 'Br4nd!new-pass', confirm: 'different' });
+    f.componentInstance.form.controls.confirm.markAsTouched();
+    f.detectChanges();
+    expect(el.textContent).toContain('Passwords do not match');
+  });
+
+  it('reset password: a failed link offers to ask for a new one', () => {
+    const settle = setup();
+    const f = TestBed.createComponent(ResetPassword);
+    f.componentRef.setInput('uid', 'u1');
+    f.componentRef.setInput('token', 't1');
+    settle(f);
+    f.componentInstance.form.setValue({ password: 'Br4nd!new-pass', confirm: 'Br4nd!new-pass' });
+    f.componentInstance.save();
+    http.expectOne(`${AUTH}/reset-password/`).flush({ detail: 'This link is invalid or has expired.' }, { status: 400, statusText: 'Bad Request' });
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.alert-danger')!.textContent).toContain('invalid or has expired');
+    expect(f.nativeElement.querySelector('a[href="/forgot-password"]')).not.toBeNull();
+  });
+
+  it('verify email: spinner while working, then a Continue button, or an error with a way back', async () => {
+    const settle = setup();
+    const ok = TestBed.createComponent(VerifyEmail);
+    ok.componentRef.setInput('token', 'tok');
+    settle(ok);
+    expect(ok.nativeElement.classList.contains('bs')).toBe(true);
+    expect(ok.nativeElement.querySelector('.spinner-border')).not.toBeNull();
+    expect(ok.nativeElement.querySelector(NO_MATERIAL)).toBeNull();
+    await Promise.resolve();
+    http.expectOne(`${AUTH}/verify-email/`).flush({ detail: 'Your email is confirmed.' });
+    ok.detectChanges();
+    expect(ok.nativeElement.textContent).toContain('Your email is confirmed.');
+    expect(ok.nativeElement.querySelector('a.btn-primary[href="/login"]')).not.toBeNull();
+    TestBed.resetTestingModule();
+    const settle2 = setup();
+    const bad = TestBed.createComponent(VerifyEmail);
+    bad.componentRef.setInput('token', 'bad');
+    settle2(bad);
+    await Promise.resolve();
+    http.expectOne(`${AUTH}/verify-email/`).flush({ detail: 'Expired.' }, { status: 400, statusText: 'Bad Request' });
+    bad.detectChanges();
+    expect(bad.nativeElement.querySelector('.alert-danger')!.textContent).toContain('Expired.');
+    expect(bad.nativeElement.querySelector('a[href="/login"]')).not.toBeNull();
+  });
+});

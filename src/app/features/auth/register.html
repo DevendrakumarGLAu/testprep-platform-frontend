@@ -1,0 +1,65 @@
+<app-auth-layout heading="Create student account" sub="Free to join. Start practising in a minute.">
+  @if (!platform.info().allow_registration) {
+    <div class="alert alert-warning" role="alert">Registration is closed. Please ask your administrator to create an account for you.</div>
+  }
+
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate [hidden]="!platform.info().allow_registration">
+    <div class="row g-3 mb-3">
+      <div class="col-6">
+        <label for="reg-first" class="form-label">First name</label>
+        <input id="reg-first" class="form-control" [class.is-invalid]="invalid('first_name')" formControlName="first_name" autocomplete="given-name" />
+        @if (invalid('first_name')) { <div class="invalid-feedback">Required</div> }
+      </div>
+      <div class="col-6">
+        <label for="reg-last" class="form-label">Last name</label>
+        <input id="reg-last" class="form-control" formControlName="last_name" autocomplete="family-name" />
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="reg-username" class="form-label">Username</label>
+      <input id="reg-username" class="form-control" [class.is-invalid]="invalid('username')" formControlName="username" autocomplete="username" />
+      @if (invalid('username')) { <div class="invalid-feedback">Required</div> }
+    </div>
+
+    <div class="mb-3">
+      <label for="reg-email" class="form-label">Email</label>
+      <input id="reg-email" type="email" class="form-control" [class.is-invalid]="invalid('email')" formControlName="email" autocomplete="email" />
+      @if (invalid('email')) { <div class="invalid-feedback">A valid email is required</div> }
+    </div>
+
+    <div class="mb-3">
+      <label for="reg-password" class="form-label">Password</label>
+      <input id="reg-password" type="password" class="form-control" [class.is-invalid]="invalid('password')" formControlName="password" autocomplete="new-password" aria-describedby="reg-password-hint" />
+      @if (invalid('password')) {
+        <div id="reg-password-hint" class="invalid-feedback">Password must be at least 8 characters</div>
+      } @else {
+        <div id="reg-password-hint" class="form-text">At least 8 characters, not too common</div>
+      }
+    </div>
+
+    <div class="mb-3">
+      <label for="reg-confirm" class="form-label">Confirm password</label>
+      <input id="reg-confirm" type="password" class="form-control" [class.is-invalid]="invalid('confirm')" formControlName="confirm" autocomplete="new-password" />
+      @if (invalid('confirm')) {
+        <div class="invalid-feedback">{{ form.controls.confirm.hasError('mismatch') ? 'Passwords do not match' : 'Please confirm your password' }}</div>
+      }
+    </div>
+
+    <app-captcha />
+
+    @if (error()) {
+      <div class="alert alert-danger py-2" role="alert">{{ error() }}</div>
+    }
+
+    <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading()">
+      @if (loading()) {
+        <span class="spinner-border spinner-border-sm" role="status" aria-label="Creating your account"></span>
+      } @else {
+        Register
+      }
+    </button>
+  </form>
+
+  <p class="switch">Already registered? <a routerLink="/login">Sign in</a></p>
+</app-auth-layout>

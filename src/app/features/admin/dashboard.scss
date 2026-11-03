@@ -1,0 +1,81 @@
+:host {
+  display: block;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+
+  .bi {
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.value {
+  font: var(--mat-sys-headline-small);
+}
+
+.label,
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.label small {
+  display: block;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  margin-bottom: 12px;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--mat-sys-on-surface);
+  --bs-table-border-color: var(--mat-sys-outline-variant);
+  font-size: 0.9em;
+}
+
+.pass {
+  color: #2e7d32;
+}
+
+.fail {
+  color: var(--mat-sys-error);
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}

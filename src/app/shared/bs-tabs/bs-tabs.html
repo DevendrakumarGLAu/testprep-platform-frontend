@@ -1,0 +1,22 @@
+<div class="bs-tabs-strip">
+  <ul class="nav nav-tabs flex-nowrap" role="tablist">
+    @for (tab of tabs(); track tab.key; let i = $index) {
+      <li class="nav-item" role="presentation">
+        <button
+          type="button"
+          class="nav-link"
+          [class.active]="i === selected()"
+          role="tab"
+          [attr.aria-selected]="i === selected()"
+          [attr.tabindex]="i === selected() ? 0 : -1"
+          [disabled]="tab.disabled"
+          (click)="selectedChange.emit(i)"
+          (keydown)="onKey($event, i)"
+        >
+          @if (tab.dot) { <span class="dot" aria-hidden="true"></span> }{{ tab.label }}
+        </button>
+      </li>
+    }
+  </ul>
+</div>
+<div class="bs-tabs-panel" role="tabpanel"><ng-content /></div>

@@ -1,0 +1,134 @@
+:host {
+  display: block;
+}
+
+.test {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 4px solid var(--mat-sys-primary);
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+  }
+}
+
+.card-body {
+  flex: 1;
+}
+
+h3 {
+  margin: 4px 0 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.actions {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+
+  a {
+    width: 100%;
+  }
+}
+
+.pending {
+  margin: 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cat {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+.chip {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+  background: var(--mat-sys-surface-container-high);
+  white-space: nowrap;
+
+  &.available {
+    background: var(--mat-sys-tertiary-container);
+  }
+
+  &.in_progress {
+    background: var(--mat-sys-primary-container);
+  }
+
+  &.missed {
+    background: var(--mat-sys-error-container);
+  }
+
+  &.locked {
+    background: #fff3cd;
+    color: #7a5b00;
+  }
+}
+
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.premium {
+  color: #b26a00;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--mat-sys-label-medium);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--mat-sys-surface-container-low);
+  font-size: 0.9em;
+  font-weight: 600;
+
+  span {
+    color: var(--mat-sys-on-surface-variant);
+    font-weight: 400;
+    font-size: 0.85em;
+  }
+}
+
+.reason {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+  margin: 0;
+}

@@ -1,0 +1,32 @@
+<div class="container-xl px-0">
+  <h1 class="h3 mb-1">My doubts</h1>
+  <p class="text-body-secondary mb-3">Questions you asked a teacher. To ask a new one, open a result and press <strong>Ask a doubt</strong> under a question.</p>
+
+  <ul class="nav nav-pills mb-3 flex-wrap gap-1">
+    @for (t of tabs; track t.value) {
+      <li class="nav-item"><button class="nav-link" [class.active]="filter() === t.value" (click)="pick(t.value)">{{ t.text }}</button></li>
+    }
+  </ul>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+  } @else if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  } @else if (rows().length === 0) {
+    <div class="card"><div class="card-body text-center text-body-secondary py-5"><i class="bi bi-chat-dots display-6"></i><p class="mt-2 mb-0">No doubts here yet.</p></div></div>
+  } @else {
+    <div class="list-group">
+      @for (r of rows(); track r.id) {
+        <a class="list-group-item list-group-item-action" [routerLink]="['/student/doubts', r.id]">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="min-w-0">
+              <div class="fw-medium text-truncate">{{ r.question_text }}</div>
+              <div class="small text-body-secondary">{{ r.exam_title }} · asked {{ r.created_at | date: 'd MMM' }} · {{ r.reply_count }} message{{ r.reply_count === 1 ? '' : 's' }}</div>
+            </div>
+            <span class="badge flex-shrink-0" [class]="'badge ' + badge(r.status)">{{ label[r.status] }}</span>
+          </div>
+        </a>
+      }
+    </div>
+  }
+</div>

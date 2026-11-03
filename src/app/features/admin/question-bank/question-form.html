@@ -1,0 +1,180 @@
+<div class="head">
+  <h1 class="h3">{{ id() ? 'Edit question #' + id() : 'New question' }}</h1>
+  <a class="btn btn-link" routerLink="/admin/questions"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to list</a>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the question"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+<form [formGroup]="form" (ngSubmit)="save()" novalidate>
+  <div class="card">
+    <div class="card-body">
+      <div class="langbar">
+        <div class="btn-group" role="group" aria-label="Language you are editing">
+          <button type="button" class="btn btn-outline-primary" [class.active]="lang() === 'en'" [attr.aria-pressed]="lang() === 'en'" (click)="lang.set('en')">English <span class="ls" [class.ok]="status('en') === 'complete'" [class.bad]="status('en') === 'incomplete'">{{ statusLabel('en') }}</span></button>
+          <button type="button" class="btn btn-outline-primary" [class.active]="lang() === 'hi'" [attr.aria-pressed]="lang() === 'hi'" (click)="lang.set('hi')">हिन्दी (Hindi) <span class="ls" [class.ok]="status('hi') === 'complete'" [class.bad]="status('hi') === 'incomplete'">{{ statusLabel('hi') }}</span></button>
+        </div>
+        <small>Write the question in English, Hindi or both. At least one language is required, and students can switch between the ones you provide.</small>
+      </div>
+      @if (lang() === 'en') {
+        <div class="mb-3">
+          <label for="qf-text" class="form-label">Question text (English)</label>
+          <textarea id="qf-text" class="form-control" rows="4" formControlName="text" (blur)="checkDuplicates()"></textarea>
+        </div>
+      } @else {
+        <div class="mb-3">
+          <label for="qf-text-hi" class="form-label">प्रश्न (Hindi)</label>
+          <textarea id="qf-text-hi" class="form-control" rows="4" formControlName="text_hi" lang="hi" (blur)="checkDuplicates()"></textarea>
+        </div>
+      }
+
+      @if (duplicates().length) {
+        <div class="dup" role="alert">
+          <strong><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Similar questions already exist</strong>
+          <ul>
+            @for (d of duplicates(); track d.id) {
+              <li>#{{ d.id }} ({{ d.exact ? 'exact match' : (d.similarity * 100 | number: '1.0-0') + '% similar' }}): {{ d.text }}</li>
+            }
+          </ul>
+          <div class="form-check">
+            <input id="qf-allow" class="form-check-input" type="checkbox" formControlName="allow_duplicate" />
+            <label for="qf-allow" class="form-check-label">Save anyway</label>
+          </div>
+        </div>
+      }
+
+      <div class="grid">
+        <div class="mb-3">
+          <label for="qf-subject" class="form-label">Subject</label>
+          <select id="qf-subject" class="form-select" [class.is-invalid]="bad(form.controls.subject)" formControlName="subject" (change)="form.controls.topic.setValue(null)">
+            @for (s of subjects(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+          </select>
+          @if (bad(form.controls.subject)) { <div class="invalid-feedback">Subject is required</div> }
+        </div>
+        <div class="mb-3">
+          <label for="qf-topic" class="form-label">Topic</label>
+          <select id="qf-topic" class="form-select" formControlName="topic">
+            <option [ngValue]="null">None</option>
+            @for (t of topicOptions(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="qf-difficulty" class="form-label">Difficulty</label>
+          <select id="qf-difficulty" class="form-select" formControlName="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="qf-date" class="form-label">Question date</label>
+          <input id="qf-date" class="form-control" type="date" [class.is-invalid]="bad(form.controls.question_date)" formControlName="question_date" [max]="todayStr" aria-describedby="qf-date-hint" />
+          @if (bad(form.controls.question_date)) {
+            <div id="qf-date-hint" class="invalid-feedback">Choose today or an earlier date</div>
+          } @else {
+            <div id="qf-date-hint" class="form-text">When the event happened or the question is current as of. Tests can then use only recent questions.</div>
+          }
+        </div>
+        <div class="mb-3">
+          <label for="qf-type" class="form-label">Question type</label>
+          <select id="qf-type" class="form-select" formControlName="question_type">
+            <option value="single_mcq">Single-correct MCQ</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h6 card-title">Options</h2>
+      <div role="radiogroup" aria-label="Correct option" formArrayName="options">
+        @for (opt of options.controls; track opt; let i = $index) {
+          <div class="option" [formGroupName]="i">
+            <input class="form-check-input" type="radio" name="correct-option" [checked]="correctIndex() === i" (change)="setCorrect(i)" [attr.aria-label]="'Mark option ' + (i + 1) + ' correct'" />
+            <div class="option-text">
+              <label [for]="'qf-opt-' + i" class="form-label visually-hidden">{{ lang() === 'en' ? 'Option ' + letter(i) + ' (English)' : 'विकल्प ' + letter(i) + ' (Hindi)' }}</label>
+              <input [id]="'qf-opt-' + i" class="form-control" [formControlName]="lang() === 'en' ? 'text' : 'text_hi'" [attr.lang]="lang()"
+                [placeholder]="lang() === 'en' ? 'Option ' + letter(i) + ' (English)' : 'विकल्प ' + letter(i) + ' (Hindi)'" />
+            </div>
+            <button type="button" class="btn btn-link" (click)="removeOption(i)" [disabled]="options.length <= MIN" aria-label="Remove option"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+          </div>
+        }
+      </div>
+      @if (options.errors?.['oneCorrect'] && options.touched) { <p class="err">Select exactly one correct option.</p> }
+      @if (options.errors?.['duplicateOptions']) { <p class="err">Option texts must be unique.</p> }
+      <button type="button" class="btn btn-outline-primary" (click)="addOption()" [disabled]="options.length >= MAX">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> Add option
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="mb-3">
+        <label for="qf-video" class="form-label">Solution video link (optional)</label>
+        <input id="qf-video" class="form-control" type="url" formControlName="video_url" placeholder="https://youtu.be/..." aria-describedby="qf-video-hint" />
+        <div id="qf-video-hint" class="form-text">Shown to students as "Watch solution" in their review.</div>
+      </div>
+      @if (lang() === 'en') {
+        <div class="mb-3">
+          <label for="qf-expl" class="form-label">Explanation / solution (English)</label>
+          <textarea id="qf-expl" class="form-control" rows="3" formControlName="explanation"></textarea>
+        </div>
+      } @else {
+        <div class="mb-3">
+          <label for="qf-expl-hi" class="form-label">व्याख्या / हल (Hindi)</label>
+          <textarea id="qf-expl-hi" class="form-control" rows="3" formControlName="explanation_hi" lang="hi"></textarea>
+        </div>
+      }
+
+      <div class="mb-3">
+        <label for="qf-tag" class="form-label">Tags</label>
+        <div class="tags" role="list" aria-label="Tags">
+          @for (t of tags(); track t) {
+            <span class="tag-chip" role="listitem">{{ t }}<button type="button" class="btn-close btn-close-sm" (click)="removeTag(t)" aria-label="Remove tag"></button></span>
+          }
+          <input #tagIn id="qf-tag" class="form-control tag-input" placeholder="Type a tag and press Enter"
+            (keydown)="tagKey($event, tagIn)" (blur)="addTag(tagIn)" />
+        </div>
+      </div>
+
+      <div class="image">
+        <strong>Image (optional, max 2 MB)</strong>
+        <span class="meta">JPG, PNG, WebP or GIF. A very large picture is made smaller for you. You can also paste a screenshot with Ctrl+V.</span>
+        @if (imageUrl()) {
+          <img [src]="imageUrl()" alt="Question image" />
+          <button type="button" class="btn btn-link" (click)="removeImage()"><i class="bi bi-trash" aria-hidden="true"></i> Remove image</button>
+        } @else if (pendingPreview()) {
+          <img [src]="pendingPreview()" alt="Selected image preview" />
+        }
+        <input #file type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden (change)="pickImage($event)" />
+        <button type="button" class="btn btn-outline-primary" (click)="file.click()"><i class="bi bi-image" aria-hidden="true"></i> Choose image</button>
+      </div>
+
+      <div class="mb-3 review">
+        <label for="qf-review" class="form-label">Review status</label>
+        <select id="qf-review" class="form-select" formControlName="review_status" aria-describedby="qf-review-hint">
+          <option value="approved">Approved</option>
+          <option value="needs_review">Needs review</option>
+        </select>
+        <div id="qf-review-hint" class="form-text">A test cannot be published while it holds a question that needs review.</div>
+      </div>
+      @if (openReports() > 0) {
+        <p class="err"><i class="bi bi-flag" aria-hidden="true"></i> {{ openReports() }} open student report{{ openReports() === 1 ? '' : 's' }} on this question.
+          <a routerLink="/admin/question-reports">Open the reports</a></p>
+      }
+      <div class="form-check form-switch mb-2">
+        <input id="qf-active" class="form-check-input" type="checkbox" role="switch" formControlName="is_active" />
+        <label for="qf-active" class="form-check-label">Active (available for tests)</label>
+      </div>
+      @if (source()) { <p class="meta">Source: {{ source() }} · Version {{ version() }}</p> }
+    </div>
+  </div>
+
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+  <div class="actions">
+    <a class="btn btn-link" routerLink="/admin/questions">Cancel</a>
+    <button type="submit" class="btn btn-primary" [disabled]="saving()">{{ id() ? 'Save changes' : 'Create question' }}</button>
+  </div>
+</form>

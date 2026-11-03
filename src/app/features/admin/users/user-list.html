@@ -1,0 +1,65 @@
+<div class="head">
+  <h1 class="h3">Users</h1>
+  <button type="button" class="btn btn-primary" (click)="openDialog(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New user</button>
+</div>
+<div class="filters">
+  <div class="field search">
+    <label for="ul-search" class="form-label">Search</label>
+    <div class="input-group">
+      <input id="ul-search" type="search" class="form-control" [formControl]="search" placeholder="Name, username or email" />
+      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+    </div>
+  </div>
+  @if (isSuper()) {
+    <div class="field">
+      <label for="ul-role" class="form-label">Role</label>
+      <select id="ul-role" class="form-select" (change)="role.set($any($event.target).value); pageIndex.set(0)">
+        <option value="" [selected]="role() === ''">All</option>
+        <option value="super_admin" [selected]="role() === 'super_admin'">Super Admin</option>
+        <option value="admin" [selected]="role() === 'admin'">Admin</option>
+        <option value="student" [selected]="role() === 'student'">Student</option>
+      </select>
+    </div>
+  }
+  <div class="field">
+    <label for="ul-status" class="form-label">Status</label>
+    <select id="ul-status" class="form-select" (change)="status.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="status() === ''">All</option>
+      <option value="true" [selected]="status() === 'true'">Active</option>
+      <option value="false" [selected]="status() === 'false'">Inactive</option>
+    </select>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading users"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (u of rows(); track u.id) {
+        <tr>
+          <td>{{ (u.first_name + ' ' + u.last_name).trim() || u.username }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ roleLabel(u.role) }}</td>
+          <td><span [class.inactive]="!u.is_active">{{ u.is_active ? 'Active' : 'Inactive' }}</span></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="openDialog(u)" aria-label="Edit user" title="Edit user"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            @if (u.id !== auth.user()?.id) {
+              <button type="button" class="btn btn-link" (click)="resetPassword(u)" aria-label="Reset password" title="Reset password"><i class="bi bi-key" aria-hidden="true"></i></button>
+              <button type="button" class="btn btn-link" (click)="toggleActive(u)" [attr.aria-label]="u.is_active ? 'Deactivate user' : 'Activate user'" [title]="u.is_active ? 'Deactivate user' : 'Activate user'">
+                <i class="bi" [class]="u.is_active ? 'bi-person-x' : 'bi-person-plus'" aria-hidden="true"></i>
+              </button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No users match your filters.</div> }
+</div>
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 20, 50]" (page)="onPage($event)" />

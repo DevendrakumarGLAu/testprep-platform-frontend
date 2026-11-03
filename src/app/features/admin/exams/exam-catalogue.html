@@ -1,0 +1,36 @@
+<div class="head">
+  <h1 class="h3">Exams</h1>
+  <span class="head-actions">
+    <button type="button" class="btn btn-outline-primary" (click)="manageFamilies()"><i class="bi bi-folder" aria-hidden="true"></i> Families</button>
+    <button type="button" class="btn btn-primary" (click)="edit(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New exam</button>
+  </span>
+</div>
+<p class="intro">
+  An exam is what students prepare for, such as SSC CGL. Group related exams into a family (SSC &rsaquo; MTS, CHSL, CGL), save each
+  exam's usual pattern, then create tests under it as full tests, subject tests or previous year papers. A test can also be
+  shown in other exams from its own settings.
+</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading exams"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Exam</th><th>Family</th><th>Sections</th><th>Tests</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (c of rows(); track c.id) {
+        <tr>
+          <td><strong>{{ c.name }}</strong>@if (c.description) { <div>{{ c.description }}</div> }</td>
+          <td>{{ c.group_name || '—' }}</td>
+          <td>@for (n of c.subject_names; track n) { <span class="chip">{{ n }}</span> } @empty { — }</td>
+          <td>{{ c.exam_count }}</td>
+          <td><span [class.off]="!c.is_active">{{ c.is_active ? 'Visible' : 'Hidden' }}</span></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="edit(c)" aria-label="Edit exam" title="Edit exam"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="remove(c)" aria-label="Delete exam" title="Delete exam"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No exams yet. Create one, for example SSC.</div> }
+</div>

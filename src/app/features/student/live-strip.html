@@ -1,0 +1,24 @@
+@if (inTab() && !items().length) {
+  <p class="empty">No live tests right now. They will appear here.</p>
+}
+@if (items().length) {
+  <section aria-label="Live tests">
+    @if (!inTab()) { <h2><span class="dot"></span> Live tests</h2> }
+    <div class="list">
+      @for (e of items(); track e.id) {
+        <div class="card live-card">
+          <div class="row-line">
+            <div>
+              <strong>{{ e.title }}</strong>
+              <div class="meta">
+                {{ e.category_name ? e.category_name + ' · ' : '' }}{{ e.start_at | date: 'EEE, d MMM, h:mm a' }} · {{ e.duration_minutes }} min
+              </div>
+            </div>
+            <div class="when" [class.now]="phase(e) === 'live'">{{ when(e) }}</div>
+            <a class="btn btn-primary" [routerLink]="['/student/tests', e.id]">{{ action(e) }}</a>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+}

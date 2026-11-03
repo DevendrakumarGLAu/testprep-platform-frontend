@@ -1,0 +1,56 @@
+<h2 class="h5 title">Fix row {{ data.row.row_number }}</h2>
+<div class="content">
+  @if (data.row.errors.length) {
+    <ul class="errs">@for (e of data.row.errors; track e) { <li>{{ e }}</li> }</ul>
+  }
+  <form [formGroup]="form" id="fix-form" (ngSubmit)="save()">
+    <div class="mb-3">
+      <label for="rf-question" class="form-label">Question</label>
+      <textarea id="rf-question" class="form-control" rows="3" formControlName="question"></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="rf-correct" class="form-label">Correct answer</label>
+      <select id="rf-correct" class="form-select" formControlName="correct" aria-describedby="rf-correct-hint">
+        @for (o of options; track o.label) { <option [value]="o.label">{{ o.label }}. {{ o.text }}</option> }
+      </select>
+      @if (!options.length) { <div id="rf-correct-hint" class="form-text">Needs at least two options in the source file</div> }
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-6">
+        <label for="rf-subject" class="form-label">Subject</label>
+        <select id="rf-subject" class="form-select" formControlName="subject">
+          @for (s of data.subjects; track s.id) { <option [value]="s.name">{{ s.name }}</option> }
+        </select>
+      </div>
+      <div class="col-6">
+        <label for="rf-topic" class="form-label">Topic (optional)</label>
+        <input id="rf-topic" class="form-control" formControlName="topic" />
+      </div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-4">
+        <label for="rf-difficulty" class="form-label">Difficulty</label>
+        <select id="rf-difficulty" class="form-select" formControlName="difficulty">
+          <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+        </select>
+      </div>
+      <div class="col-4">
+        <label for="rf-marks" class="form-label">Marks</label>
+        <input id="rf-marks" class="form-control" type="number" step="0.25" formControlName="marks" />
+      </div>
+      <div class="col-4">
+        <label for="rf-negative" class="form-label">Negative</label>
+        <input id="rf-negative" class="form-control" type="number" step="0.25" formControlName="negative_marks" />
+      </div>
+    </div>
+    <div class="mb-3">
+      <label for="rf-expl" class="form-label">Explanation</label>
+      <textarea id="rf-expl" class="form-control" rows="2" formControlName="explanation"></textarea>
+    </div>
+    @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+  </form>
+</div>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="fix-form" [disabled]="saving()">Save and re-check</button>
+</div>

@@ -1,0 +1,75 @@
+<h1 class="h3">Welcome, {{ auth.user()?.first_name || auth.user()?.username }}</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the dashboard"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@if (d(); as d) {
+  <div class="stats">
+    <div class="card stat"><i class="bi bi-mortarboard" aria-hidden="true"></i>
+      <div><div class="value">{{ d.students.total }}</div><div class="label">Registered students<small>{{ d.students.new_last_30_days }} new in 30 days</small></div></div></div>
+    <div class="card stat"><i class="bi bi-person-check" aria-hidden="true"></i>
+      <div><div class="value">{{ d.students.active }}</div><div class="label">Active students</div></div></div>
+    <div class="card stat"><i class="bi bi-question-circle" aria-hidden="true"></i>
+      <div><div class="value">{{ d.questions.total }}</div><div class="label">Questions<small>{{ d.questions.active }} active</small></div></div></div>
+    <div class="card stat"><i class="bi bi-clipboard-check" aria-hidden="true"></i>
+      <div><div class="value">{{ d.tests.total }}</div><div class="label">Tests<small>{{ d.tests.published }} published · {{ d.tests.draft }} draft</small></div></div></div>
+    <div class="card stat"><i class="bi bi-check2-square" aria-hidden="true"></i>
+      <div><div class="value">{{ d.attempts.submitted }}</div><div class="label">Attempts submitted<small>{{ d.attempts.in_progress }} in progress</small></div></div></div>
+    <div class="card stat"><i class="bi bi-percent" aria-hidden="true"></i>
+      <div><div class="value">{{ d.average_percentage === null ? '—' : d.average_percentage + '%' }}</div><div class="label">Average score<small>Pass rate {{ d.pass_rate === null ? '—' : d.pass_rate + '%' }}</small></div></div></div>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Participation, last 14 days</h2>
+        <app-chart type="line" [labels]="participationLabels()" [series]="participationSeries()" label="Submitted attempts per day over the last 14 days" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Score distribution</h2>
+        <app-chart type="bar" [labels]="distLabels()" [series]="distSeries()" label="Number of attempts by score range" />
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Subject-wise accuracy</h2>
+        @if (d.subjects.length) {
+          <app-chart type="bar" [horizontal]="true" [max]="100" [labels]="subjectLabels()" [series]="subjectSeries()" label="Accuracy percentage by subject" />
+        } @else { <p class="muted">No completed attempts yet.</p> }
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Most attempted tests</h2>
+        @for (t of d.top_tests; track t.id) {
+          <div class="top-row"><a [routerLink]="['/admin/tests', t.id, 'results']">{{ t.title }}</a><strong>{{ t.attempts }}</strong></div>
+        } @empty { <p class="muted">No completed attempts yet.</p> }
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h6 card-title">Recent test activity</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Student</th><th>Test</th><th>Score</th><th>Result</th><th>Submitted</th><th></th></tr></thead>
+          <tbody>
+            @for (a of d.recent_activity; track a.attempt) {
+              <tr>
+                <td>{{ a.student }}</td><td>{{ a.exam }}</td>
+                <td>{{ a.score }} / {{ a.total_marks }} ({{ a.percentage }}%)</td>
+                <td [class]="a.passed ? 'pass' : 'fail'">{{ a.passed ? 'Passed' : 'Not passed' }}</td>
+                <td>{{ a.submitted_at | date: 'short' }}</td>
+                <td><a [routerLink]="['/admin/attempts', a.attempt]">Review</a></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!d.recent_activity.length) { <p class="muted">Nothing yet. Activity appears when students submit tests.</p> }
+    </div>
+  </div>
+}

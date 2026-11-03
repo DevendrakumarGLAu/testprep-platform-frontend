@@ -1,0 +1,171 @@
+@let r = data();
+<div class="head">
+  <h1>{{ r.exam.title }}</h1>
+  <p class="muted">
+    Attempt {{ r.attempt.attempt_number }} · submitted {{ r.attempt.submitted_at | date: 'medium' }}
+    @if (r.attempt.auto_submitted) { · auto-submitted at the deadline }
+    @if (r.attempt.student) { · <strong>{{ r.attempt.student.name }}</strong> ({{ r.attempt.student.email }}) }
+  </p>
+</div>
+
+<div class="card score-card">
+  <div class="card-body">
+    <div class="score">{{ r.summary.score }} <span>/ {{ r.summary.total_marks }}</span></div>
+    <div class="verdict" [class.pass]="r.summary.passed" [class.fail]="!r.summary.passed">
+      {{ r.summary.passed ? 'Passed' : 'Not passed' }} · passing marks {{ r.summary.passing_marks }}
+    </div>
+    <div class="grid">
+      <div><strong>{{ r.summary.percentage ?? '—' }}{{ r.summary.percentage === null ? '' : '%' }}</strong><span>Score</span></div>
+      <div><strong class="ok">{{ r.summary.correct }}</strong><span>Correct</span></div>
+      <div><strong class="bad">{{ r.summary.incorrect }}</strong><span>Incorrect</span></div>
+      <div><strong>{{ r.summary.unanswered }}</strong><span>Unanswered</span></div>
+      <div><strong>{{ r.summary.accuracy }}%</strong><span>Accuracy</span></div>
+      <div><strong>{{ duration(r.summary.time_taken_seconds) }}</strong><span>Time taken</span></div>
+    </div>
+    @if (r.comparison.average_percentage !== null && r.comparison.attempts_count > 1) {
+      <p class="muted">
+        Average across {{ r.comparison.attempts_count }} attempts: {{ r.comparison.average_percentage }}%
+        @if (r.summary.percentage !== null) {
+          ({{ r.summary.percentage >= r.comparison.average_percentage ? 'above' : 'below' }} average)
+        }
+      </p>
+    }
+  </div>
+</div>
+
+<div class="two">
+  <div class="card">
+    <div class="card-header">Section-wise marks</div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table class="table table-sm plain">
+          <thead><tr><th>Section</th><th>Marks</th><th>Correct</th><th>Incorrect</th><th>Unanswered</th><th>Time</th></tr></thead>
+          <tbody>
+            @for (s of r.sections; track s.name) {
+              <tr><td>{{ s.name }}</td><td>{{ s.marks }} / {{ s.max_marks }}</td><td>{{ s.correct }}</td><td>{{ s.incorrect }}</td><td>{{ s.unanswered }}</td><td>{{ short(s.time_seconds) }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">Subject-wise accuracy</div>
+    <div class="card-body">
+      @for (s of r.subjects; track s.subject) {
+        <div class="bar-row">
+          <span>{{ s.subject }}</span>
+          <div class="bar"><div class="fill" [style.width.%]="s.accuracy"></div></div>
+          <span>{{ s.accuracy }}%</span>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+
+@if (r.timing.total_seconds > 0) {
+  <div class="card timing">
+    <div class="card-header">Time spent on each question</div>
+    <div class="card-body">
+      <p class="muted">
+        {{ short(r.timing.total_seconds) }} on questions · average {{ short(r.timing.average_seconds) }} per question
+        @if (r.timing.slowest) { · longest on Q{{ r.timing.slowest.number }} ({{ short(r.timing.slowest.seconds) }}) }
+      </p>
+      @for (q of r.questions; track q.number) {
+        <div class="time-row">
+          <span>Q{{ q.number }}</span>
+          <div class="bar"><div class="fill" [style.width.%]="(q.time_spent_seconds * 100) / maxTime()"></div></div>
+          <span class="val">{{ short(q.time_spent_seconds) }}</span>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<h2>Question review</h2>
+@if (languages().length > 1) { <app-lang-switch [languages]="languages()" /> }
+@if (!r.solutions_available) {
+  <div class="notice"><i class="bi bi-lock-fill"></i> Correct answers, marks per question and explanations will appear when solutions are released. Your selected answers are shown below.</div>
+} @else {
+  <div class="btn-group filters" role="group" aria-label="Filter questions">
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'all'" (click)="filter.set('all')">All ({{ r.questions.length }})</button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'correct'" (click)="filter.set('correct')">Correct ({{ r.summary.correct }})</button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'incorrect'" (click)="filter.set('incorrect')">Incorrect ({{ r.summary.incorrect }})</button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'unanswered'" (click)="filter.set('unanswered')">Unanswered ({{ r.summary.unanswered }})</button>
+  </div>
+}
+
+@for (q of shown(); track q.number) {
+  <div class="card q" [class]="'card q ' + (q.status ?? '')">
+    <div class="card-body">
+      <div class="q-head">
+        <span>Q{{ q.number }} · {{ q.section }}{{ q.subject ? ' · ' + q.subject : '' }} · <i class="bi bi-stopwatch"></i> {{ short(q.time_spent_seconds) }}</span>
+        @if (q.status) {
+          <span class="tag" [class]="'tag ' + q.status">{{ q.status }} · {{ q.marks_awarded }} / {{ q.marks }}</span>
+        } @else {
+          <span class="muted">{{ q.marks }} marks</span>
+        }
+      </div>
+      @if (q.image_url) {
+        <img class="zoomable" [src]="q.image_url" alt="Question image" tabindex="0" role="button" title="Tap to enlarge"
+          (click)="zoom(q.image_url)" (keydown.enter)="zoom(q.image_url)" />
+      }
+      <div class="q-text" [attr.lang]="lang()">{{ say(q.text, q.text_hi) }}</div>
+      @if (retry()[q.number]; as t) {
+        <p class="muted retry-hint">{{ t.picked === null ? 'Re-attempt: choose the answer again.' : 'Re-attempt' }}</p>
+        <ol class="opts retry">
+          @for (o of q.options; track o.id) {
+            <li tabindex="0" role="button" [attr.aria-disabled]="t.picked !== null"
+              [class.correct]="t.picked !== null && o.is_correct" [class.wrong]="t.picked === o.id && o.is_correct === false" [class.chosen]="t.picked === o.id"
+              (click)="pickRetry(q.number, o.id)" (keydown.enter)="pickRetry(q.number, o.id)">
+              {{ say(o.text, o.text_hi) }}
+              @if (t.picked === o.id) { <span class="mark">Your new answer</span> }
+            </li>
+          }
+        </ol>
+        @if (t.picked !== null) {
+          <p class="retry-result" [class.ok]="isRetryCorrect(q, t.picked)" role="status">
+            {{ isRetryCorrect(q, t.picked) ? 'Correct! Well done.' : 'Not quite. The right answer is highlighted.' }}
+          </p>
+          @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
+        }
+        <div class="q-actions">
+          @if (t.picked !== null) { <button type="button" class="btn btn-sm btn-link" (click)="startRetry(q.number)"><i class="bi bi-arrow-repeat"></i> Try again</button> }
+          <button type="button" class="btn btn-sm btn-link" (click)="stopRetry(q.number)">Back to my result</button>
+        </div>
+      } @else {
+        <ol class="opts">
+          @for (o of q.options; track o.id) {
+            <li [class.correct]="o.is_correct" [class.wrong]="q.selected_option === o.id && o.is_correct === false" [class.chosen]="q.selected_option === o.id">
+              {{ say(o.text, o.text_hi) }}
+              @if (q.selected_option === o.id) { <span class="mark">Your answer</span> }
+              @if (o.is_correct) { <span class="mark good">Correct answer</span> }
+            </li>
+          }
+        </ol>
+        @if (q.selected_option === null) { <p class="muted">You did not answer this question.</p> }
+        @if (q.explanation || q.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(q.explanation, q.explanation_hi) }}</div> }
+      }
+      @if (q.video_url) {
+        <a class="btn btn-sm btn-link video" [href]="q.video_url" target="_blank" rel="noopener noreferrer"><i class="bi bi-play-btn"></i> Watch solution</a>
+      }
+      @if (canAct() && data().solutions_available && !retry()[q.number]) {
+        <div class="q-actions">
+          @if (data().reattempt_enabled !== false) {
+            <button type="button" class="btn btn-sm btn-link" (click)="startRetry(q.number)"><i class="bi bi-arrow-repeat"></i> Re-attempt</button>
+          }
+          <button type="button" class="btn btn-sm btn-link" (click)="saveToggle.emit(q.number)" [attr.aria-pressed]="!!q.saved_id">
+            <i class="bi" [class.bi-bookmark-fill]="q.saved_id" [class.bi-bookmark]="!q.saved_id"></i> {{ q.saved_id ? 'Saved' : 'Save' }}
+          </button>
+          @if (doubtEnabled()) {
+            <button type="button" class="btn btn-sm btn-link" (click)="doubt.emit(q.number)"><i class="bi bi-question-circle"></i> Ask a doubt</button>
+          }
+          <button type="button" class="btn btn-sm btn-link" (click)="report.emit(q.number)" [disabled]="q.report_status === 'open'">
+            <i class="bi bi-flag"></i>
+            {{ q.report_status === 'open' ? 'Reported, waiting for review' : q.report_status === 'resolved' ? 'Reported, fixed. Report again?' : 'Report a problem' }}
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

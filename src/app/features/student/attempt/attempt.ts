@@ -1,13 +1,7 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Location, NgTemplateOutlet } from '@angular/common';
-import { Component, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSidenavModule } from '@angular/material/sidenav';
+import { Component, DestroyRef, HostListener, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -19,8 +13,9 @@ import { AnswerPatch, AttemptQuestion, AttemptSectionState, AttemptState, PauseI
 import { StudentService } from '../student.service';
 import { ImageViewer } from '../../../shared/image-viewer';
 import { ConfirmDialog } from '../../../shared/confirm-dialog';
+import { BsModal } from '../../coach/bs-modal/bs-modal';
 
-interface SubmitDialogData {
+export interface SubmitDialogData {
   total: number;
   answered: number;
   unanswered: number;
@@ -30,40 +25,6 @@ interface SubmitDialogData {
   /** Set when submitting one section of a test with timed sections. */
   section?: string;
   last?: boolean;
-}
-
-@Component({
-  selector: 'app-submit-dialog',
-  imports: [MatDialogModule, MatButtonModule],
-  styles: `
-    .review { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; padding: 0; list-style: none; }
-    .review li { padding: 8px 12px; border-radius: 10px; background: var(--mat-sys-surface-container-high); }
-    .review li.warn { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
-  `,
-  template: `
-    <h2 mat-dialog-title>{{ data.section && !data.last ? 'Submit ' + data.section + '?' : 'Submit your test?' }}</h2>
-    <mat-dialog-content>
-      <p>You answered <strong>{{ data.answered }}</strong> of {{ data.total }} questions{{ data.section && !data.last ? ' in this section' : '' }}.</p>
-      <ul class="review" aria-label="Summary of your test">
-        <li><strong>{{ data.answered }}</strong> answered</li>
-        <li [class.warn]="data.unanswered"><strong>{{ data.unanswered }}</strong> not answered</li>
-        <li [class.warn]="data.marked"><strong>{{ data.marked }}</strong> marked for review</li>
-        <li><strong>{{ data.notVisited }}</strong> not visited</li>
-      </ul>
-      @if (data.section && !data.last) {
-        <p>You will move on to the next section. You cannot come back to {{ data.section }} or change its answers.</p>
-      } @else {
-        <p>You cannot change your answers after submitting.</p>
-      }
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button [mat-dialog-close]="false">Keep working</button>
-      <button mat-flat-button [mat-dialog-close]="true">{{ data.section && !data.last ? 'Submit section' : 'Submit' }}</button>
-    </mat-dialog-actions>
-  `,
-})
-export class SubmitDialog {
-  data = inject<SubmitDialogData>(MAT_DIALOG_DATA);
 }
 
 type SaveState = 'saved' | 'saving' | 'offline';
@@ -79,194 +40,10 @@ function clockOf(s: number): string {
 
 @Component({
   selector: 'app-attempt',
-  imports: [RouterLink, NgTemplateOutlet, MatCardModule, MatButtonModule, MatIconModule, MatRadioModule, MatProgressBarModule, MatSidenavModule, LangSwitch],
+  imports: [RouterLink, NgTemplateOutlet, LangSwitch, BsModal],
+  templateUrl: './attempt.html',
   styleUrl: './attempt.scss',
-  template: `
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-
-    @if (finished(); as f) {
-      <main class="done">
-        <mat-card appearance="outlined">
-          <mat-card-content>
-            <mat-icon class="big">task_alt</mat-icon>
-            <h1>{{ f.autoSubmitted ? "Time's up. Your test was submitted." : 'Test submitted' }}</h1>
-            <p>{{ title() }}</p>
-            @if (f.result) {
-              <div class="score">{{ f.result.score }} <span>/ {{ f.result.total_marks }}</span></div>
-              <p [class]="f.result.passed ? 'pass' : 'fail'">{{ f.result.passed ? 'Passed' : 'Not passed' }} (passing marks {{ f.result.passing_marks }})</p>
-              <div class="grid">
-                <div><strong>{{ f.result.correct }}</strong><span>Correct</span></div>
-                <div><strong>{{ f.result.incorrect }}</strong><span>Incorrect</span></div>
-                <div><strong>{{ f.result.unanswered }}</strong><span>Unanswered</span></div>
-                <div><strong>{{ f.result.accuracy }}%</strong><span>Accuracy</span></div>
-                <div><strong>{{ duration(f.result.time_taken_seconds) }}</strong><span>Time taken</span></div>
-              </div>
-            } @else {
-              <p>Your answers are saved. Your result will be available once your instructor releases it.</p>
-            }
-            <div class="actions">
-              @if (f.result) { <a mat-flat-button [routerLink]="['/student/results', id()]">View detailed result</a> }
-              <a mat-stroked-button routerLink="/student/dashboard">Back to dashboard</a>
-              <a mat-button routerLink="/student/attempts">My attempts</a>
-            </div>
-          </mat-card-content>
-        </mat-card>
-      </main>
-    } @else if (paused()) {
-      <main class="done paused">
-        <mat-card appearance="outlined">
-          <mat-card-content>
-            <mat-icon class="big">pause_circle</mat-icon>
-            <h1>Test paused</h1>
-            <p>{{ title() }}</p>
-            <div class="score">{{ frozenClock() }} <span>left</span></div>
-            <p>Your timer is stopped and your answers are saved. The questions stay hidden until you resume.</p>
-            @if (autoResumeIn() !== null) {
-              <p class="hint">The test restarts by itself in <strong>{{ autoResumeClock() }}</strong>, and the timer then keeps running.</p>
-            }
-            @if (pauseNote()) { <p class="hint">{{ pauseNote() }}</p> }
-            <div class="actions">
-              <button mat-flat-button (click)="resumeTest()" [disabled]="busy()"><mat-icon>play_arrow</mat-icon> Resume test</button>
-              <a mat-stroked-button routerLink="/student/dashboard"><mat-icon>home</mat-icon> Go to dashboard</a>
-              <a mat-button routerLink="/student/tests">My tests</a>
-            </div>
-            <p class="hint">You can leave now. Open this test again from the dashboard or the test page and press Resume.</p>
-          </mat-card-content>
-        </mat-card>
-      </main>
-    } @else if (q(); as cur) {
-      <mat-sidenav-container class="shell">
-        <!-- Small screens: the question palette lives in a drawer opened from the burger button on the right. -->
-        <mat-sidenav #drawer mode="over" position="end" [fixedInViewport]="true" class="palette-drawer" aria-label="Question palette">
-          @if (mobile()) {
-            <div class="drawer-head">
-              <strong>Questions</strong>
-              <button mat-icon-button (click)="drawer.close()" aria-label="Close question palette"><mat-icon>close</mat-icon></button>
-            </div>
-            <div class="palette in-drawer"><ng-container *ngTemplateOutlet="paletteBody" /></div>
-          }
-        </mat-sidenav>
-
-        <mat-sidenav-content>
-          <header class="bar">
-            <div class="title-wrap">
-              <button mat-icon-button class="back" type="button" (click)="leave()" aria-label="Go back. Your answers stay saved" title="Go back">
-                <mat-icon>arrow_back</mat-icon>
-              </button>
-              <div class="title">{{ title() }}</div>
-            </div>
-            <div class="right">
-              <span class="save" [class]="'save ' + saveState()">
-                <mat-icon inline>{{ saveState() === 'saved' ? 'cloud_done' : saveState() === 'saving' ? 'sync' : 'cloud_off' }}</mat-icon>
-                {{ saveState() === 'saved' ? 'Saved' : saveState() === 'saving' ? 'Saving…' : 'Offline, retrying…' }}
-              </span>
-              @if (sectional()) {
-                <span class="timer" [class.low]="sectionRemaining() <= 60" role="timer" aria-live="off" title="Time left in this section">
-                  <mat-icon inline>timer</mat-icon> {{ sectionClock() }}
-                </span>
-                <span class="total" title="Time left in the whole test">Test {{ clock() }}</span>
-              } @else {
-                <span class="timer" [class.low]="remaining() <= 300" role="timer" aria-live="off">
-                  <mat-icon inline>timer</mat-icon> {{ clock() }}
-                </span>
-              }
-              @if (pause()?.allowed) {
-                <button mat-stroked-button class="pause-btn" (click)="pauseTest()" [disabled]="submitting() || busy() || pauseBlocked()" [attr.title]="pauseHint()">
-                  <mat-icon>pause</mat-icon> Pause
-                </button>
-              }
-              <button mat-flat-button (click)="confirmSubmit()" [disabled]="submitting()">{{ submitLabel() }}</button>
-              @if (mobile()) {
-                <button mat-icon-button (click)="drawer.toggle()" aria-label="Open question palette"><mat-icon>menu</mat-icon></button>
-              }
-            </div>
-          </header>
-
-          <div class="layout">
-            <section class="main">
-              @if (sections().length > 1) {
-                <nav class="sections" role="tablist" aria-label="Subjects">
-                  @for (g of sections(); track g.name) {
-                    <button type="button" role="tab" class="sec" [class.active]="g.current" [class.closed]="g.status === 'done'"
-                      [attr.aria-selected]="g.current" [disabled]="sectional() && !g.current" (click)="openSection(g.name)">
-                      <span class="sec-name">
-                        @if (g.status === 'done') { <mat-icon inline>check_circle</mat-icon> }
-                        {{ g.name }}
-                      </span>
-                      <span class="sec-sub">{{ g.caption }}</span>
-                    </button>
-                  }
-                </nav>
-              }
-              <mat-card appearance="outlined">
-                <mat-card-content>
-                  <div class="q-head">
-                    <span>{{ cur.section }} · Question {{ index() + 1 }} of {{ questions().length }}</span>
-                    <app-lang-switch [languages]="languages()" />
-                    <span class="qtime" title="Time you have spent on this question" role="timer" aria-live="off">
-                      <mat-icon inline>timer</mat-icon> {{ questionClock() }}
-                    </span>
-                    <span>+{{ cur.q.marks }} / -{{ cur.q.negative_marks }}</span>
-                  </div>
-                  @if (cur.q.image_url) {
-                    <img class="zoomable" [src]="cur.q.image_url" alt="Question image" tabindex="0" role="button" title="Tap to enlarge"
-                      (click)="zoom(cur.q.image_url)" (keydown.enter)="zoom(cur.q.image_url)" />
-                  }
-                  <div class="q-text" [attr.lang]="lang()">{{ say(cur.q.text, cur.q.text_hi) }}</div>
-                  <mat-radio-group class="options" [value]="cur.q.selected_option" (change)="select($event.value)" [attr.aria-label]="'Options for question ' + (index() + 1)">
-                    @for (o of cur.q.options; track o.id; let i = $index) {
-                      <mat-radio-button [value]="o.id" class="opt" [class.chosen]="cur.q.selected_option === o.id">
-                        <span class="letter">{{ letter(i) }}.</span> {{ say(o.text, o.text_hi) }}
-                      </mat-radio-button>
-                    }
-                  </mat-radio-group>
-                </mat-card-content>
-              </mat-card>
-              <div class="nav">
-                <button mat-stroked-button (click)="go(index() - 1)" [disabled]="index() === 0"><mat-icon>chevron_left</mat-icon> Previous</button>
-                <button mat-button (click)="clear()" [disabled]="cur.q.selected_option === null">Clear response</button>
-                <button mat-button (click)="toggleMark()">
-                  <mat-icon>{{ cur.q.marked_for_review ? 'bookmark_remove' : 'bookmark_add' }}</mat-icon>
-                  {{ cur.q.marked_for_review ? 'Unmark review' : 'Mark for review' }}
-                </button>
-                <span class="spacer"></span>
-                <button mat-flat-button (click)="go(index() + 1)" [disabled]="index() === questions().length - 1">Next <mat-icon iconPositionEnd>chevron_right</mat-icon></button>
-              </div>
-            </section>
-
-            <!-- Wide screens: the palette sits beside the question. -->
-            @if (!mobile()) {
-              <aside class="palette"><ng-container *ngTemplateOutlet="paletteBody" /></aside>
-            }
-          </div>
-        </mat-sidenav-content>
-      </mat-sidenav-container>
-
-      <ng-template #paletteBody>
-        <div class="counts">
-          <span><i class="sw answered"></i> {{ counts().answered }} answered</span>
-          <span><i class="sw unanswered"></i> {{ counts().unanswered }} unanswered</span>
-          <span><i class="sw marked"></i> {{ counts().marked }} marked</span>
-        </div>
-        @for (g of groups(); track g.name) {
-          <div class="group-name">{{ g.name }}</div>
-          <div class="grid-nums">
-            @for (n of g.items; track n.i) {
-              <button type="button" class="num" [class]="'num ' + n.state" [class.current]="n.i === index()"
-                (click)="go(n.i); mobile() && drawer.close()" [attr.aria-label]="'Question ' + (n.i + 1) + ', ' + n.label">{{ n.i + 1 }}</button>
-            }
-          </div>
-        }
-        <div class="legend">
-          <span><i class="sw answered"></i> Answered</span>
-          <span><i class="sw unanswered"></i> Not answered</span>
-          <span><i class="sw marked"></i> Marked</span>
-          <span><i class="sw answered-marked"></i> Answered + marked</span>
-          <span><i class="sw not-visited"></i> Not visited</span>
-        </div>
-      </ng-template>
-    }
-  `,
+  host: { class: 'bs' },
 })
 export class AttemptPage {
   id = input.required<string>();
@@ -280,6 +57,10 @@ export class AttemptPage {
   private location = inject(Location);
 
   loading = signal(true);
+  /** The question palette drawer on small screens. */
+  drawerOpen = signal(false);
+  /** What the submit pop-up shows; null while it is closed. */
+  submitData = signal<SubmitDialogData | null>(null);
   /** True for a test whose sections each have their own timer and open one after another. */
   sectional = signal(false);
   /** Languages this test is written in; the student's choice is remembered across questions, tests and visits. */
@@ -765,10 +546,25 @@ export class AttemptPage {
     const c = this.counts();
     const last = !this.hasUpcoming();
     const data: SubmitDialogData = { total: this.questions().length, ...c, notVisited: this.notVisited(), ...(this.sectional() ? { section: this.activeName, last } : {}) };
-    this.dialog
-      .open(SubmitDialog, { data })
-      .afterClosed()
-      .subscribe((ok) => ok && (this.sectional() && !last ? this.submitSection() : this.submit(false)));
+    this.submitData.set(data);
+  }
+
+  /** The student's answer to the submit pop-up. */
+  answerSubmit(ok: boolean) {
+    const data = this.submitData();
+    this.submitData.set(null);
+    if (!ok || !data) return;
+    if (data.section && !data.last) void this.submitSection();
+    else void this.submit(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape() {
+    this.drawerOpen.set(false);
+  }
+
+  protected onDrawerBackdrop(event: MouseEvent) {
+    if (event.target === event.currentTarget) this.drawerOpen.set(false);
   }
 
   /** Stops the clock. Saves first so nothing the student just did is lost while the questions are hidden. */

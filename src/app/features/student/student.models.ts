@@ -321,7 +321,7 @@ export interface LeaderboardRow {
 export interface LeaderboardData {
   exam: string;
   participants: number;
-  me: (LeaderboardRow & { better_than_percent: number }) | null;
+  me: (LeaderboardRow & { better_than_percent: number; percentile?: number }) | null;
   top: LeaderboardRow[];
 }
 

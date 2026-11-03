@@ -31,8 +31,8 @@ export function cardLines(d: ShareCardData): { text: string; size: number; weigh
 /** Draws the card on a 2D canvas context. */
 export function drawCard(ctx: CanvasRenderingContext2D, d: ShareCardData, size = CARD_SIZE) {
   const grad = ctx.createLinearGradient(0, 0, 0, size);
-  grad.addColorStop(0, '#1a73e8');
-  grad.addColorStop(1, '#0b3d91');
+  grad.addColorStop(0, '#4f46e5');
+  grad.addColorStop(1, '#7c3aed');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
   ctx.textAlign = 'center';

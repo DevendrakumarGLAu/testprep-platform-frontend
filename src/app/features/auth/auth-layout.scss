@@ -82,9 +82,8 @@
     gap: 10px;
   }
 
-  mat-icon {
-    vertical-align: -3px;
-    margin-right: 4px;
+  .bi {
+    margin-right: 6px;
     opacity: 0.95;
   }
 }
@@ -162,5 +161,15 @@
     margin-top: -28px;
     padding: 24px 20px;
     position: relative;
+  }
+}
+
+.legal {
+  margin: 20px 0 10px;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  a {
+    color: var(--mat-sys-primary);
   }
 }

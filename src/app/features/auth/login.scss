@@ -1,0 +1,25 @@
+:host {
+  display: block;
+}
+
+.forgot {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: right;
+}
+
+.switch {
+  margin: 1.25rem 0 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+
+  a {
+    margin-left: 4px;
+    font-weight: 500;
+  }
+}
+
+.btn-lg {
+  min-height: 48px;
+}

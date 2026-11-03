@@ -1,0 +1,114 @@
+:host {
+  display: inline-block;
+}
+
+.wrap {
+  position: relative;
+}
+
+.bell {
+  position: relative;
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 8px 10px;
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+}
+
+.count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  font-size: 0.65rem;
+  padding: 0.25em 0.5em;
+}
+
+.panel {
+  top: 100%;
+  right: 0;
+  left: auto;
+  margin-top: 4px;
+  width: min(380px, 92vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 0;
+  background: var(--mat-sys-surface-container);
+  color: var(--mat-sys-on-surface);
+  border-color: var(--mat-sys-outline-variant);
+}
+
+// On a narrow screen the bell is not at the right edge, so the panel spans the screen instead of running off the left.
+// (it hangs from the top bar, which is positioned)
+@media (max-width: 700px) {
+  .wrap {
+    position: static;
+  }
+
+  .panel {
+    top: 100%;
+    left: 8px;
+    right: 8px;
+    width: auto;
+  }
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  position: sticky;
+  top: 0;
+  background: var(--mat-sys-surface-container);
+}
+
+.item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border: 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  text-align: left;
+  background: none;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &.unread {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+  }
+
+  .bi {
+    color: var(--mat-sys-primary);
+    flex: none;
+    font-size: 1.2rem;
+  }
+}
+
+.t {
+  font-weight: 500;
+}
+
+.b,
+.d {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+.empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.all {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  text-decoration: none;
+}

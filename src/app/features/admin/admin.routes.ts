@@ -42,12 +42,28 @@ export const ADMIN_ROUTES: Routes = [
         loadComponent: () => import('./insights/insights').then((m) => m.InsightsPage),
       },
       {
+        path: 'popups',
+        loadComponent: () => import('./popups/popups').then((m) => m.PopupsAdmin),
+      },
+      {
         path: 'study-notes',
         loadComponent: () => import('./content/study-notes').then((m) => m.StudyNotes),
       },
       {
         path: 'test-series',
         loadComponent: () => import('./content/test-series').then((m) => m.TestSeriesPage),
+      },
+      {
+        path: 'doubts',
+        loadComponent: () => import('../coach/admin/doubt-inbox/doubt-inbox').then((m) => m.DoubtInbox),
+      },
+      {
+        path: 'feedback',
+        loadComponent: () => import('./feedback/feedback-inbox').then((m) => m.FeedbackInbox),
+      },
+      {
+        path: 'batch-progress',
+        loadComponent: () => import('../coach/admin/batch-progress/batch-progress').then((m) => m.BatchProgress),
       },
       {
         path: 'question-reports',

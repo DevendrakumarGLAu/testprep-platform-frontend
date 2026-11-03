@@ -160,7 +160,7 @@ describe('Result extras: share and print', () => {
   it('offers both buttons, and the share button needs the score to exist', () => {
     const f = open(null);
     const buttons = [...(f.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('.tools button')];
-    expect(buttons.map((b) => b.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['share Share my score', 'print Print or save as PDF']);
+    expect(buttons.map((b) => b.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['Share my score', 'Print or save as PDF']);
     expect(buttons[0].disabled).toBe(true);
     expect(buttons[1].disabled).toBe(false);
   });

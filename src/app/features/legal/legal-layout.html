@@ -1,0 +1,21 @@
+<header class="bar">
+  <div class="wrap">
+    <a class="logo" routerLink="/"><img src="favicon.svg" alt="" width="28" height="28" /> {{ platform.info().platform_name }}</a>
+    <nav aria-label="Legal pages">
+      <a routerLink="/terms">Terms of use</a>
+      <a routerLink="/privacy">Privacy policy</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap page">
+  <article class="card">
+    <div class="card-body">
+      <h1 class="h2">{{ title() }}</h1>
+      @if (updated()) { <p class="meta">Last updated: {{ updated() }}</p> }
+      <ng-content />
+      <hr />
+      <app-support-line lead="Questions about this page?" />
+    </div>
+  </article>
+  <p class="back"><a routerLink="/"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to {{ platform.info().platform_name }}</a></p>
+</main>

@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px 0;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+}
+
+.body {
+  overflow: auto;
+  max-height: 78vh;
+  padding: 8px 16px 16px;
+}
+
+img {
+  display: block;
+  max-width: none;
+}

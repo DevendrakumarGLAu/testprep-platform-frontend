@@ -1,0 +1,102 @@
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the student"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (s(); as s) {
+  <div class="head">
+    <div>
+      <h1 class="h3">{{ s.name }}</h1>
+      <div class="muted">{{ s.email }}{{ s.phone ? ' · ' + s.phone : '' }} · {{ s.username }}</div>
+      <div class="muted">Registered {{ s.date_joined | date: 'mediumDate' }} · {{ s.is_active ? 'Active' : 'Inactive' }}</div>
+    </div>
+    <div class="head-actions">
+      <a class="btn btn-link" routerLink="/admin/students"><i class="bi bi-arrow-left" aria-hidden="true"></i> Students</a>
+      <button type="button" class="btn btn-primary" (click)="pdf()" [disabled]="pdfBusy()"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> Download PDF report</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="card stat"><div class="value">{{ s.performance.attempts_count }}</div><div class="muted">Completed attempts</div></div>
+    <div class="card stat"><div class="value">{{ val(s.performance.average_percentage) }}</div><div class="muted">Average score</div></div>
+    <div class="card stat"><div class="value">{{ val(s.performance.best_percentage) }}</div><div class="muted">Best score</div></div>
+    <div class="card stat"><div class="value">{{ val(s.performance.accuracy_percent) }}</div><div class="muted">Accuracy</div></div>
+    <div class="card stat"><div class="value">{{ val(s.performance.pass_rate) }}</div><div class="muted">Pass rate</div></div>
+  </div>
+
+  <div class="two">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Performance trend</h2>
+        @if (trendLabels().length) {
+          <app-chart type="line" [max]="100" [labels]="trendLabels()" [series]="trendSeries()" label="Score percentage of the last attempts" />
+        } @else { <p class="muted">No completed attempts yet.</p> }
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Subject-wise accuracy</h2>
+        @if (subjectLabels().length) {
+          <app-chart type="bar" [horizontal]="true" [max]="100" [labels]="subjectLabels()" [series]="subjectSeries()" label="Accuracy percentage by subject" />
+        } @else { <p class="muted">No completed attempts yet.</p> }
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h6 card-title">Batches</h2>
+      <fieldset class="checklist" aria-label="Member of">
+        @for (b of allBatches(); track b.id) {
+          <div class="form-check">
+            <input [id]="'pb-' + b.id" class="form-check-input" type="checkbox" [checked]="batchIds().includes(b.id)" (change)="toggleBatch(b.id, $any($event.target).checked)" />
+            <label [for]="'pb-' + b.id" class="form-check-label">{{ b.name }}</label>
+          </div>
+        } @empty { <span class="muted">No batches yet.</span> }
+      </fieldset>
+      <button type="button" class="btn btn-outline-primary" (click)="saveBatches()">Save batches</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h6 card-title">Assigned tests</h2>
+      @for (e of s.assigned_exams; track e.id) {
+        <div class="line"><span><strong>{{ e.title }}</strong> <span class="muted">{{ e.status }} · access: {{ e.access_type }}</span></span>
+          <button type="button" class="btn btn-link" (click)="unassign(e.id)">Remove</button></div>
+      } @empty { <p class="muted">No tests assigned individually.</p> }
+      @for (n of notes(); track n) { <div class="note"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ n }}</div> }
+      <fieldset class="checklist" aria-label="Assign tests">
+        @for (e of assignable(); track e.id) {
+          <div class="form-check">
+            <input [id]="'pa-' + e.id" class="form-check-input" type="checkbox" [checked]="toAssign().includes(e.id)" (change)="toggleAssign(e.id, $any($event.target).checked)" />
+            <label [for]="'pa-' + e.id" class="form-check-label">{{ e.title }} ({{ e.status }})</label>
+          </div>
+        } @empty { <span class="muted">Every test is already assigned.</span> }
+      </fieldset>
+      <button type="button" class="btn btn-primary" (click)="assign()" [disabled]="!toAssign().length">Assign</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <h2 class="h6 card-title">Attempt history</h2>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle">
+          <thead><tr><th>Test</th><th>#</th><th>Started</th><th>Status</th><th>Score</th><th>Result</th><th>Time</th><th></th></tr></thead>
+          <tbody>
+            @for (h of s.performance.history; track h.id) {
+              <tr>
+                <td>{{ h.exam_title }}</td><td>{{ h.attempt_number }}</td><td>{{ h.started_at | date: 'short' }}</td>
+                <td>{{ h.status === 'in_progress' ? 'In progress' : h.auto_submitted ? 'Auto-submitted' : 'Submitted' }}</td>
+                <td>@if (h.score !== null) { {{ h.score }} / {{ h.total_marks }} ({{ h.percentage }}%) } @else { — }</td>
+                <td [class]="h.passed ? 'pass' : 'fail'">{{ h.passed === null ? '' : h.passed ? 'Passed' : 'Not passed' }}</td>
+                <td>{{ h.time_taken_seconds === null ? '—' : duration(h.time_taken_seconds) }}</td>
+                <td>@if (h.status === 'submitted') { <a [routerLink]="['/admin/attempts', h.id]">Review</a> }</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!s.performance.history.length) { <p class="muted">No attempts yet.</p> }
+    </div>
+  </div>
+}

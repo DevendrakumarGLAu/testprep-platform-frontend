@@ -1,0 +1,12 @@
+@if (notify.toasts().length) {
+  <div class="toast-stack" role="region" aria-label="Messages">
+    @for (t of notify.toasts(); track t.id) {
+      <div class="toast show align-items-center border-0" [class]="'toast show align-items-center border-0 ' + t.kind" [attr.role]="t.kind === 'error' ? 'alert' : 'status'" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">{{ t.message }}</div>
+          <button type="button" class="btn btn-link btn-sm action" (click)="notify.dismiss(t.id)">{{ t.action }}</button>
+        </div>
+      </div>
+    }
+  </div>
+}

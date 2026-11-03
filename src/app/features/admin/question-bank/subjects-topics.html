@@ -1,0 +1,71 @@
+<h1 class="h3">Subjects &amp; Topics</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<app-bs-tabs [tabs]="tabs" [selected]="tab()" (selectedChange)="tab.set($event)">
+  @if (tab() === 0) {
+    <div class="bar">
+      <span></span>
+      <button type="button" class="btn btn-primary" (click)="editSubject(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New subject</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Name</th><th>Topics</th><th>Questions</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (s of subjects(); track s.id) {
+            <tr>
+              <td><span [class.archived]="!s.is_active">{{ s.name }}</span></td>
+              <td>{{ s.topic_count }}</td>
+              <td>{{ s.question_count }}</td>
+              <td>{{ s.is_active ? 'Active' : 'Archived' }}</td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-link" (click)="editSubject(s)" aria-label="Edit subject" title="Edit subject"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-link" (click)="toggleSubject(s)" [attr.aria-label]="s.is_active ? 'Archive subject' : 'Restore subject'" [title]="s.is_active ? 'Archive subject' : 'Restore subject'">
+                  <i class="bi" [class]="s.is_active ? 'bi-archive' : 'bi-arrow-counterclockwise'" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn btn-link" (click)="removeSubject(s)" aria-label="Delete subject" title="Delete subject"><i class="bi bi-trash" aria-hidden="true"></i></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (!loading() && subjects().length === 0) { <div class="empty">No subjects yet. Create one to get started.</div> }
+    </div>
+  } @else {
+    <div class="bar">
+      <div class="field">
+        <label for="st-filter" class="form-label">Filter by subject</label>
+        <select id="st-filter" class="form-select" (change)="pickSubject($any($event.target).value)">
+          <option value="" [selected]="topicFilter() === null">All subjects</option>
+          @for (s of subjects(); track s.id) { <option [value]="s.id" [selected]="topicFilter() === s.id">{{ s.name }}</option> }
+        </select>
+      </div>
+      <button type="button" class="btn btn-primary" (click)="editTopic(null)" [disabled]="activeSubjects().length === 0">
+        <i class="bi bi-plus-lg" aria-hidden="true"></i> New topic
+      </button>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle">
+        <thead><tr><th>Topic</th><th>Subject</th><th>Questions</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (t of topics(); track t.id) {
+            <tr>
+              <td><span [class.archived]="!t.is_active">{{ t.name }}</span></td>
+              <td>{{ t.subject_name }}</td>
+              <td>{{ t.question_count }}</td>
+              <td>{{ t.is_active ? 'Active' : 'Archived' }}</td>
+              <td class="row-actions">
+                <button type="button" class="btn btn-link" (click)="editTopic(t)" aria-label="Edit topic" title="Edit topic"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-link" (click)="toggleTopic(t)" [attr.aria-label]="t.is_active ? 'Archive topic' : 'Restore topic'" [title]="t.is_active ? 'Archive topic' : 'Restore topic'">
+                  <i class="bi" [class]="t.is_active ? 'bi-archive' : 'bi-arrow-counterclockwise'" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn btn-link" (click)="removeTopic(t)" aria-label="Delete topic" title="Delete topic"><i class="bi bi-trash" aria-hidden="true"></i></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (!loading() && topics().length === 0) { <div class="empty">No topics found.</div> }
+    </div>
+  }
+</app-bs-tabs>

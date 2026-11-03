@@ -1,0 +1,41 @@
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  height: 3px;
+  border-radius: 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1999;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--mat-sys-scrim) 25%, transparent);
+}
+
+.spinner {
+  width: 3.5rem;
+  height: 3.5rem;
+  color: var(--mat-sys-primary);
+  filter: drop-shadow(0 1px 3px #0006);
+}
+
+.box {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.wake {
+  max-width: min(380px, 86vw);
+  text-align: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  box-shadow: 0 2px 10px #0004;
+}

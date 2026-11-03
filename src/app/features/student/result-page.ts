@@ -1,49 +1,36 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
-import { MatDialog } from '@angular/material/dialog';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { apiErrorMessage } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { PlatformService } from '../../core/platform.service';
 import { ResultView } from '../../shared/result-view';
 import { ResultData } from '../../shared/result.models';
-import { PlatformService } from '../../core/platform.service';
 import { ShareCardData } from '../../shared/share-card';
-import { ReportDialog, ReportDialogResult } from './report-dialog';
+import { AskDoubt } from '../coach/ask-doubt/ask-doubt';
+import { ReportDialogResult, ReportModal } from './report-modal/report-modal';
 import { ResultExtras } from './result-extras';
 import { StudentService } from './student.service';
 
 @Component({
   selector: 'app-student-result',
-  imports: [RouterLink, MatButtonModule, MatCardModule, MatIconModule, MatProgressBarModule, ResultView, ResultExtras],
-  template: `
-    <a mat-button routerLink="/student/attempts"><mat-icon>arrow_back</mat-icon> My attempts</a>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-    @if (data(); as d) {
-      @if (d.solutions_available) {
-        <app-result-extras [attemptId]="id()" [examId]="'' + d.exam.id" [wrong]="d.summary.incorrect + d.summary.unanswered" [card]="card(d)" />
-      }
-      <app-result-view [data]="d" [canAct]="true" (saveToggle)="toggleSave($event)" (report)="reportQuestion($event)" />
-    } @else if (message()) {
-      <mat-card appearance="outlined"><mat-card-content>
-        <h2>{{ message() }}</h2>
-        <a mat-flat-button routerLink="/student/attempts">Back to my attempts</a>
-      </mat-card-content></mat-card>
-    }
-  `,
+  imports: [RouterLink, ResultView, ResultExtras, AskDoubt, ReportModal],
+  templateUrl: './result-page.html',
+  styleUrl: './result-page.scss',
+  host: { class: 'bs' },
 })
 export class StudentResultPage {
   id = input.required<string>();
   private api = inject(StudentService);
-  private dialog = inject(MatDialog);
   private notify = inject(NotifyService);
   private platform = inject(PlatformService);
   loading = signal(true);
   data = signal<ResultData | null>(null);
   message = signal('');
+  /** The question number whose "Ask a doubt" dialog is open. */
+  doubtFor = signal<number | null>(null);
+  /** The question number whose "Report a problem" dialog is open. */
+  reportFor = signal<number | null>(null);
 
   constructor() {
     effect(() => {
@@ -94,11 +81,16 @@ export class StudentResultPage {
     }
   }
 
-  async reportQuestion(number: number) {
-    const result = await firstValueFrom(
-      this.dialog.open<ReportDialog, { number: number }, ReportDialogResult>(ReportDialog, { data: { number }, width: '480px', maxWidth: '95vw' }).afterClosed(),
-    );
-    if (!result) return;
+  /** Opens the "Report a problem" form for a question. */
+  reportQuestion(number: number) {
+    this.reportFor.set(number);
+  }
+
+  /** Sends the report the student filled in, for the question whose form is open. */
+  async sendReport(result: ReportDialogResult) {
+    const number = this.reportFor();
+    this.reportFor.set(null);
+    if (number === null) return;
     try {
       await firstValueFrom(this.api.reportQuestion(this.id(), number, result.reason, result.message, result.image));
       this.patchQuestion(number, { report_status: 'open' });

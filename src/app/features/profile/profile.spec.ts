@@ -126,3 +126,54 @@ describe('Profile page', () => {
     expect(c.passwordError()).toContain('Current password is incorrect.');
   });
 });
+
+describe('Profile page (Bootstrap)', () => {
+  async function open() {
+    localStorage.clear();
+    localStorage.setItem('tp_access', 'A');
+    localStorage.setItem('tp_user', JSON.stringify(USER));
+    TestBed.configureTestingModule({
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), { provide: NotifyService, useValue: { success: vi.fn(), error: vi.fn() } }],
+    });
+    const http = TestBed.inject(HttpTestingController);
+    const fixture = TestBed.createComponent(Profile);
+    fixture.detectChanges();
+    http.expectOne(`${API}/auth/captcha/`).flush({ enabled: false });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
+  }
+
+  it('is made of Bootstrap cards and fields with no Material component', async () => {
+    const { el } = await open();
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelectorAll('.card').length).toBe(3);
+    expect(el.querySelector('select.form-select')).not.toBeNull();
+    expect(el.querySelector('input.form-check-input[type="checkbox"]')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-form-field, mat-select, mat-checkbox, mat-button-toggle-group, mat-icon, [mat-flat-button]')).toBeNull();
+  });
+
+  it('the appearance buttons show and change the chosen mode', async () => {
+    const { fixture, c, el } = await open();
+    const buttons = () => Array.from(el.querySelectorAll<HTMLButtonElement>('.btn-group button'));
+    buttons().find((b) => b.textContent!.trim() === 'Dark')!.click();
+    fixture.detectChanges();
+    expect(c.theme.mode()).toBe('dark');
+    expect(buttons().filter((b) => b.classList.contains('active')).map((b) => b.textContent!.trim())).toEqual(['Dark']);
+    c.theme.set('light');
+  });
+
+  it('shows a field error only after the field is touched, and the password hint is replaced by its error', async () => {
+    const { fixture, c, el } = await open();
+    expect(el.querySelector('.invalid-feedback')).toBeNull();
+    c.password.markAllAsTouched();
+    c.details.patchValue({ first_name: '' });
+    c.details.markAllAsTouched();
+    fixture.detectChanges();
+    const messages = Array.from(el.querySelectorAll('.invalid-feedback')).map((e) => e.textContent!.trim());
+    expect(messages).toContain('First name is required');
+    expect(messages).toContain('Enter your current password');
+    expect(messages).toContain('Password must be at least 8 characters');
+    expect(el.textContent).not.toContain('At least 8 characters, not too common');
+  });
+});

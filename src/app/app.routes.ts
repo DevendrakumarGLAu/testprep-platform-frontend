@@ -35,6 +35,8 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard('student')],
     loadChildren: () => import('./features/student/student.routes').then((m) => m.STUDENT_ROUTES),
   },
+  { path: 'terms', loadComponent: () => import('./features/legal/terms').then((m) => m.Terms) },
+  { path: 'privacy', loadComponent: () => import('./features/legal/privacy').then((m) => m.Privacy) },
   { path: 'exam/:id', loadComponent: () => import('./features/landing/exam-page').then((m) => m.PublicExamPage) },
   { path: '', pathMatch: 'full', loadComponent: () => import('./features/landing/landing').then((m) => m.Landing) },
   { path: '**', redirectTo: '' },

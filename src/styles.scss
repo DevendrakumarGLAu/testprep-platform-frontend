@@ -13,7 +13,7 @@ html {
         primary: mat.$azure-palette,
         tertiary: mat.$blue-palette,
       ),
-      typography: Roboto,
+      typography: (plain-family: 'Inter, Roboto, sans-serif', brand-family: 'Inter, Roboto, sans-serif'),
       density: 0,
     )
   );
@@ -38,35 +38,20 @@ body {
 }
 /* You can add global styles to this file, and also import other style files */
 
-.snack-success {
-  --mat-snack-bar-button-color: #fff;
-  --mat-snack-bar-container-color: #1b5e20;
-  --mat-snack-bar-supporting-text-color: #fff;
-}
-
-.snack-warning {
-  --mat-snack-bar-button-color: #fff;
-  --mat-snack-bar-container-color: #b45309;
-  --mat-snack-bar-supporting-text-color: #fff;
-}
-
-.snack-error {
-  --mat-snack-bar-button-color: #fff;
-  --mat-snack-bar-container-color: var(--mat-sys-error);
-  --mat-snack-bar-supporting-text-color: var(--mat-sys-on-error);
-}
-
 // Printing a result or a test paper: only the content, without the side bar, top bar and buttons.
 @media print {
   mat-sidenav,
+  .sidebar,
   .topbar,
   .no-print,
   app-notification-bell,
+  app-toasts,
   app-loader {
     display: none !important;
   }
 
-  mat-sidenav-content {
+  mat-sidenav-content,
+  .column {
     margin-left: 0 !important;
   }
 
@@ -93,16 +78,70 @@ input[type='datetime-local'] {
   cursor: pointer;
 }
 
-// ---- Premium look: soft canvas, rounded raised cards, pill buttons, calmer headings ----
+// ---- SaaS look: neutral canvas, white cards with soft borders, one indigo accent ----
+// These replace the colours of the Material theme above, so every screen (all of them use these variables) follows them.
+html {
+  --mat-sys-primary: light-dark(#4f46e5, #a5b4fc);
+  --mat-sys-on-primary: light-dark(#ffffff, #1e1b4b);
+  --mat-sys-primary-container: light-dark(#eef2ff, #312e81);
+  --mat-sys-on-primary-container: light-dark(#3730a3, #e0e7ff);
+  --mat-sys-secondary-container: light-dark(#eef2ff, #2e2a63);
+  --mat-sys-on-secondary-container: light-dark(#3730a3, #e0e7ff);
+  --mat-sys-tertiary: light-dark(#059669, #6ee7b7);
+  --mat-sys-tertiary-container: light-dark(#d1fae5, #064e3b);
+  --mat-sys-on-tertiary-container: light-dark(#065f46, #a7f3d0);
+  --mat-sys-background: light-dark(#ffffff, #0f1115);
+  --mat-sys-surface: light-dark(#ffffff, #12151a);
+  --mat-sys-surface-container-lowest: light-dark(#ffffff, #0c0e12);
+  --mat-sys-surface-container-low: light-dark(#f8fafc, #161a20);
+  --mat-sys-surface-container: light-dark(#f1f5f9, #1b1f26);
+  --mat-sys-surface-container-high: light-dark(#e9eef5, #222730);
+  --mat-sys-surface-container-highest: light-dark(#e2e8f0, #2a303a);
+  --mat-sys-surface-variant: light-dark(#f1f5f9, #1b1f26);
+  --mat-sys-on-surface: light-dark(#111827, #e6e9ef);
+  --mat-sys-on-surface-variant: light-dark(#64748b, #9aa3b2);
+  --mat-sys-outline: light-dark(#94a3b8, #647084);
+  --mat-sys-outline-variant: light-dark(#e2e8f0, #2b313b);
+}
+
 :root {
-  --tp-radius: 20px;
-  --tp-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.06);
-  --tp-shadow-hover: 0 2px 4px rgba(16, 24, 40, 0.08), 0 16px 36px rgba(16, 24, 40, 0.1);
-  --tp-gradient: linear-gradient(135deg, var(--mat-sys-primary), color-mix(in srgb, var(--mat-sys-primary) 55%, #6a1b9a));
+  --tp-radius: 14px;
+  --tp-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --tp-shadow-hover: 0 2px 4px rgba(15, 23, 42, 0.06), 0 10px 24px rgba(15, 23, 42, 0.08);
+  --tp-gradient: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+// Slim, rounded scrollbars everywhere (the page, tables, pop-ups), instead of the thick grey system ones.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: light-dark(#cbd5e1, #3a4150) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: light-dark(#cbd5e1, #3a4150);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: light-dark(#94a3b8, #566074);
+  background-clip: content-box;
 }
 
 body {
-  background: color-mix(in srgb, var(--mat-sys-surface) 92%, var(--mat-sys-primary));
+  background: light-dark(#f4f6fa, #0c0e12);
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {

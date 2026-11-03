@@ -1,0 +1,36 @@
+<app-bs-modal [title]="'Ask a doubt about question ' + number()" (closed)="closed.emit()">
+  @if (doubtId() !== null) {
+    <div class="text-center py-3">
+      <i class="bi bi-check-circle-fill text-success display-5"></i>
+      <h3 class="h5 mt-2">Your doubt was sent</h3>
+      <p class="text-body-secondary mb-0">A teacher will reply. You will get a message in the bell, and you can read the answer under My doubts.</p>
+    </div>
+  } @else {
+    <label for="doubt-message" class="form-label">What did you not understand?</label>
+    <textarea
+      id="doubt-message"
+      class="form-control"
+      rows="5"
+      [(ngModel)]="message"
+      [maxlength]="max"
+      placeholder="For example: Why is option B correct? I thought it was C because..."
+    ></textarea>
+    <div class="d-flex justify-content-between small text-body-secondary mt-1">
+      <span>The teacher can see the question and the option you chose.</span>
+      <span>{{ length }} / {{ max }}</span>
+    </div>
+    @if (error()) { <div class="alert alert-danger py-2 mt-3 mb-0">{{ error() }}</div> }
+  }
+  <ng-container footer>
+    @if (doubtId() !== null) {
+      <a class="btn btn-outline-primary" [routerLink]="['/student/doubts', doubtId()]" (click)="closed.emit()">Open my doubt</a>
+      <button class="btn btn-primary" (click)="closed.emit()">Close</button>
+    } @else {
+      <button class="btn btn-outline-secondary" (click)="closed.emit()">Cancel</button>
+      <button class="btn btn-primary" (click)="send()" [disabled]="busy()">
+        @if (busy()) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+        Send doubt
+      </button>
+    }
+  </ng-container>
+</app-bs-modal>

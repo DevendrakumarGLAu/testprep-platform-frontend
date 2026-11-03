@@ -48,3 +48,58 @@ describe('TestCard result link', () => {
     expect((el.querySelector('a.view-result') as HTMLAnchorElement).getAttribute('href')).toBe('/student/results/att9');
   });
 });
+
+describe('TestCard as a Bootstrap card', () => {
+  const buttons = (el: HTMLElement) => Array.from(el.querySelectorAll('.actions a, .actions p')).map((n) => n.textContent!.trim());
+
+  it('is a Bootstrap card with no Material component in it', () => {
+    const el = render(exam());
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.card .card-body')).not.toBeNull();
+    expect(el.querySelector('.actions a.btn.btn-primary')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-icon, [mat-flat-button], [mat-stroked-button]')).toBeNull();
+  });
+
+  it('shows the facts of the test and its status', () => {
+    const el = render(exam({ attempts_used: 2, max_attempts: 3 }));
+    expect(el.querySelector('h3')!.textContent).toBe('SuperTET 1');
+    expect(el.textContent).toContain('120');
+    expect(el.textContent).toContain('360.00');
+    expect(el.textContent).toContain('2 / 3');
+    expect(el.querySelector('.chip')!.textContent).toContain('Available');
+    expect(el.querySelector('.chip')!.className).toContain('available');
+  });
+
+  it('offers the right main button for each situation', () => {
+    expect(buttons(render(exam()))).toEqual(['Start']);
+    TestBed.resetTestingModule();
+    expect(buttons(render(exam({ status: 'in_progress' })))[0]).toContain('Resume');
+    TestBed.resetTestingModule();
+    expect(buttons(render(exam({ locked: true } as Partial<StudentExam>)))[0]).toContain('Locked');
+    TestBed.resetTestingModule();
+    expect(buttons(render(exam({ can_start: false, reason: 'Opens on Monday', status: 'upcoming' })))[0]).toBe('Details');
+    TestBed.resetTestingModule();
+    expect(render(exam({ can_start: false, reason: 'Opens on Monday' })).textContent).toContain('Opens on Monday');
+  });
+
+  it('marks a live test and a premium test', () => {
+    const live = render(exam({ is_live: true }));
+    expect(live.querySelector('.live')!.textContent).toContain('LIVE TEST');
+    expect(live.textContent).toContain('Join live test');
+    TestBed.resetTestingModule();
+    const premium = render(exam({ premium: true, price: '99' } as Partial<StudentExam>));
+    expect(premium.querySelector('.premium')!.textContent).toContain('Premium · ₹99');
+  });
+
+  it('names the kind of test: a subject for a sectional test, the year for a previous year paper', () => {
+    expect(render(exam({ test_type: 'sectional', subject_name: 'Maths' })).querySelector('.cat')!.textContent).toContain('Maths only');
+    TestBed.resetTestingModule();
+    expect(render(exam({ test_type: 'previous_year', year: 2022 })).querySelector('.cat')!.textContent).toContain('Previous year 2022');
+  });
+
+  it('shows the picture when the test has one', () => {
+    expect(render(exam({ thumbnail_url: 'https://cdn.example/a.png' })).querySelector('img.card-img-top')!.getAttribute('src')).toBe('https://cdn.example/a.png');
+    TestBed.resetTestingModule();
+    expect(render(exam()).querySelector('img')).toBeNull();
+  });
+});

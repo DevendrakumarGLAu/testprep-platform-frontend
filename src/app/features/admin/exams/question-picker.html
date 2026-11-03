@@ -1,0 +1,86 @@
+<h2 class="h5 title">Add questions from the bank</h2>
+<div class="content">
+  <div class="filters">
+    <div class="field">
+      <label for="qp-search" class="form-label">Search</label>
+      <div class="input-group">
+        <input id="qp-search" type="search" class="form-control" [formControl]="search" />
+        <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="qp-subject" class="form-label">Subject</label>
+      <select id="qp-subject" class="form-select" (change)="pickSubject($any($event.target).value)">
+        <option value="" [selected]="subject() === null">All</option>
+        @for (s of subjects(); track s.id) { <option [value]="s.id" [selected]="subject() === s.id">{{ s.name }}</option> }
+      </select>
+    </div>
+    <div class="field">
+      <label for="qp-age" class="form-label">Question date</label>
+      <select id="qp-age" class="form-select" (change)="age.set($any($event.target).value); pageIndex.set(0)">
+        @for (a of agePresets; track a.value) { <option [value]="a.value" [selected]="age() === a.value">{{ a.label }}</option> }
+      </select>
+    </div>
+    <div class="field">
+      <label for="qp-usage" class="form-label">Used in tests</label>
+      <select id="qp-usage" class="form-select" (change)="usage.set($any($event.target).value); pageIndex.set(0)">
+        <option value="" [selected]="usage() === ''">Any</option>
+        <option value="no" [selected]="usage() === 'no'">Not used in any test yet</option>
+        <option value="yes" [selected]="usage() === 'yes'">Already used in a test</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="qp-difficulty" class="form-label">Difficulty</label>
+      <select id="qp-difficulty" class="form-select" (change)="difficulty.set($any($event.target).value); pageIndex.set(0)">
+        <option value="" [selected]="difficulty() === ''">All</option>
+        <option value="easy" [selected]="difficulty() === 'easy'">Easy</option>
+        <option value="medium" [selected]="difficulty() === 'medium'">Medium</option>
+        <option value="hard" [selected]="difficulty() === 'hard'">Hard</option>
+      </select>
+    </div>
+  </div>
+  @if (data.excludeIds.length) {
+    <div class="form-check mt-2">
+      <input id="qp-intest" class="form-check-input" type="checkbox" [checked]="showInTest()" (change)="showInTest.set($any($event.target).checked); pageIndex.set(0)" />
+      <label for="qp-intest" class="form-check-label">Also show the {{ data.excludeIds.length }} questions already in this test</label>
+    </div>
+  }
+  <div class="bulk">
+    <div class="form-check">
+      <input id="qp-page" class="form-check-input" type="checkbox" [checked]="pageAllSelected()" [indeterminate]="pageSomeSelected()" (change)="togglePage($any($event.target).checked)" [disabled]="rows().length === 0" />
+      <label for="qp-page" class="form-check-label">Select this page</label>
+    </div>
+    <button type="button" class="btn btn-link btn-sm" (click)="selectAllMatching()" [disabled]="busy() || total() === 0">Select all {{ total() }} matching</button>
+    <span class="spacer"></span>
+    <div class="rand">
+      <label for="qp-random" class="form-label visually-hidden">Random</label>
+      <input id="qp-random" class="form-control form-control-sm" type="number" min="1" [max]="limit" [formControl]="randomCount" placeholder="Random" />
+    </div>
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="addRandom()" [disabled]="busy()"><i class="bi bi-shuffle" aria-hidden="true"></i> Add random</button>
+  </div>
+  <p class="count">{{ selected().size }} selected · {{ remaining() }} more allowed in this test (limit {{ limit }})</p>
+  @if (loading() || busy()) {
+    <div class="progress loader" role="progressbar" aria-label="Loading questions"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+  }
+  @for (q of rows(); track q.id) {
+    <div class="item form-check">
+      <input [id]="'qp-q-' + q.id" class="form-check-input" type="checkbox" [checked]="selected().has(q.id)" [disabled]="inTest(q.id)" (change)="toggle(q, $any($event.target).checked)" [attr.aria-label]="'Select question ' + q.id" />
+      <label [for]="'qp-q-' + q.id" class="form-check-label">
+        <div>{{ q.text || q.text_hi }}</div>
+        <div class="meta">
+          <strong>#{{ q.id }}</strong> · {{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }} · {{ q.difficulty }}
+          · {{ q.question_date ? q.question_date + ' (' + ageOf(q.question_date) + ')' : 'no date' }}
+          @if (old(q.question_date)) { <span class="old">older than 2 years</span> }
+          <app-usage-tags [usedIn]="q.used_in" [currentId]="data.examId" [inCurrent]="inTest(q.id)" />
+        </div>
+      </label>
+    </div>
+  } @empty {
+    @if (!loading()) { <div class="empty">No available questions match.</div> }
+  }
+  <app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 25, 50, 100]" (page)="onPage($event)" />
+</div>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="button" class="btn btn-primary" (click)="add()" [disabled]="selected().size === 0">Add {{ selected().size || '' }} selected</button>
+</div>

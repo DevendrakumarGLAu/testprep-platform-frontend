@@ -1,65 +1,19 @@
 import { Component, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { apiErrorMessage } from '../../core/models';
 import { PlatformService } from '../../core/platform.service';
 import { AuthLayout } from './auth-layout';
 import { CaptchaField } from './captcha-field';
+import { SupportLine } from '../../shared/support-line/support-line';
 
 @Component({
   selector: 'app-login',
-  imports: [
-    ReactiveFormsModule, RouterLink, AuthLayout, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatIconModule, MatProgressSpinnerModule, CaptchaField,
-  ],
-  styleUrl: './auth.scss',
-  template: `
-    <app-auth-layout heading="Sign in" [sub]="'Welcome back to ' + platform.info().platform_name">
-      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
-        <mat-form-field appearance="outline">
-          <mat-label>Username or email</mat-label>
-          <input matInput formControlName="username" autocomplete="username" />
-          @if (form.controls.username.hasError('required')) {
-            <mat-error>Username or email is required</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
-          <input matInput [type]="hide() ? 'password' : 'text'" formControlName="password" autocomplete="current-password" />
-          <button mat-icon-button matSuffix type="button" (click)="hide.set(!hide())" [attr.aria-label]="'Toggle password visibility'">
-            <mat-icon>{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
-          </button>
-          @if (form.controls.password.hasError('required')) {
-            <mat-error>Password is required</mat-error>
-          }
-        </mat-form-field>
-        <app-captcha />
-        <p class="forgot">
-          @if (platform.info().email_enabled) { <a routerLink="/forgot-password">Forgot password?</a> }
-          @else { <span>Forgot your password? Ask your administrator to reset it.</span> }
-        </p>
-        @if (error()) {
-          <p class="form-error" role="alert">{{ error() }}</p>
-        }
-        <button mat-flat-button type="submit" [disabled]="loading()">
-          @if (loading()) { <mat-spinner diameter="20" /> } @else { Sign in }
-        </button>
-      </form>
-      <p class="switch">
-        @if (platform.info().allow_registration) {
-          New student? <a routerLink="/register">Create an account</a>
-        } @else {
-          Need an account? Ask your administrator.
-        }
-      </p>
-    </app-auth-layout>
-  `,
+  imports: [ReactiveFormsModule, RouterLink, AuthLayout, CaptchaField, SupportLine],
+  templateUrl: './login.html',
+  styleUrl: './login.scss',
+  host: { class: 'bs' },
 })
 export class Login {
   private fb = inject(FormBuilder);
@@ -77,6 +31,12 @@ export class Login {
     username: ['', Validators.required],
     password: ['', Validators.required],
   });
+
+  /** True when a field should show its error: it is wrong and the person has been to it or tried to submit. */
+  invalid(name: 'username' | 'password') {
+    const control = this.form.controls[name];
+    return control.invalid && (control.touched || control.dirty);
+  }
 
   submit() {
     if (this.form.invalid) {

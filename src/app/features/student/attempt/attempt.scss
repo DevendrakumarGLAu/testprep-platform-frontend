@@ -5,10 +5,15 @@
   background: var(--mat-sys-surface-container-low);
 }
 
+.loading-bar {
+  height: 4px;
+  border-radius: 0;
+}
+
 /* Long words, links and wide pictures wrap or shrink instead of pushing the page sideways. */
 .main,
-.main mat-card,
-.main mat-card-content,
+.main .card,
+.main .card-body,
 .q-text,
 .options,
 .opt {
@@ -22,44 +27,40 @@
   word-break: break-word;
 }
 
-/* The radio's own label refuses to wrap by default, which is what made long options run off the screen. */
-.opt ::ng-deep .mdc-form-field {
-  display: flex;
-  align-items: flex-start;
-  width: 100%;
-}
-
-.opt ::ng-deep .mdc-label {
-  flex: 1 1 0;
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  padding-top: 11px;
-  padding-bottom: 11px;
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
 }
 
 .shell {
-  height: 100vh;
-  --mat-sidenav-content-background-color: var(--mat-sys-surface-container-low);
-  background: var(--mat-sys-surface-container-low);
+  min-height: 100vh;
+}
+
+/* The question numbers drawer for small screens: slides over the page from the right. */
+.drawer-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .palette-drawer {
   width: min(86vw, 320px);
-}
-
-/* The heading stays put and only the list of question numbers scrolls, however many questions there are. */
-.palette-drawer ::ng-deep .mat-drawer-inner-container {
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
 }
 
+/* The heading stays put and only the list of question numbers scrolls, however many questions there are. */
 .drawer-head {
   flex: none;
-}
-
-.drawer-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -87,6 +88,8 @@
 .back {
   flex: none;
   margin-left: -8px;
+  font-size: 1.25rem;
+  line-height: 1;
 }
 
 .bar {
@@ -203,6 +206,7 @@
   flex-wrap: wrap;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-label-large);
@@ -234,10 +238,28 @@ img {
   gap: 8px;
 }
 
+/* One option: the whole bordered row is the click target, with the radio on the left. */
 .opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 10px;
-  padding: 4px 8px;
+  cursor: pointer;
+
+  .form-check-input {
+    float: none;
+    flex: none;
+    margin: 0.2rem 0 0;
+  }
+
+  .form-check-label {
+    flex: 1 1 0;
+    min-width: 0;
+    cursor: pointer;
+  }
 
   &.chosen {
     border-color: var(--mat-sys-primary);
@@ -250,7 +272,7 @@ img {
   }
 }
 
-.nav {
+.q-nav {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -359,22 +381,47 @@ img {
   background: var(--mat-sys-surface-container-high);
 }
 
+/* The summary inside the submit pop-up. */
+.review {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  li.warn {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+}
+
 .done {
   display: grid;
   place-items: center;
   padding: 24px 16px;
   min-height: 80vh;
 
-  mat-card {
+  .card {
     max-width: 560px;
     width: 100%;
     text-align: center;
   }
 
+  .card-body {
+    padding: 24px;
+  }
+
   .big {
+    display: block;
     font-size: 56px;
-    width: 56px;
-    height: 56px;
+    line-height: 1.2;
     color: var(--mat-sys-primary);
   }
 
@@ -400,7 +447,7 @@ img {
     color: var(--mat-sys-error);
   }
 
-  .grid {
+  .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
     gap: 12px;
@@ -446,11 +493,11 @@ img {
     justify-content: space-between;
   }
 
-  .nav button {
+  .q-nav button {
     flex: 1 1 auto;
   }
 
-  .nav .spacer {
+  .q-nav .spacer {
     display: none;
   }
 
@@ -471,6 +518,6 @@ img {
   color: var(--mat-sys-tertiary);
 }
 
-.pause-btn mat-icon {
-  margin-right: 2px;
+.btn-link {
+  text-decoration: none;
 }

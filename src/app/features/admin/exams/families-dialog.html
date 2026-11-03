@@ -1,0 +1,26 @@
+<h2 class="h5 title">Exam families</h2>
+<div class="content">
+  <p class="note">
+    A family groups related exams. SSC can hold SSC MTS, SSC CHSL and SSC CGL. Students pick the family first, then the exam.
+    Put an exam in a family from the exam's own settings.
+  </p>
+  @if (loading()) {
+    <div class="progress loader" role="progressbar" aria-label="Loading families"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+  }
+  @for (g of groups(); track g.id; let i = $index) {
+    <div class="line" [class.off]="!g.is_active">
+      <div class="name"><strong>{{ g.name }}</strong> <span class="muted">· {{ g.exam_count }} exam{{ g.exam_count === 1 ? '' : 's' }}{{ g.is_active ? '' : ' · hidden' }}</span></div>
+      <button type="button" class="btn btn-link" (click)="move(i, -1)" [disabled]="i === 0 || busy()" aria-label="Move up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-link" (click)="move(i, 1)" [disabled]="i === groups().length - 1 || busy()" aria-label="Move down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-link" (click)="toggle(g)" [disabled]="busy()" [attr.aria-label]="g.is_active ? 'Hide from students' : 'Show to students'"><i class="bi" [class]="g.is_active ? 'bi-eye' : 'bi-eye-slash'" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-link" (click)="rename(g)" [disabled]="busy()" aria-label="Rename family"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-link" (click)="remove(g)" [disabled]="busy()" aria-label="Delete family"><i class="bi bi-trash" aria-hidden="true"></i></button>
+    </div>
+  } @empty {
+    @if (!loading()) { <div class="empty">No families yet. Add one, for example SSC.</div> }
+  }
+</div>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="add()" [disabled]="busy()"><i class="bi bi-plus-lg" aria-hidden="true"></i> New family</button>
+  <button type="button" class="btn btn-primary" (click)="done()">Done</button>
+</div>

@@ -1,0 +1,37 @@
+@if (loaded() && data()) {
+  <div class="card">
+    <div class="card-body p-3 p-md-4">
+      @if (plan(); as p) {
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <h2 class="h6 mb-0"><i class="bi bi-calendar-check me-2 text-primary"></i>Today's study plan</h2>
+          <span class="badge text-bg-primary">{{ p.days_left }} day{{ p.days_left === 1 ? '' : 's' }} to {{ p.target_name }}</span>
+        </div>
+        @if (today().length === 0) {
+          <p class="text-body-secondary mb-2">Nothing planned for today.</p>
+        } @else if (left().length === 0) {
+          <p class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>All {{ today().length }} tasks done today. Well done!</p>
+        } @else {
+          <ul class="list-unstyled mb-2">
+            @for (t of next(); track t.id) {
+              <li class="d-flex align-items-center gap-2 py-1">
+                <i class="bi bi-circle text-body-secondary"></i>
+                <span class="flex-grow-1 text-truncate">{{ t.title }}</span>
+                @if (t.link) { <a class="btn btn-sm btn-outline-primary" [routerLink]="t.link">Start</a> }
+              </li>
+            }
+          </ul>
+        }
+        @if (p.overdue_count > 0) { <p class="small text-danger mb-2">{{ p.overdue_count }} missed task{{ p.overdue_count === 1 ? '' : 's' }}. Open your plan to catch up.</p> }
+        <a routerLink="/student/plan" class="small">See the whole plan</a>
+      } @else {
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div>
+            <h2 class="h6 mb-1"><i class="bi bi-calendar-check me-2 text-primary"></i>Plan your preparation</h2>
+            <div class="text-body-secondary small">Pick your exam date and get a to-do list for every day.</div>
+          </div>
+          <a class="btn btn-primary btn-sm" routerLink="/student/plan">Make a study plan</a>
+        </div>
+      }
+    </div>
+  </div>
+}

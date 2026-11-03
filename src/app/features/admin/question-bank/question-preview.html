@@ -1,0 +1,18 @@
+<h2 class="h5 title">Question preview</h2>
+<div class="content">
+  <div class="meta">
+    {{ q.subject_name }}{{ q.topic_name ? ' / ' + q.topic_name : '' }} · {{ q.difficulty }} ·
+    +{{ q.marks }} / -{{ q.negative_marks }} · v{{ q.version }}
+  </div>
+  @if (q.image_url) { <img [src]="q.image_url" alt="Question image" /> }
+  @if (q.text) { <div class="q">{{ q.text }}</div> }
+  @if (q.text_hi) { <div class="q" lang="hi">{{ q.text_hi }}</div> }
+  <ol>
+    @for (o of q.options; track o.id) {
+      <li [class.correct]="o.is_correct">{{ o.text }}{{ o.text && o.text_hi ? " / " : "" }}<span lang="hi">{{ o.text_hi }}</span> @if (o.is_correct) { <i class="bi bi-check-circle-fill" aria-hidden="true"></i> }</li>
+    }
+  </ol>
+  @if (q.explanation) { <div class="expl"><strong>Explanation</strong><br />{{ q.explanation }}</div> }
+  @if (q.explanation_hi) { <div class="expl" lang="hi"><strong>व्याख्या</strong><br />{{ q.explanation_hi }}</div> }
+</div>
+<div class="footer"><button type="button" class="btn btn-primary" (click)="close()">Close</button></div>

@@ -1,0 +1,14 @@
+<app-auth-layout heading="Confirming your email">
+  @if (state() === 'working') {
+    <div class="d-flex align-items-center gap-3" role="status">
+      <span class="spinner-border text-primary" aria-hidden="true"></span>
+      <span>Please wait a moment.</span>
+    </div>
+  } @else if (state() === 'ok') {
+    <p role="status"><i class="bi bi-check-circle-fill text-success me-1"></i> {{ message() }}</p>
+    <a class="btn btn-primary btn-lg w-100" routerLink="/login">Continue</a>
+  } @else {
+    <div class="alert alert-danger" role="alert">{{ message() }}</div>
+    <a class="btn btn-outline-primary btn-lg w-100" routerLink="/login">Go to sign in</a>
+  }
+</app-auth-layout>

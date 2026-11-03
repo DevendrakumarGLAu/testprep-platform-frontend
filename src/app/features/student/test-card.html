@@ -1,0 +1,43 @@
+<div class="card test">
+  @if (exam().thumbnail_url) { <img class="card-img-top" [src]="exam().thumbnail_url" alt="" /> }
+  <div class="card-body">
+    <div class="top">
+      <div>
+        <div class="cat">{{ exam().category_name ? exam().category_name + ' · ' : '' }}{{ typeLine() }}</div>
+        <h3>{{ exam().title }}</h3>
+        @if (exam().is_live) { <span class="live"><i class="bi bi-broadcast"></i> LIVE TEST</span> }
+        @if (exam().premium) {
+          <span class="premium"><i class="bi bi-award-fill"></i> Premium{{ exam().price ? ' · ₹' + exam().price : '' }}</span>
+        }
+      </div>
+      <span [class]="'chip ' + exam().status">{{ label() }}</span>
+    </div>
+    <div class="facts">
+      <div><span>Questions</span><br />{{ exam().question_count }}</div>
+      <div><span>Total marks</span><br />{{ exam().total_marks }}</div>
+      <div><span>Duration</span><br />{{ exam().duration_minutes }} min{{ exam().sectional_timing ? ' · timed sections' : '' }}</div>
+      <div><span>Attempts</span><br />{{ exam().attempts_used }} / {{ exam().max_attempts || 'unlimited' }}</div>
+      <div><span>Starts</span><br />{{ exam().start_at ? (exam().start_at | date: 'medium') : 'Anytime' }}</div>
+      <div><span>Ends</span><br />{{ exam().end_at ? (exam().end_at | date: 'medium') : 'No end' }}</div>
+    </div>
+    @if (!exam().can_start && exam().reason) { <p class="reason">{{ exam().reason }}</p> }
+  </div>
+  <div class="actions">
+    @if (exam().status === 'in_progress') {
+      <a class="btn btn-primary" [routerLink]="['/student/tests', exam().id]"><i class="bi bi-play-fill"></i> Resume</a>
+    } @else if (exam().locked) {
+      <a class="btn btn-outline-primary" [routerLink]="['/student/tests', exam().id]"><i class="bi bi-lock-fill"></i> Locked</a>
+    } @else if (exam().can_start) {
+      <a class="btn btn-primary" [routerLink]="['/student/tests', exam().id]">{{ exam().is_live ? 'Join live test' : exam().attempts_used ? 'Attempt again' : 'Start' }}</a>
+    } @else {
+      <a class="btn btn-outline-primary" [routerLink]="['/student/tests', exam().id]">Details</a>
+    }
+    @if (exam().last_attempt_id) {
+      @if (exam().result_available) {
+        <a class="btn btn-outline-primary view-result" [routerLink]="['/student/results', exam().last_attempt_id]"><i class="bi bi-bar-chart-fill"></i> View result</a>
+      } @else {
+        <p class="pending">Result not released yet</p>
+      }
+    }
+  </div>
+</div>

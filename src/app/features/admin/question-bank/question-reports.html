@@ -1,0 +1,48 @@
+<h1 class="h3">Question reports</h1>
+<p class="meta">Problems students reported while reviewing their results. A reported question is held back from newly published tests until you approve it again.</p>
+<div class="filters">
+  <div class="field">
+    <label for="qr-status" class="form-label visually-hidden">Show</label>
+    <select id="qr-status" class="form-select" (change)="status.set($any($event.target).value); pageIndex.set(0)">
+      <option value="open" [selected]="status() === 'open'">Open</option>
+      <option value="resolved" [selected]="status() === 'resolved'">Fixed</option>
+      <option value="rejected" [selected]="status() === 'rejected'">No change needed</option>
+      <option value="" [selected]="status() === ''">All</option>
+    </select>
+  </div>
+  <span class="meta">{{ total() }} report{{ total() === 1 ? '' : 's' }}</span>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading reports"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@for (r of rows(); track r.id) {
+  <div class="card">
+    <div class="card-body">
+      <div class="head">
+        <a class="id" [routerLink]="['/admin/questions', r.question]">Question #{{ r.question }}</a>
+        <span class="chip" [class]="'chip ' + r.status">{{ statusLabel(r.status) }}</span>
+        <span>{{ r.reason_label }}</span>
+      </div>
+      <div class="text">{{ r.question_text }}</div>
+      @if (r.message) { <div class="msg">{{ r.message }}</div> }
+      @if (r.image_url) {
+        <img class="thumb" [src]="r.image_url" alt="Picture attached by the student" title="Click to enlarge" tabindex="0" role="button" (click)="zoom(r.image_url)" (keydown.enter)="zoom(r.image_url)" />
+      }
+      <div class="meta">Reported by {{ r.student_name }}{{ r.exam_title ? ' in ' + r.exam_title : '' }} · {{ r.created_at | date: 'medium' }}</div>
+      <div class="note-field">
+        <label [for]="'qr-note-' + r.id" class="form-label">Note to the student (optional)</label>
+        <input [id]="'qr-note-' + r.id" class="form-control" [ngModel]="note(r)" (ngModelChange)="setNote(r, $event)" maxlength="500" />
+      </div>
+      <div class="actions">
+        <a class="btn btn-outline-primary" [routerLink]="['/admin/questions', r.question]"><i class="bi bi-pencil" aria-hidden="true"></i> Open question</a>
+        @if (r.status !== 'resolved') { <button type="button" class="btn btn-primary" (click)="set(r, 'resolved')"><i class="bi bi-check-lg" aria-hidden="true"></i> Mark fixed</button> }
+        @if (r.status !== 'rejected') { <button type="button" class="btn btn-link" (click)="set(r, 'rejected')">No change needed</button> }
+        @if (r.status !== 'open') { <button type="button" class="btn btn-link" (click)="set(r, 'open')">Reopen</button> }
+      </div>
+    </div>
+  </div>
+} @empty {
+  @if (!loading()) { <div class="empty">No reports here. Nothing is waiting for you.</div> }
+}
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize" (page)="pageIndex.set($event.pageIndex)" />

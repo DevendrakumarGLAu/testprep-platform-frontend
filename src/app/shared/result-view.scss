@@ -20,7 +20,7 @@
     }
   }
 
-  .badge {
+  .verdict {
     display: inline-block;
     padding: 4px 14px;
     border-radius: 16px;
@@ -68,8 +68,17 @@
   margin-bottom: 16px;
 }
 
-mat-card-content {
-  padding-top: 12px;
+.card-header {
+  font-weight: 600;
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+h2 {
+  margin: 24px 0 8px;
+  font-size: 1.5rem;
 }
 
 .table-wrap {
@@ -252,8 +261,9 @@ table.plain {
   white-space: pre-wrap;
 }
 
-mat-button-toggle-group {
+.filters {
   flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 img.zoomable {

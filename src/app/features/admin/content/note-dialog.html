@@ -1,0 +1,48 @@
+<h2 class="h5 title">{{ data.note ? 'Edit study note' : 'New study note' }}</h2>
+<form [formGroup]="form" id="note-form" (ngSubmit)="save()" novalidate>
+  <div class="mb-3">
+    <label for="nd-title" class="form-label">Title (English)</label>
+    <input id="nd-title" class="form-control" formControlName="title" maxlength="200" placeholder="October 2026 current affairs" />
+  </div>
+  <div class="mb-3">
+    <label for="nd-title-hi" class="form-label">शीर्षक (Hindi)</label>
+    <input id="nd-title-hi" class="form-control" formControlName="title_hi" maxlength="200" lang="hi" />
+  </div>
+  <div class="mb-3">
+    <label for="nd-body" class="form-label">Note (English)</label>
+    <textarea id="nd-body" class="form-control" rows="8" formControlName="body" placeholder="One point per line. Start a line with - for a bullet."></textarea>
+  </div>
+  <div class="mb-3">
+    <label for="nd-body-hi" class="form-label">नोट (Hindi)</label>
+    <textarea id="nd-body-hi" class="form-control" rows="8" formControlName="body_hi" lang="hi"></textarea>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+      <label for="nd-exam" class="form-label">Exam</label>
+      <select id="nd-exam" class="form-select" formControlName="category">
+        <option [ngValue]="null">Any exam</option>
+        @for (c of data.categories; track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label for="nd-subject" class="form-label">Subject</label>
+      <select id="nd-subject" class="form-select" formControlName="subject">
+        <option [ngValue]="null">Any subject</option>
+        @for (s of data.subjects; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+      </select>
+    </div>
+    <div class="col-12 col-md-4">
+      <label for="nd-date" class="form-label">Covers (date)</label>
+      <input id="nd-date" class="form-control" type="date" formControlName="note_date" />
+    </div>
+  </div>
+  <div class="form-check form-switch mb-3">
+    <input id="nd-published" class="form-check-input" type="checkbox" role="switch" formControlName="is_published" />
+    <label for="nd-published" class="form-check-label">Visible to students</label>
+  </div>
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+</form>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="note-form" [disabled]="saving()">Save</button>
+</div>

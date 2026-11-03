@@ -1,0 +1,27 @@
+<div class="head">
+  <h1 class="h3">Batches</h1>
+  <button type="button" class="btn btn-primary" (click)="edit(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New batch</button>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading batches"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Batch</th><th>Students</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (b of rows(); track b.id) {
+        <tr>
+          <td>{{ b.name }}</td>
+          <td>{{ b.member_count }}</td>
+          <td>{{ b.is_active ? 'Active' : 'Inactive' }}</td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="members(b)" aria-label="Manage members" title="Manage members"><i class="bi bi-people" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="edit(b)" aria-label="Edit batch" title="Edit batch"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="remove(b)" aria-label="Delete batch" title="Delete batch"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No batches yet.</div> }
+</div>

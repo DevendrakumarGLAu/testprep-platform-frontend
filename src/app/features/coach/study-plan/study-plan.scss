@@ -1,0 +1,43 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.task.done .title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.accuracy {
+  height: 8px;
+}
+
+.progress-bar {
+  &.tone-weak {
+    background-color: var(--mat-sys-error);
+  }
+
+  &.tone-ok {
+    background-color: #f59e0b;
+  }
+
+  &.tone-strong {
+    background-color: #16a34a;
+  }
+
+  &.tone-none {
+    background-color: var(--mat-sys-outline);
+  }
+}
+
+.subject-tag {
+  font-weight: 500;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.list-group-item {
+  background: transparent;
+}

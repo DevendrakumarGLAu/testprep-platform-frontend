@@ -1,0 +1,61 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(760px, 88vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 12px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.group {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.text {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.copy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 2px 1.5em;
+  flex-wrap: wrap;
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+.used {
+  color: var(--mat-sys-primary);
+  font-size: 0.85em;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 0;
+  background: var(--mat-dialog-container-color, var(--mat-sys-surface));
+}

@@ -1,0 +1,31 @@
+<app-bs-modal [title]="'Report a problem with question ' + number()" (closed)="closed.emit()">
+  <p>Tell us what is wrong. The admins will check it and fix the question if needed.</p>
+  <div class="reasons" role="radiogroup" aria-label="What is wrong?">
+    @for (r of reasons; track r.value) {
+      <div class="form-check">
+        <input class="form-check-input" type="radio" name="report-reason" [id]="'reason-' + r.value" [value]="r.value" [checked]="reason() === r.value"
+          (change)="reason.set(r.value); error.set('')" />
+        <label class="form-check-label" [for]="'reason-' + r.value">{{ r.label }}</label>
+      </div>
+    }
+  </div>
+
+  <label for="report-message" class="form-label mt-3">{{ reason() === 'other' ? 'Describe the problem' : 'More details (optional)' }}</label>
+  <textarea id="report-message" class="form-control" rows="3" maxlength="1000" [ngModel]="message()" (ngModelChange)="message.set($event)"></textarea>
+
+  <div class="picture">
+    <button type="button" class="btn btn-outline-primary" (click)="file.click()"><i class="bi bi-image"></i> {{ preview() ? 'Change picture' : 'Add a picture' }}</button>
+    <input #file type="file" hidden accept="image/jpeg,image/png,image/webp,image/gif" (change)="pick($event)" />
+    @if (preview()) {
+      <img [src]="preview()" alt="The picture you are sending" />
+      <button type="button" class="btn btn-link" (click)="remove()">Remove</button>
+    }
+  </div>
+  <p class="hint">Optional. You can also paste a screenshot with Ctrl+V. JPG, PNG, WebP or GIF, up to 2 MB.</p>
+  @if (error()) { <div class="alert alert-danger py-2 mb-0" role="alert">{{ error() }}</div> }
+
+  <ng-container footer>
+    <button type="button" class="btn btn-outline-secondary" (click)="closed.emit()">Cancel</button>
+    <button type="button" class="btn btn-primary" (click)="send()">Send report</button>
+  </ng-container>
+</app-bs-modal>

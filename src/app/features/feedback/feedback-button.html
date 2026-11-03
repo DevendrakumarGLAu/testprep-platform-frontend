@@ -1,0 +1,27 @@
+<button type="button" class="btn btn-link trigger" (click)="show()" aria-label="Send feedback" title="Send feedback">
+  <i class="bi bi-chat-left-text" aria-hidden="true"></i><span class="label">Feedback</span>
+</button>
+
+@if (open()) {
+  <app-bs-modal title="Send us feedback" size="sm" (closed)="close()">
+    <p class="intro">Your note goes straight to the team. It helps us fix problems quickly.</p>
+    <div class="mb-3">
+      <label for="fb-kind" class="form-label">What is it about?</label>
+      <select id="fb-kind" class="form-select" name="kind" [(ngModel)]="kind">
+        @for (k of kinds; track k.value) { <option [value]="k.value">{{ k.label }}</option> }
+      </select>
+    </div>
+    <div class="mb-1">
+      <label for="fb-message" class="form-label">Your message</label>
+      <textarea id="fb-message" class="form-control" rows="5" maxlength="2000" name="message" [(ngModel)]="message" [placeholder]="hint"></textarea>
+    </div>
+    <div class="form-text mb-2">We also send the page you are on and your browser type, so we can find the problem.</div>
+    @if (error()) { <div class="alert alert-danger py-2 mb-0" role="alert">{{ error() }}</div> }
+    <ng-container footer>
+      <button type="button" class="btn btn-link" (click)="close()">Cancel</button>
+      <button type="button" class="btn btn-primary" (click)="send()" [disabled]="busy()">
+        @if (busy()) { <span class="spinner-border spinner-border-sm" aria-hidden="true"></span> } @else { Send }
+      </button>
+    </ng-container>
+  </app-bs-modal>
+}

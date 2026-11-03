@@ -2,21 +2,12 @@ import { isOld } from '../../../shared/question-age';
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map, startWith } from 'rxjs';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatRadioModule } from '@angular/material/radio';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatTabsModule } from '@angular/material/tabs';
 import { Router, RouterLink } from '@angular/router';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
+import { BsTab, BsTabs } from '../../../shared/bs-tabs/bs-tabs';
 import { openPicker } from '../../../shared/pickers';
 import { Question, Subject } from '../question-bank/qb.models';
 import { QuestionBankService } from '../question-bank/qb.service';
@@ -27,430 +18,10 @@ import { StudentPicker } from './student-picker';
 
 @Component({
   selector: 'app-exam-form',
-  imports: [
-    ReactiveFormsModule, RouterLink, MatTabsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatIconModule, MatSlideToggleModule, MatRadioModule, MatProgressBarModule, StudentPicker,
-  ],
+  imports: [ReactiveFormsModule, RouterLink, StudentPicker, BsTabs],
+  templateUrl: './exam-form.html',
   styleUrl: './exam-form.scss',
-  template: `
-    <div class="head">
-      <div>
-        <h1>{{ id() ? exam()?.title || 'Test' : 'New test' }}</h1>
-        @if (exam(); as e) { <span class="chip" [class]="'chip ' + e.status">{{ e.status }}</span> }
-      </div>
-      <div class="head-actions">
-        <a mat-button routerLink="/admin/tests"><mat-icon>arrow_back</mat-icon> Back</a>
-        @if (exam(); as e) {
-          <a mat-stroked-button [routerLink]="['/admin/tests', e.id, 'preview']"><mat-icon>visibility</mat-icon> Preview</a>
-          @if (e.status !== 'draft') {
-            <a mat-stroked-button [routerLink]="['/admin/tests', e.id, 'results']"><mat-icon>bar_chart</mat-icon> Results</a>
-          }
-          @if (e.status === 'draft') {
-            <button mat-flat-button (click)="lifecycle('publish')"><mat-icon>publish</mat-icon> Publish</button>
-          } @else if (e.status === 'published') {
-            <button mat-stroked-button (click)="lifecycle('unpublish')"><mat-icon>unpublished</mat-icon> Unpublish</button>
-          }
-        }
-      </div>
-    </div>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-
-    @if (problems().length) {
-      <div class="problems" role="alert">
-        <strong>This test is not ready to publish:</strong>
-        <ul>@for (p of problems(); track p) { <li>{{ p }}</li> }</ul>
-      </div>
-    }
-    @if (exam()?.locked) {
-      <div class="info">
-        <mat-icon inline>lock</mat-icon>
-        Scoring rules and questions are locked while the test is {{ exam()!.status }}. Unpublish it to change them.
-        Title, descriptions, dates, release settings and assignments can still be edited.
-      </div>
-    }
-
-    <mat-tab-group animationDuration="0" [(selectedIndex)]="tab">
-      <!-- DETAILS -->
-      <mat-tab label="Details & rules">
-        <form [formGroup]="form" (ngSubmit)="saveDetails()" novalidate class="tab">
-          <mat-card appearance="outlined"><mat-card-content>
-            <mat-form-field appearance="outline">
-              <mat-label>Title</mat-label>
-              <input matInput formControlName="title" maxlength="200" />
-              <mat-error>Title is required</mat-error>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Description</mat-label>
-              <textarea matInput rows="2" formControlName="description"></textarea>
-            </mat-form-field>
-            <mat-form-field appearance="outline">
-              <mat-label>Instructions shown before the test</mat-label>
-              <textarea matInput rows="4" formControlName="instructions"></textarea>
-            </mat-form-field>
-            @if (pattern(); as p) {
-              <div class="pattern-bar">
-                <mat-icon>auto_fix_high</mat-icon>
-                <span><strong>{{ selectedCategory()?.name }}</strong> has a saved pattern: {{ patternSummary() }}</span>
-                <button mat-stroked-button type="button" (click)="applyPattern()" [disabled]="locked()">Use this pattern</button>
-              </div>
-            }
-            <div class="grid">
-              <mat-form-field appearance="outline">
-                <mat-label>Exam (for example SSC)</mat-label>
-                <mat-select formControlName="category">
-                  <mat-option [value]="null">None</mat-option>
-                  @for (c of categories(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
-                </mat-select>
-                <button mat-icon-button matSuffix type="button" (click)="addCategory($event)" aria-label="New exam">
-                  <mat-icon>add</mat-icon>
-                </button>
-                <mat-hint>Students find the test under this exam</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Also show in these exams</mat-label>
-                <mat-select multiple formControlName="also_in">
-                  @for (c of otherCategories(); track c.id) { <mat-option [value]="c.id">{{ c.name }}</mat-option> }
-                </mat-select>
-                <mat-hint>One test, many exams: students of each exam see it, and the results stay together</mat-hint>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Type of test</mat-label>
-                <mat-select formControlName="test_type">
-                  @for (t of testTypes; track t.value) { <mat-option [value]="t.value">{{ t.label }}</mat-option> }
-                </mat-select>
-              </mat-form-field>
-              @if (customTabs().length) {
-                <mat-form-field appearance="outline">
-                  <mat-label>Show in tab</mat-label>
-                  <mat-select formControlName="tab_key">
-                    <mat-option value="">By type of test</mat-option>
-                    @for (t of customTabs(); track t.key) { <mat-option [value]="t.key">{{ t.label }}</mat-option> }
-                  </mat-select>
-                  <mat-hint>Put this test in one of the exam's own tabs instead of the tab of its type</mat-hint>
-                </mat-form-field>
-              }
-              @if (form.value.test_type === 'sectional') {
-                <mat-form-field appearance="outline">
-                  <mat-label>Subject</mat-label>
-                  <mat-select formControlName="subject">
-                    @for (s of subjects(); track s.id) { <mat-option [value]="s.id">{{ s.name }}</mat-option> }
-                  </mat-select>
-                  <mat-hint>For example Maths only</mat-hint>
-                  <mat-error>Choose the subject</mat-error>
-                </mat-form-field>
-              }
-              @if (form.value.test_type === 'previous_year') {
-                <mat-form-field appearance="outline">
-                  <mat-label>Year of the paper</mat-label>
-                  <input matInput type="number" min="1950" formControlName="year" />
-                  <mat-error>Enter the year, for example 2023</mat-error>
-                </mat-form-field>
-              }
-            </div>
-            @if (exam()) {
-              <div class="thumb">
-                <strong>Thumbnail (optional, max 2 MB)</strong>
-                @if (exam()!.thumbnail_url) {
-                  <img [src]="exam()!.thumbnail_url" alt="Test thumbnail" />
-                  <button mat-button type="button" (click)="removeThumb()"><mat-icon>delete</mat-icon> Remove</button>
-                }
-                <input #file type="file" accept="image/*" hidden (change)="pickThumb($event)" />
-                <button mat-stroked-button type="button" (click)="file.click()"><mat-icon>image</mat-icon> Choose image</button>
-              </div>
-            }
-          </mat-card-content></mat-card>
-
-          <mat-card appearance="outlined">
-            <mat-card-header><mat-card-title>Rules</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="grid">
-                <mat-form-field appearance="outline">
-                  <mat-label>Duration (minutes)</mat-label>
-                  <input matInput type="number" min="1" max="600" formControlName="duration_minutes" />
-                  @if (sectional()) { <mat-hint>Total of the section time limits</mat-hint> }
-                  <mat-error>1 to 600 minutes</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Marks per question</mat-label>
-                  <input matInput type="number" min="0.01" step="0.25" formControlName="marks_per_question" />
-                  <mat-hint>Every question in this test is worth this</mat-hint>
-                  <mat-error>Must be greater than 0</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Passing marks</mat-label>
-                  <input matInput type="number" min="0" step="0.25" formControlName="passing_marks" />
-                  <mat-hint>Total marks: {{ exam()?.total_marks ?? '0.00' }}</mat-hint>
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Maximum attempts</mat-label>
-                  <input matInput type="number" min="0" max="50" formControlName="max_attempts" />
-                  <mat-hint>0 = unlimited retakes</mat-hint>
-                  <mat-error>0 to 50</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Unanswered penalty</mat-label>
-                  <input matInput type="number" min="0" step="0.25" formControlName="unanswered_penalty" />
-                  <mat-hint>Marks deducted per unanswered question (normally 0)</mat-hint>
-                </mat-form-field>
-              </div>
-              <div class="neg">
-                <mat-form-field appearance="outline">
-                  <mat-label>Negative marking</mat-label>
-                  <mat-select formControlName="negative_option">
-                    <mat-option value="off">No negative marking</mat-option>
-                    @if (rule().option === 'question') { <mat-option value="question">Each question's own value (older tests)</mat-option> }
-                    <mat-option value="fraction">Fraction of the question's marks</mat-option>
-                    <mat-option value="fixed">Fixed marks per wrong answer</mat-option>
-                  </mat-select>
-                </mat-form-field>
-                @if (rule().option === 'fraction') {
-                  <div class="presets" role="group" aria-label="Common fractions">
-                    @for (p of presets; track p.label) {
-                      <button mat-stroked-button type="button" [class.on]="sameValue(p.value)" [disabled]="locked()" (click)="form.controls.negative_value.setValue(p.value)">{{ p.label }}</button>
-                    }
-                  </div>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Fraction deducted</mat-label>
-                    <input matInput type="number" min="0.01" max="1" step="0.0001" formControlName="negative_value" />
-                    <mat-hint>0.25 = 1/4, 0.3333 = 1/3</mat-hint>
-                    <mat-error>Between 0 and 1</mat-error>
-                  </mat-form-field>
-                }
-                @if (rule().option === 'fixed') {
-                  <mat-form-field appearance="outline">
-                    <mat-label>Marks deducted per wrong answer</mat-label>
-                    <input matInput type="number" min="0" max="100" step="0.05" formControlName="negative_value" />
-                    <mat-error>0 or more</mat-error>
-                  </mat-form-field>
-                }
-              </div>
-              <p class="neg-example"><mat-icon inline>info</mat-icon> {{ negativeExample() }}</p>
-              <div class="toggles">
-                <mat-slide-toggle formControlName="sectional_timing">Time each section separately (SSC style)</mat-slide-toggle>
-                @if (sectional()) {
-                  <p class="neg-example">
-                    <mat-icon inline>info</mat-icon>
-                    Sections open one after another, each with its own timer. A student cannot move on until the section's time
-                    is up or they submit that section, and cannot go back. Set each section's time limit in the Questions tab.
-                  </p>
-                }
-                <mat-slide-toggle formControlName="shuffle_questions">Shuffle questions within sections</mat-slide-toggle>
-                <mat-slide-toggle formControlName="shuffle_options">Shuffle answer options</mat-slide-toggle>
-                @if (!live()) { <mat-slide-toggle formControlName="allow_pause">Let students pause the test</mat-slide-toggle> }
-              </div>
-              @if (form.controls.allow_pause.value && !live()) {
-                <div class="grid">
-                  <mat-form-field appearance="outline">
-                    <mat-label>Pauses allowed</mat-label>
-                    <input matInput type="number" min="0" max="20" formControlName="max_pauses" />
-                    <mat-hint>0 = unlimited</mat-hint>
-                  </mat-form-field>
-                  <mat-form-field appearance="outline">
-                    <mat-label>Longest pause (minutes)</mat-label>
-                    <input matInput type="number" min="0" max="120" formControlName="pause_minutes" />
-                    <mat-hint>0 = no limit: the student can resume any time</mat-hint>
-                  </mat-form-field>
-                </div>
-                <p class="neg-example">
-                  <mat-icon inline>info</mat-icon>
-                  While paused the timer stops and the questions are hidden. With a limit, a pause that runs longer restarts the test by
-                  itself and the timer keeps running. With 0 the student stays paused until they resume.
-                </p>
-              }
-            </mat-card-content>
-          </mat-card>
-
-          <mat-card appearance="outlined">
-            <mat-card-header><mat-card-title>Schedule &amp; release</mat-card-title></mat-card-header>
-            <mat-card-content>
-              <div class="live-box">
-                <mat-slide-toggle formControlName="is_live">Live test (everyone starts together)</mat-slide-toggle>
-                @if (live()) {
-                  <p class="neg-example">
-                    <mat-icon inline>sensors</mat-icon>
-                    Students join from the start time and everyone finishes at the same moment (start time + duration), so someone who joins
-                    late gets the time that is left. Pausing is off. Set the start time below; the end is worked out for you.
-                  </p>
-                  <mat-form-field appearance="outline" class="late">
-                    <mat-label>Students can still join for (minutes)</mat-label>
-                    <input matInput type="number" min="0" max="180" formControlName="late_join_minutes" />
-                    <mat-hint>After this many minutes from the start nobody new can join</mat-hint>
-                  </mat-form-field>
-                  @if (liveLink(); as link) {
-                    <div class="live-link">
-                      <strong>Link to share</strong>
-                      <div class="row">
-                        <input readonly [value]="link" aria-label="Link to share this live test" (focus)="$any($event.target).select()" />
-                        <button mat-stroked-button type="button" (click)="copyLink(link)"><mat-icon>content_copy</mat-icon> Copy link</button>
-                      </div>
-                      <span class="meta">Only registered students can open it: anyone not signed in is asked to log in first, and a test given to chosen students or batches stays closed to everyone else.</span>
-                    </div>
-                  } @else {
-                    <p class="meta">Save the test to get the link to share with students.</p>
-                  }
-                }
-              </div>
-              <div class="grid">
-                <mat-form-field appearance="outline">
-                  <mat-label>{{ live() ? 'Live test starts at' : 'Available from' }}</mat-label>
-                  <input #startIn matInput type="datetime-local" formControlName="start_at" />
-                  <button mat-icon-button matSuffix type="button" (click)="pickDate(startIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
-                  <mat-hint>{{ live() ? 'Required for a live test' : 'Empty = available as soon as published' }}</mat-hint>
-                </mat-form-field>
-                @if (!live()) {
-                  <mat-form-field appearance="outline">
-                    <mat-label>Available until</mat-label>
-                    <input #endIn matInput type="datetime-local" formControlName="end_at" />
-                    <button mat-icon-button matSuffix type="button" (click)="pickDate(endIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
-                    <mat-hint>Empty = no end</mat-hint>
-                  </mat-form-field>
-                }
-                <mat-form-field appearance="outline">
-                  <mat-label>Result release</mat-label>
-                  <mat-select formControlName="result_release">
-                    <mat-option value="immediate">Immediately after submission</mat-option>
-                    <mat-option value="scheduled">At a scheduled time</mat-option>
-                    <mat-option value="manual">Manually by an admin</mat-option>
-                  </mat-select>
-                </mat-form-field>
-                @if (form.value.result_release === 'scheduled') {
-                  <mat-form-field appearance="outline">
-                    <mat-label>Results released at</mat-label>
-                    <input #releaseIn matInput type="datetime-local" formControlName="result_release_at" />
-                  <button mat-icon-button matSuffix type="button" (click)="pickDate(releaseIn)" aria-label="Choose date and time"><mat-icon>calendar_month</mat-icon></button>
-                  </mat-form-field>
-                }
-                <mat-form-field appearance="outline">
-                  <mat-label>Solution release</mat-label>
-                  <mat-select formControlName="solution_release">
-                    <mat-option value="with_result">Together with the result</mat-option>
-                    <mat-option value="after_end">After the test window closes</mat-option>
-                    <mat-option value="manual">Manually by an admin</mat-option>
-                  </mat-select>
-                </mat-form-field>
-              </div>
-            </mat-card-content>
-          </mat-card>
-
-          @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-          <div class="actions">
-            <button mat-flat-button type="submit" [disabled]="saving()">{{ id() ? 'Save changes' : 'Create test' }}</button>
-          </div>
-        </form>
-      </mat-tab>
-
-      <!-- QUESTIONS -->
-      <mat-tab label="Questions" [disabled]="!exam()">
-        <div class="tab">
-          <div class="summary">
-            <strong>{{ totalQuestions() }}</strong> {{ totalQuestions() === 1 ? "question" : "questions" }} · <strong>{{ totalMarks() }}</strong> marks
-            @if (sectional()) { · <strong>{{ sectionTotal() }}</strong> minutes in total }
-          </div>
-          @for (s of sections(); track $index; let si = $index) {
-            <mat-card appearance="outlined" class="section">
-              <mat-card-content>
-                <div class="section-head">
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>Section name</mat-label>
-                    <input matInput [value]="s.name" [disabled]="locked()" (input)="renameSection(si, $any($event.target).value)" />
-                  </mat-form-field>
-                  <button mat-icon-button (click)="moveSection(si, -1)" [disabled]="locked() || si === 0" aria-label="Move section up"><mat-icon>arrow_upward</mat-icon></button>
-                  <button mat-icon-button (click)="moveSection(si, 1)" [disabled]="locked() || si === sections().length - 1" aria-label="Move section down"><mat-icon>arrow_downward</mat-icon></button>
-                  @if (sectional()) {
-                    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="mins">
-                      <mat-label>Minutes</mat-label>
-                      <input matInput type="number" min="1" max="600" [value]="s.duration_minutes ?? ''" [disabled]="locked()"
-                        (change)="setSectionMinutes(si, $any($event.target).value)" aria-label="Time limit of this section in minutes" />
-                    </mat-form-field>
-                  }
-                  <button mat-button (click)="clearSection(si)" [disabled]="locked() || s.questions.length === 0">Remove all questions</button>
-                  <button mat-icon-button (click)="removeSection(si)" [disabled]="locked() || sections().length === 1" aria-label="Remove section"><mat-icon>delete</mat-icon></button>
-                </div>
-                @for (q of s.questions; track q.question; let qi = $index) {
-                  <div class="q-row">
-                    <span class="num">{{ qi + 1 }}</span>
-                    <div class="q-text">
-                      {{ q.text }}
-                      <div class="meta"><strong>#{{ q.question }}</strong> · {{ q.subject_name }} · {{ q.difficulty }}
-                        · {{ q.question_date || 'no date' }}
-                        @if (old(q.question_date)) { <span class="warn">older than 2 years</span> }
-                        @if (q.also_in?.length) { · <span class="also" [attr.title]="q.also_in!.join(', ')">also in {{ q.also_in!.length === 1 ? q.also_in![0] : q.also_in!.length + ' other tests' }}</span> }
-                        @if (q.current_version && q.question_version && q.current_version !== q.question_version) {
-                          · <span class="warn">bank question changed since added (v{{ q.question_version }} → v{{ q.current_version }})</span>
-                        }
-                      </div>
-                    </div>
-                    <span class="score" title="Set by this test's marks per question and negative marking rule">
-                      +{{ shown(q.marks) }} / {{ +q.negative_marks ? '-' + shown(q.negative_marks) : '0' }}
-                    </span>
-                    <button mat-icon-button (click)="moveQuestion(si, qi, -1)" [disabled]="locked() || qi === 0" aria-label="Move question up"><mat-icon>arrow_upward</mat-icon></button>
-                    <button mat-icon-button (click)="moveQuestion(si, qi, 1)" [disabled]="locked() || qi === s.questions.length - 1" aria-label="Move question down"><mat-icon>arrow_downward</mat-icon></button>
-                    <button mat-icon-button (click)="removeQuestion(si, qi)" [disabled]="locked()" aria-label="Remove question"><mat-icon>close</mat-icon></button>
-                  </div>
-                } @empty {
-                  <p class="meta">No questions in this section yet.</p>
-                }
-                <button mat-stroked-button (click)="addQuestions(si)" [disabled]="locked()"><mat-icon>add</mat-icon> Add questions</button>
-              </mat-card-content>
-            </mat-card>
-          }
-          <div class="actions">
-            <button mat-button (click)="addSection()" [disabled]="locked()"><mat-icon>playlist_add</mat-icon> Add section</button>
-            <button mat-flat-button (click)="saveStructure()" [disabled]="locked() || saving()">Save questions</button>
-          </div>
-        </div>
-      </mat-tab>
-
-      <!-- ACCESS -->
-      <mat-tab label="Access & assignment" [disabled]="!exam()">
-        <div class="tab">
-          <mat-card appearance="outlined"><mat-card-content>
-            <mat-radio-group [value]="access()" (change)="setAccess($event.value)" [disabled]="locked()" class="radios">
-              <mat-radio-button value="public">Public: any signed-in student</mat-radio-button>
-              <mat-radio-button value="assigned">Assigned students only</mat-radio-button>
-              <mat-radio-button value="batch">Selected batches only</mat-radio-button>
-            </mat-radio-group>
-            @if (access() === 'assigned') {
-              <app-student-picker [value]="studentIds()" (changed)="studentIds.set($event)" />
-            }
-            @if (access() === 'batch') {
-              <mat-form-field appearance="outline">
-                <mat-label>Batches</mat-label>
-                <mat-select multiple [value]="batchIds()" (selectionChange)="batchIds.set($event.value)">
-                  @for (b of batches(); track b.id) { <mat-option [value]="b.id">{{ b.name }} ({{ b.member_count }})</mat-option> }
-                </mat-select>
-              </mat-form-field>
-            }
-          </mat-card-content></mat-card>
-          <div class="actions">
-            <button mat-flat-button (click)="saveAccess()" [disabled]="saving()">Save access</button>
-          </div>
-
-          <mat-card appearance="outlined"><mat-card-content>
-            <mat-slide-toggle [checked]="premium()" (change)="premium.set($event.checked)">Premium test</mat-slide-toggle>
-            <p class="meta">Premium tests are listed for everyone but locked until you give a student access. Payments are not connected: you grant access here by hand.</p>
-            @if (premium()) {
-              <mat-form-field appearance="outline">
-                <mat-label>Price shown to students (₹, optional)</mat-label>
-                <input matInput type="number" min="0" step="1" [value]="price()" (input)="price.set($any($event.target).value)" />
-              </mat-form-field>
-              <strong>Students with access</strong>
-              <app-student-picker [value]="premiumStudentIds()" (changed)="premiumStudentIds.set($event)" />
-              <mat-form-field appearance="outline">
-                <mat-label>Batches with access</mat-label>
-                <mat-select multiple [value]="premiumBatchIds()" (selectionChange)="premiumBatchIds.set($event.value)">
-                  @for (b of batches(); track b.id) { <mat-option [value]="b.id">{{ b.name }} ({{ b.member_count }})</mat-option> }
-                </mat-select>
-              </mat-form-field>
-            }
-          </mat-card-content></mat-card>
-          <div class="actions">
-            <button mat-flat-button (click)="savePremium()" [disabled]="saving()">Save premium settings</button>
-          </div>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-  `,
+  host: { class: 'bs' },
 })
 export class ExamForm {
   id = input<string>();
@@ -462,7 +33,13 @@ export class ExamForm {
   private dialog = inject(MatDialog);
   private qb = inject(QuestionBankService);
 
-  tab = 0;
+  /** The open tab: 0 details, 1 questions, 2 access. The last two open once the test has been saved. */
+  tab = signal(0);
+  tabs = computed<BsTab[]>(() => [
+    { key: 'details', label: 'Details & rules' },
+    { key: 'questions', label: 'Questions', disabled: !this.exam() },
+    { key: 'access', label: 'Access & assignment', disabled: !this.exam() },
+  ]);
   pickDate = openPicker;
   loading = signal(false);
   saving = signal(false);
@@ -563,6 +140,22 @@ export class ExamForm {
   /** Minutes of all section time limits together. */
   sectionTotal = computed(() => this.sections().reduce((t, s) => t + (s.duration_minutes || 0), 0));
   ruleSetsNegative = computed(() => this.rule().option === 'fraction' || this.rule().option === 'fixed');
+
+  /** Show a field's error once it has been touched or the person tried to save. */
+  bad(c: AbstractControl) {
+    return c.invalid && (c.touched || c.dirty);
+  }
+
+  toggleAlsoIn(id: number, on: boolean) {
+    const now = this.form.controls.also_in.value.filter((x) => x !== id);
+    this.form.controls.also_in.setValue(on ? [...now, id] : now);
+    this.form.controls.also_in.markAsDirty();
+  }
+
+  /** Adds or removes an id in a list kept in a signal (batches of the access and premium settings). */
+  toggleId(list: { update(fn: (l: number[]) => number[]): void }, id: number, on: boolean) {
+    list.update((l) => (on ? [...l.filter((x) => x !== id), id] : l.filter((x) => x !== id)));
+  }
 
   sameValue(v: number) {
     return Math.abs(this.rule().value - v) < 0.00005;

@@ -1,0 +1,95 @@
+<div class="head"><h1 class="h3">Students</h1></div>
+<div class="filters">
+  <div class="field search">
+    <label for="sl-search" class="form-label">Search</label>
+    <div class="input-group">
+      <input id="sl-search" type="search" class="form-control" [formControl]="search" placeholder="Name, email, phone" />
+      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+    </div>
+  </div>
+  <div class="field">
+    <label for="sl-status" class="form-label">Status</label>
+    <select id="sl-status" class="form-select" (change)="status.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="status() === ''">All</option>
+      <option value="true" [selected]="status() === 'true'">Active</option>
+      <option value="false" [selected]="status() === 'false'">Inactive</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="sl-batch" class="form-label">Batch</label>
+    <select id="sl-batch" class="form-select" (change)="pickBatch($any($event.target).value)">
+      <option value="" [selected]="batch() === ''">All</option>
+      @for (b of batches(); track b.id) { <option [value]="b.id" [selected]="batch() === b.id">{{ b.name }}</option> }
+    </select>
+  </div>
+  <div class="field">
+    <label for="sl-from" class="form-label">Registered from</label>
+    <div class="input-group">
+      <input #fromIn id="sl-from" class="form-control" type="date" [value]="from()" (change)="from.set($any($event.target).value); pageIndex.set(0)" />
+      <button type="button" class="btn btn-outline-secondary" (click)="pickDate(fromIn)" aria-label="Choose a date"><i class="bi bi-calendar3" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  <div class="field">
+    <label for="sl-to" class="form-label">Registered to</label>
+    <div class="input-group">
+      <input #toIn id="sl-to" class="form-control" type="date" [value]="to()" (change)="to.set($any($event.target).value); pageIndex.set(0)" />
+      <button type="button" class="btn btn-outline-secondary" (click)="pickDate(toIn)" aria-label="Choose a date"><i class="bi bi-calendar3" aria-hidden="true"></i></button>
+    </div>
+  </div>
+  <div class="field">
+    <label for="sl-sort" class="form-label">Sort by</label>
+    <select id="sl-sort" class="form-select" (change)="ordering.set($any($event.target).value); pageIndex.set(0)">
+      <option value="-date_joined" [selected]="ordering() === '-date_joined'">Newest registered</option>
+      <option value="first_name" [selected]="ordering() === 'first_name'">Name</option>
+      <option value="-average_percentage" [selected]="ordering() === '-average_percentage'">Highest average</option>
+      <option value="-attempts_count" [selected]="ordering() === '-attempts_count'">Most attempts</option>
+      <option value="-last_attempt_at" [selected]="ordering() === '-last_attempt_at'">Recently active</option>
+    </select>
+  </div>
+</div>
+
+@if (selection.hasValue()) {
+  <div class="bulk">
+    <strong>{{ selection.selected.length }} selected</strong>
+    <button type="button" class="btn btn-primary btn-sm" (click)="consolidated()" [disabled]="pdfBusy()"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF report for selected</button>
+    <button type="button" class="btn btn-link btn-sm" (click)="selection.clear()">Clear</button>
+  </div>
+}
+
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading students"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>
+          <input class="form-check-input" type="checkbox" (change)="$any($event.target).checked ? selectPage() : selection.clear()" [checked]="allSelected()"
+            [indeterminate]="selection.hasValue() && !allSelected()" aria-label="Select all on page" />
+        </th>
+        <th>Student</th><th>Batches</th><th>Attempts</th><th>Average</th><th>Registered</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (s of rows(); track s.id) {
+        <tr>
+          <td><input class="form-check-input" type="checkbox" (change)="selection.toggle(s.id)" [checked]="selection.isSelected(s.id)" [attr.aria-label]="'Select ' + s.name" /></td>
+          <td><a [routerLink]="['/admin/students', s.id]">{{ s.name }}</a><div class="muted">{{ s.email }}</div></td>
+          <td>@for (b of s.batches; track b.id) { <span class="chip">{{ b.name }}</span> } @empty { <span class="muted">—</span> }</td>
+          <td>{{ s.attempts_count }}</td>
+          <td>{{ s.average_percentage === null ? '—' : s.average_percentage + '%' }}</td>
+          <td>{{ s.date_joined | date: 'mediumDate' }}</td>
+          <td><span [class.off]="!s.is_active">{{ s.is_active ? 'Active' : 'Inactive' }}</span></td>
+          <td class="row-actions">
+            <a class="btn btn-link" [routerLink]="['/admin/students', s.id]" aria-label="Open profile" title="Open profile"><i class="bi bi-person" aria-hidden="true"></i></a>
+            <button type="button" class="btn btn-link" (click)="toggle(s)" [attr.aria-label]="s.is_active ? 'Deactivate student' : 'Activate student'" [title]="s.is_active ? 'Deactivate student' : 'Activate student'">
+              <i class="bi" [class]="s.is_active ? 'bi-person-x' : 'bi-person-plus'" aria-hidden="true"></i>
+            </button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No students match your filters.</div> }
+</div>
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 20, 50]" (page)="onPage($event)" />

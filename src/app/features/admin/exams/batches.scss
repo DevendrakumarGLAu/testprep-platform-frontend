@@ -1,0 +1,46 @@
+:host {
+  display: block;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--mat-sys-on-surface);
+  --bs-table-border-color: var(--mat-sys-outline-variant);
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+
+  .btn-link {
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--mat-sys-on-surface-variant);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}

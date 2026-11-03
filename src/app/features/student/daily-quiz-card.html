@@ -1,0 +1,19 @@
+<div class="card">
+  <div class="card-body">
+    <div class="head"><i class="bi bi-lightning-charge-fill"></i><strong>Today's quiz</strong></div>
+    @if (!status()) {
+      <p>Loading…</p>
+    } @else if (status()!.done) {
+      <p>You finished today's quiz. A new one is ready tomorrow.</p>
+      <button type="button" class="btn btn-outline-secondary" disabled>Done for today</button>
+    } @else if (status()!.available || status()!.in_progress) {
+      <p>{{ status()!.size }} recent questions, the same for the whole day.</p>
+      <button type="button" class="btn btn-primary" (click)="start()" [disabled]="busy()">
+        {{ status()!.in_progress ? 'Continue quiz' : 'Start quiz' }}
+      </button>
+    } @else {
+      <p>Today's quiz will be ready once enough recent questions are added.</p>
+      <button type="button" class="btn btn-outline-secondary" disabled>Not ready yet</button>
+    }
+  </div>
+</div>

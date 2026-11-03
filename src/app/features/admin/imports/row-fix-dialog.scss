@@ -1,0 +1,31 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(520px, 86vw);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 12px;
+}
+
+.errs {
+  color: var(--mat-sys-error);
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+
+.footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--mat-dialog-container-color, var(--mat-sys-surface));
+}
+
+.btn-link {
+  text-decoration: none;
+}

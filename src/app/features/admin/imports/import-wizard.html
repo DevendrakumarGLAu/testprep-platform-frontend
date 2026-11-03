@@ -1,0 +1,229 @@
+<div class="head">
+  <h1 class="h3">Import questions</h1>
+  <a class="btn btn-link" routerLink="/admin/questions"><i class="bi bi-arrow-left" aria-hidden="true"></i> Question bank</a>
+</div>
+
+<ol class="steps" aria-label="Import steps">
+  @for (s of stepList; track s.id; let i = $index) {
+    <li [class.active]="step() === s.id" [class.done]="stepIndex() > i"><span>{{ i + 1 }}</span> {{ s.label }}</li>
+  }
+</ol>
+@if (busy()) {
+  <div class="progress loader" role="progressbar" aria-label="Working"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@switch (step()) {
+  <!-- 1. UPLOAD -->
+  @case ('upload') {
+    <div class="sources">
+      @for (s of sources(); track s.id) {
+        <div class="card" [class.off]="!s.available">
+          <div class="card-body">
+            <strong>{{ s.label }}</strong>
+            @if (s.extensions.length) { <span class="muted"> {{ s.extensions.join(' ') }}</span> }
+            @if (!s.available) { <span class="soon">Coming later</span> }
+            <p class="muted">{{ s.note }}</p>
+          </div>
+        </div>
+      }
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="drop" (dragover)="$event.preventDefault()" (drop)="drop($event)">
+          <i class="bi bi-upload" aria-hidden="true"></i>
+          <p>Drag a file here, or</p>
+          <input #file type="file" accept=".csv,.xlsx,.xls,.pdf" hidden (change)="pick($event)" />
+          <button type="button" class="btn btn-primary" (click)="file.click()" [disabled]="busy()">Choose file</button>
+          <p class="muted">Up to 100 MB and 2000 questions. All sources use the same checks and review step.</p>
+        </div>
+        @if (uploadError()) { <div class="alert alert-danger py-2 mt-3" role="alert">{{ uploadError() }}</div> }
+        <div class="templates">
+          <strong>Need a template?</strong>
+          <button type="button" class="btn btn-link" (click)="template('csv')"><i class="bi bi-download" aria-hidden="true"></i> CSV template</button>
+          <button type="button" class="btn btn-link" (click)="template('xlsx')"><i class="bi bi-download" aria-hidden="true"></i> Excel template</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- 2. MAP -->
+  @case ('map') {
+    @if (job(); as j) {
+      <div class="card">
+        <div class="card-body">
+          <h2 class="h5 card-title">{{ j.filename }}</h2>
+          <p class="muted">{{ j.total_rows }} rows found. Check how its columns map to question fields.</p>
+          @for (w of j.warnings; track w) { <p class="warn"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ w }}</p> }
+          <div class="map-grid">
+            @for (f of fields; track f.key) {
+              <div>
+                <label [for]="'iw-' + f.key" class="form-label">{{ f.label }}{{ f.required ? ' *' : '' }}</label>
+                <select [id]="'iw-' + f.key" class="form-select" (change)="setField(f.key, $any($event.target).value)">
+                  <option value="" [selected]="!mapping()[f.key]">(none)</option>
+                  @for (h of j.headers; track h) { <option [value]="h" [selected]="mapping()[f.key] === h">{{ h }}</option> }
+                </select>
+              </div>
+            }
+            <div class="wide">
+              <span id="iw-opts-label" class="form-label d-block">Option columns, English (lettered A, B, C… in file order)</span>
+              <fieldset class="checklist" aria-labelledby="iw-opts-label">
+                @for (h of j.headers; track h) {
+                  <div class="form-check form-check-inline">
+                    <input [id]="'iw-opt-' + $index" class="form-check-input" type="checkbox" [checked]="mapping().options.includes(h)" (change)="toggleOption(h, $any($event.target).checked)" />
+                    <label [for]="'iw-opt-' + $index" class="form-check-label">{{ h }}</label>
+                  </div>
+                }
+              </fieldset>
+            </div>
+            <div class="wide">
+              <span id="iw-opts-hi-label" class="form-label d-block">Option columns, Hindi (same order: A, B, C…)</span>
+              <fieldset class="checklist" aria-labelledby="iw-opts-hi-label">
+                @for (h of j.headers; track h) {
+                  <div class="form-check form-check-inline">
+                    <input [id]="'iw-opthi-' + $index" class="form-check-input" type="checkbox" [checked]="(mapping().options_hi ?? []).includes(h)" (change)="toggleOptionHi(h, $any($event.target).checked)" />
+                    <label [for]="'iw-opthi-' + $index" class="form-check-label">{{ h }}</label>
+                  </div>
+                }
+              </fieldset>
+            </div>
+            <p class="hint wide">Provide English, Hindi or both. A language you use needs the question and every option.</p>
+          </div>
+
+          <h3 class="h6">Defaults for empty cells</h3>
+          <div class="map-grid">
+            <div>
+              <label for="iw-dsubject" class="form-label">Default subject</label>
+              <select id="iw-dsubject" class="form-select" [ngModel]="defaults.subject" (ngModelChange)="defaults.subject = $event; defaults.topic = null">
+                <option [ngValue]="null">(none)</option>
+                @for (s of subjects(); track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+              </select>
+            </div>
+            <div>
+              <label for="iw-dtopic" class="form-label">Default topic</label>
+              <select id="iw-dtopic" class="form-select" [(ngModel)]="defaults.topic" [disabled]="!defaults.subject">
+                <option [ngValue]="null">(none)</option>
+                @for (t of topicsFor(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
+              </select>
+            </div>
+            <div>
+              <label for="iw-ddiff" class="form-label">Default difficulty</label>
+              <select id="iw-ddiff" class="form-select" [(ngModel)]="defaults.difficulty">
+                <option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+              </select>
+            </div>
+            <div>
+              <label for="iw-dmarks" class="form-label">Default marks</label>
+              <input id="iw-dmarks" class="form-control" type="number" step="0.25" min="0" [(ngModel)]="defaults.marks" />
+            </div>
+            <div>
+              <label for="iw-dneg" class="form-label">Default negative marks</label>
+              <input id="iw-dneg" class="form-control" type="number" step="0.25" min="0" [(ngModel)]="defaults.negative_marks" />
+            </div>
+          </div>
+          <div class="form-check">
+            <input id="iw-create" class="form-check-input" type="checkbox" [(ngModel)]="createMissing" />
+            <label for="iw-create" class="form-check-label">Create subjects and topics that do not exist yet</label>
+          </div>
+
+          <h3 class="h6 mt-3">Preview of your file</h3>
+          <div class="table-wrap">
+            <table class="plain">
+              <thead><tr>@for (h of j.headers; track h) { <th>{{ h }}</th> }</tr></thead>
+              <tbody>@for (r of j.sample; track $index) { <tr>@for (h of j.headers; track h) { <td>{{ r[h] }}</td> }</tr> }</tbody>
+            </table>
+          </div>
+          @if (error()) { <div class="alert alert-danger py-2 mt-3" role="alert">{{ error() }}</div> }
+        </div>
+        <div class="card-footer">
+          <button type="button" class="btn btn-link" (click)="cancel()">Cancel import</button>
+          <button type="button" class="btn btn-primary" (click)="validate()" [disabled]="busy()">Validate and preview</button>
+        </div>
+      </div>
+    }
+  }
+
+  <!-- 3. REVIEW -->
+  @case ('review') {
+    @if (job(); as j) {
+      <div class="counts">
+        <span class="pill ok">{{ j.valid_rows }} valid</span>
+        <span class="pill dup">{{ j.duplicate_rows }} possible duplicates</span>
+        <span class="pill bad">{{ j.invalid_rows }} invalid</span>
+        <span class="muted">of {{ j.total_rows }} rows</span>
+      </div>
+      @for (w of j.warnings; track w) { <p class="warn"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ w }}</p> }
+      <div class="toolbar">
+        <div class="btn-group" role="group" aria-label="Filter rows">
+          <button type="button" class="btn btn-outline-primary" [class.active]="filter() === ''" [attr.aria-pressed]="filter() === ''" (click)="setFilter('')">All</button>
+          <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'valid'" [attr.aria-pressed]="filter() === 'valid'" (click)="setFilter('valid')">Valid</button>
+          <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'duplicate'" [attr.aria-pressed]="filter() === 'duplicate'" (click)="setFilter('duplicate')">Duplicates</button>
+          <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'invalid'" [attr.aria-pressed]="filter() === 'invalid'" (click)="setFilter('invalid')">Invalid</button>
+        </div>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-link btn-sm" (click)="select('valid')">Select valid</button>
+        <button type="button" class="btn btn-link btn-sm" (click)="select('valid_and_duplicates')">Select valid + duplicates</button>
+        <button type="button" class="btn btn-link btn-sm" (click)="select('none')">Clear</button>
+      </div>
+      <div class="table-wrap">
+        <table class="plain review">
+          <thead><tr><th></th><th>Row</th><th>Question</th><th>Subject / topic</th><th>Answer</th><th>Check</th><th></th></tr></thead>
+          <tbody>
+            @for (r of rows(); track r.id) {
+              <tr [class]="r.status">
+                <td><input class="form-check-input" type="checkbox" [checked]="r.selected" [disabled]="r.status === 'invalid'" (change)="toggle(r, $any($event.target).checked)" [attr.aria-label]="'Import row ' + r.row_number" /></td>
+                <td>{{ r.row_number }}</td>
+                <td class="q">{{ r.normalized?.display || r.normalized?.question || '(empty)' }}
+                  @if (r.normalized?.options?.length) { <div class="opts">@for (o of r.normalized!.options; track o.label) { <span [class.right]="o.label === r.normalized!.correct_label">{{ o.label }}. {{ o.text || o.text_hi }}</span> } </div> }
+                </td>
+                <td>{{ r.normalized?.subject }}{{ r.normalized?.topic ? ' / ' + r.normalized?.topic : '' }}
+                  @if (r.normalized?.new_subject || r.normalized?.new_topic) { <span class="new">will be created</span> }</td>
+                <td>{{ r.normalized?.correct_label || '—' }}</td>
+                <td>
+                  @if (r.status === 'valid') { <span class="ok">Valid</span> }
+                  @if (r.status === 'duplicate') {
+                    <span class="dup">{{ r.duplicate_info?.in_file ? 'Repeats row ' + r.duplicate_info?.row : (r.duplicate_info?.exact ? 'Already in the bank' : 'Looks like question #' + r.duplicate_of + ' (' + ((r.duplicate_info?.similarity ?? 0) * 100).toFixed(0) + '%)') }}</span>
+                  }
+                  @for (e of r.errors; track e) { <div class="bad">{{ e }}</div> }
+                </td>
+                <td><button type="button" class="btn btn-link icon" (click)="fix(r)" aria-label="Fix this row" title="Fix this row"><i class="bi bi-pencil" aria-hidden="true"></i></button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (!busy() && rows().length === 0) { <p class="muted pad">No rows in this view.</p> }
+      </div>
+      <app-bs-pager [length]="total()" [pageIndex]="page() - 1" [pageSize]="20" (page)="onPage($event)" />
+      @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+      <div class="actions">
+        <button type="button" class="btn btn-link" (click)="step.set('map')">Back to mapping</button>
+        <button type="button" class="btn btn-link" (click)="cancel()">Cancel import</button>
+        <button type="button" class="btn btn-primary" (click)="commit()" [disabled]="busy() || selectedCount() === 0">Import {{ selectedCount() }} selected</button>
+      </div>
+    }
+  }
+
+  <!-- 4. DONE -->
+  @case ('done') {
+    @if (job(); as j) {
+      <div class="card done">
+        <div class="card-body">
+          <i class="bi big" [class]="j.imported_count ? 'bi-check-circle' : 'bi-info-circle'" aria-hidden="true"></i>
+          <h2 class="h4">{{ j.imported_count }} question{{ j.imported_count === 1 ? '' : 's' }} imported</h2>
+          <div class="counts center">
+            <span class="pill ok">{{ j.imported_count }} imported</span>
+            <span class="pill dup">{{ j.skipped_count }} skipped</span>
+            <span class="pill bad">{{ j.failed_count }} failed</span>
+          </div>
+          @if (j.invalid_rows || j.failed_count) {
+            <p>{{ j.invalid_rows + j.failed_count }} row(s) could not be imported. Download the report, fix them in your file and import again.</p>
+            <button type="button" class="btn btn-outline-primary" (click)="downloadReport()"><i class="bi bi-download" aria-hidden="true"></i> Download failed-row report</button>
+          }
+          <div class="actions center">
+            <a class="btn btn-primary" routerLink="/admin/questions">View question bank</a>
+            <button type="button" class="btn btn-link" (click)="reset()">Import another file</button>
+          </div>
+        </div>
+      </div>
+    }
+  }
+}

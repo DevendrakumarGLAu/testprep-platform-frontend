@@ -1,0 +1,22 @@
+<h1 class="h3">Study notes</h1>
+<div class="search">
+  <label for="notes-search" class="form-label visually-hidden">Search notes</label>
+  <div class="input-group">
+    <input id="notes-search" type="search" class="form-control" placeholder="Search notes" [formControl]="search" />
+    <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+  </div>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading notes"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@for (n of rows(); track n.id) {
+  <a class="card note-card" [routerLink]="['/student/notes', n.id]">
+    <div class="card-body">
+      <div class="meta">{{ n.category || 'All exams' }}{{ n.subject ? ' · ' + n.subject : '' }}{{ n.note_date ? ' · ' + (n.note_date | date: 'MMM y') : '' }}</div>
+      <h2 class="h5">{{ n.title || n.title_hi }}</h2>
+      <p>{{ n.summary }}</p>
+    </div>
+  </a>
+} @empty {
+  @if (!loading()) { <div class="card"><div class="card-body">No notes yet. Check back soon.</div></div> }
+}

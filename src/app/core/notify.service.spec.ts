@@ -1,28 +1,54 @@
 import { TestBed } from '@angular/core/testing';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { vi } from 'vitest';
 import { NotifyService } from './notify.service';
 
 describe('NotifyService', () => {
-  const open = vi.fn();
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
-  beforeEach(() => {
-    open.mockClear();
-    TestBed.configureTestingModule({ providers: [{ provide: MatSnackBar, useValue: { open } }] });
+  const service = () => TestBed.inject(NotifyService);
+
+  it('shows a success message for a short time', () => {
+    const s = service();
+    s.success('Saved');
+    expect(s.toasts()).toEqual([expect.objectContaining({ kind: 'success', message: 'Saved', action: 'OK' })]);
+    vi.advanceTimersByTime(3499);
+    expect(s.toasts().length).toBe(1);
+    vi.advanceTimersByTime(1);
+    expect(s.toasts()).toEqual([]);
   });
 
-  it('shows success messages in the top-right corner', () => {
-    TestBed.inject(NotifyService).success('Saved');
-    expect(open).toHaveBeenCalledWith('Saved', 'OK', expect.objectContaining({ horizontalPosition: 'end', verticalPosition: 'top', panelClass: 'snack-success' }));
+  it('keeps a warning on screen longer', () => {
+    const s = service();
+    s.warning('Careful');
+    expect(s.toasts()[0]).toEqual(expect.objectContaining({ kind: 'warning', message: 'Careful', action: 'OK' }));
+    vi.advanceTimersByTime(7999);
+    expect(s.toasts().length).toBe(1);
+    vi.advanceTimersByTime(1);
+    expect(s.toasts()).toEqual([]);
   });
 
-  it('shows warnings in the top-right corner for a longer time', () => {
-    TestBed.inject(NotifyService).warning('Careful');
-    expect(open).toHaveBeenCalledWith('Careful', 'OK', expect.objectContaining({ horizontalPosition: 'end', verticalPosition: 'top', panelClass: 'snack-warning', duration: 8000 }));
+  it('keeps an error until it has been readable for a while, with a Dismiss button', () => {
+    const s = service();
+    s.error('Failed');
+    expect(s.toasts()[0]).toEqual(expect.objectContaining({ kind: 'error', message: 'Failed', action: 'Dismiss' }));
+    vi.advanceTimersByTime(6000);
+    expect(s.toasts()).toEqual([]);
   });
 
-  it('shows errors in the top-right corner and keeps them longer', () => {
-    TestBed.inject(NotifyService).error('Failed');
-    expect(open).toHaveBeenCalledWith('Failed', 'Dismiss', expect.objectContaining({ horizontalPosition: 'end', verticalPosition: 'top', panelClass: 'snack-error', duration: 6000 }));
+  it('a new message replaces the one before, and the old one is not removed early', () => {
+    const s = service();
+    s.success('First');
+    vi.advanceTimersByTime(3000);
+    s.error('Second');
+    vi.advanceTimersByTime(600); // the first message's time is up now
+    expect(s.toasts().map((t) => t.message)).toEqual(['Second']);
+  });
+
+  it('can be dismissed by hand', () => {
+    const s = service();
+    s.error('Failed');
+    s.dismiss(s.toasts()[0].id);
+    expect(s.toasts()).toEqual([]);
   });
 });

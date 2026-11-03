@@ -1,0 +1,82 @@
+<div class="head">
+  <h1 class="h3">Tests</h1>
+  <a class="btn btn-primary" routerLink="/admin/tests/new"><i class="bi bi-plus-lg" aria-hidden="true"></i> New test</a>
+</div>
+<div class="filters">
+  <div class="field search">
+    <label for="el-search" class="form-label">Search</label>
+    <div class="input-group">
+      <input id="el-search" type="search" class="form-control" [formControl]="search" />
+      <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+    </div>
+  </div>
+  <div class="field">
+    <label for="el-status" class="form-label">Status</label>
+    <select id="el-status" class="form-select" (change)="status.set($any($event.target).value); pageIndex.set(0)">
+      <option value="" [selected]="status() === ''">All</option>
+      <option value="draft" [selected]="status() === 'draft'">Draft</option>
+      <option value="published" [selected]="status() === 'published'">Published</option>
+      <option value="archived" [selected]="status() === 'archived'">Archived</option>
+    </select>
+  </div>
+</div>
+
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading tests"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Test</th><th>Exam / type</th><th>Questions / marks</th><th>Duration</th><th>Available</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (e of rows(); track e.id) {
+        <tr>
+          <td><a [routerLink]="['/admin/tests', e.id]">{{ e.title }}</a>@if (e.is_live) { <span class="live-chip"><i class="bi bi-broadcast" aria-hidden="true"></i> LIVE</span> }</td>
+          <td>{{ e.category_name || '—' }}<div class="sub">{{ typeLabel(e) }}</div></td>
+          <td>{{ e.question_count }} / {{ e.total_marks }}</td>
+          <td>{{ e.duration_minutes }} min</td>
+          <td>
+            @if (e.start_at || e.end_at) {
+              {{ e.start_at ? (e.start_at | date: 'short') : 'Any time' }} → {{ e.end_at ? (e.end_at | date: 'short') : 'No end' }}
+            } @else { Always }
+          </td>
+          <td><span class="chip" [class]="'chip ' + e.status">{{ e.status }}</span></td>
+          <td class="row-actions">
+            <div class="menu-wrap">
+              <button type="button" class="btn btn-link" (click)="toggleMenu(e.id)" aria-label="Actions" aria-haspopup="menu" [attr.aria-expanded]="menuFor() === e.id"><i class="bi bi-three-dots-vertical" aria-hidden="true"></i></button>
+              @if (menuFor() === e.id) {
+                <div class="dropdown-menu dropdown-menu-end show" role="menu">
+                  <a class="dropdown-item" role="menuitem" [routerLink]="['/admin/tests', e.id]"><i class="bi bi-pencil" aria-hidden="true"></i> Open / edit</a>
+                  <a class="dropdown-item" role="menuitem" [routerLink]="['/admin/tests', e.id, 'preview']"><i class="bi bi-eye" aria-hidden="true"></i> Preview as student</a>
+                  @if (e.status !== 'draft') {
+                    <a class="dropdown-item" role="menuitem" [routerLink]="['/admin/tests', e.id, 'results']"><i class="bi bi-bar-chart" aria-hidden="true"></i> Results</a>
+                  }
+                  @if (e.is_live && e.status === 'published') {
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); copyLiveLink(e)"><i class="bi bi-link-45deg" aria-hidden="true"></i> Copy live link</button>
+                  }
+                  <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); duplicate(e)"><i class="bi bi-copy" aria-hidden="true"></i> Duplicate</button>
+                  @if (e.status === 'draft') {
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); publish(e)"><i class="bi bi-cloud-upload" aria-hidden="true"></i> Publish</button>
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); remove(e)"><i class="bi bi-trash" aria-hidden="true"></i> Delete draft</button>
+                  }
+                  @if (e.status === 'published') {
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); run(e, 'unpublish', 'Unpublish test?', 'Students will no longer see it. You can edit it again.')">
+                      <i class="bi bi-cloud-slash" aria-hidden="true"></i> Unpublish</button>
+                  }
+                  @if (e.status !== 'archived') {
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); run(e, 'archive', 'Archive test?', 'It is hidden from students. Past results are kept.')">
+                      <i class="bi bi-archive" aria-hidden="true"></i> Archive</button>
+                  } @else {
+                    <button type="button" class="dropdown-item" role="menuitem" (click)="menuFor.set(null); run(e, 'restore', 'Restore test?', 'It returns as a draft and must be published again.')">
+                      <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore</button>
+                  }
+                </div>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">No tests found.</div> }
+</div>
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="pageSize()" [pageSizeOptions]="[10, 20, 50]" (page)="onPage($event)" />

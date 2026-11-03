@@ -1,0 +1,173 @@
+<header class="top">
+  <div class="wrap bar">
+    <a class="logo" routerLink="/" aria-label="Home"><img src="favicon.svg" alt="" width="32" height="32" /> {{ platform.info().platform_name }}</a>
+    <nav class="links" aria-label="Sections">
+      <a href="#exams" (click)="go($event, 'exams')">Exams</a>
+      <a href="#features" (click)="go($event, 'features')">Features</a>
+      <a href="#how" (click)="go($event, 'how')">How it works</a>
+      <a href="#faq" (click)="go($event, 'faq')">FAQ</a>
+    </nav>
+    <div class="actions">
+      @if (auth.isLoggedIn()) {
+        <a class="btn btn-primary" [routerLink]="auth.homeRoute()">Go to dashboard</a>
+      } @else {
+        <a class="btn btn-link" routerLink="/login">Log in</a>
+        @if (platform.info().allow_registration) { <a class="btn btn-primary" routerLink="/register">Sign up free</a> }
+      }
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><i class="bi bi-translate" aria-hidden="true"></i> Hindi + English · Free mock tests</span>
+        <h1>Prepare smarter.<br /><em>Crack your exam.</em></h1>
+        <p class="lead">Mock tests, subject-wise practice and previous year papers in the real exam pattern, with a detailed analysis after every attempt.</p>
+        <div class="cta">
+          @if (auth.isLoggedIn()) {
+            <a class="btn btn-primary btn-lg big" [routerLink]="auth.homeRoute()">Continue practising</a>
+          } @else if (platform.info().allow_registration) {
+            <a class="btn btn-primary btn-lg big" routerLink="/register">Start practising free</a>
+            <a class="btn btn-outline-primary btn-lg big" routerLink="/login">I already have an account</a>
+          } @else {
+            <a class="btn btn-primary btn-lg big" routerLink="/login">Log in</a>
+          }
+        </div>
+        <ul class="ticks">
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Real exam pattern and negative marking</li>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Attempt as many times as you like</li>
+          <li><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Solutions and time-per-question analysis</li>
+        </ul>
+      </div>
+      <div class="preview" aria-hidden="true">
+        <div class="card result">
+          <div class="head"><strong>SSC Full Test 1</strong><span class="chip">Attempt 3</span></div>
+          <div class="score"><span class="big-n">78.5</span><span>/ 100 marks</span></div>
+          <div class="bars">
+            <div><span>Maths</span><i style="--w: 82%"></i></div>
+            <div><span>GK</span><i style="--w: 70%"></i></div>
+            <div><span>Reasoning</span><i style="--w: 88%"></i></div>
+            <div><span>English</span><i style="--w: 64%"></i></div>
+          </div>
+          <div class="mini">
+            <span><i class="bi bi-check-circle-fill" aria-hidden="true"></i> 80 correct</span>
+            <span><i class="bi bi-x-circle-fill" aria-hidden="true"></i> 14 wrong</span>
+            <span><i class="bi bi-stopwatch" aria-hidden="true"></i> 54 min</span>
+          </div>
+        </div>
+        <div class="card float"><i class="bi bi-translate" aria-hidden="true"></i> <span>हिन्दी / English</span></div>
+      </div>
+    </div>
+  </section>
+
+  @if (numbers().length) {
+    <section class="stats">
+      <div class="wrap">
+        @for (s of numbers(); track s.label) {
+          <div><strong>{{ s.value }}</strong><span>{{ s.label }}</span></div>
+        }
+      </div>
+    </section>
+  }
+
+  <section id="exams" class="block">
+    <div class="wrap">
+      <h2>Choose your exam</h2>
+      <p class="sub">Tests for the exams students are preparing for right now.</p>
+      @if (exams().length) {
+        <div class="exam-grid">
+          @for (e of exams(); track e.name) {
+            <article class="card exam">
+              <div class="avatar" aria-hidden="true">{{ e.name.charAt(0) }}</div>
+              <h3>{{ e.name }}</h3>
+              @if (e.description) { <p class="desc">{{ e.description }}</p> }
+              <p class="count">{{ e.tests }} {{ e.tests === 1 ? 'free test' : 'free tests' }}</p>
+              @if (e.subjects.length) {
+                <div class="chips">@for (s of e.subjects; track s) { <span class="chip">{{ s }}</span> }</div>
+              }
+              <a class="btn btn-outline-primary" [routerLink]="['/exam', e.id]">See the tests</a>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="soon">Exams will appear here as soon as the first tests are published.</p>
+      }
+    </div>
+  </section>
+
+  <section id="features" class="block alt">
+    <div class="wrap">
+      <h2>Everything you need to practise</h2>
+      <p class="sub">Built around how real exams work.</p>
+      <div class="feature-grid">
+        @for (f of features; track f.title) {
+          <article class="card feature">
+            <div class="ico"><i class="bi" [class]="f.icon" aria-hidden="true"></i></div>
+            <h3>{{ f.title }}</h3>
+            <p>{{ f.text }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="block">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <div class="steps">
+        @for (s of steps; track s.n) {
+          <div class="step"><span class="num">{{ s.n }}</span><h3>{{ s.title }}</h3><p>{{ s.text }}</p></div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" class="block alt">
+    <div class="wrap narrow">
+      <h2>Questions students ask</h2>
+      <div class="accordion faq">
+        @for (f of faq; track f.q; let i = $index) {
+          <div class="accordion-item">
+            <h3 class="accordion-header">
+              <button type="button" class="accordion-button" [class.collapsed]="openFaq() !== i" [attr.aria-expanded]="openFaq() === i" [attr.aria-controls]="'faq-' + i" (click)="toggleFaq(i)">{{ f.q }}</button>
+            </h3>
+            @if (openFaq() === i) {
+              <div class="accordion-collapse collapse show" [id]="'faq-' + i"><div class="accordion-body">{{ f.a }}</div></div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Ready for your next mock test?</h2>
+      <p>Join and start practising today.</p>
+      @if (auth.isLoggedIn()) {
+        <a class="btn btn-light btn-lg big" [routerLink]="auth.homeRoute()">Go to dashboard</a>
+      } @else if (platform.info().allow_registration) {
+        <a class="btn btn-light btn-lg big" routerLink="/register">Create free account</a>
+      } @else {
+        <a class="btn btn-light btn-lg big" routerLink="/login">Log in</a>
+      }
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="logo"><img src="favicon.svg" alt="" width="24" height="24" /> {{ platform.info().platform_name }}</span>
+    <nav aria-label="Footer">
+      <a routerLink="/login">Log in</a>
+      @if (platform.info().allow_registration) { <a routerLink="/register">Sign up</a> }
+      <a routerLink="/terms">Terms of use</a>
+      <a routerLink="/privacy">Privacy policy</a>
+      @if (platform.info().support_email) { <a [href]="'mailto:' + platform.info().support_email">{{ platform.info().support_email }}</a> }
+    </nav>
+    <app-support-line lead="Questions?" />
+    <span class="copy">© {{ year }} {{ platform.info().platform_name }}. All rights reserved.</span>
+  </div>
+</footer>

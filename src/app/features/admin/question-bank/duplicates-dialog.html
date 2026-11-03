@@ -1,0 +1,26 @@
+<h2 class="h5 title">Duplicate questions</h2>
+<div class="content">
+  @if (loading()) {
+    <div class="progress loader" role="progressbar" aria-label="Looking for duplicates"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+  }
+  <p class="meta">Questions with exactly the same text. Choose the one to keep: the other copies are archived (hidden from new tests, never deleted).</p>
+  @for (g of groups(); track g.questions[0].id) {
+    <div class="group">
+      <div class="text">{{ g.text }}</div>
+      <div role="radiogroup" aria-label="Which copy to keep">
+        @for (q of g.questions; track q.id) {
+          <div class="copy form-check">
+            <input [id]="'dup-' + q.id" class="form-check-input" type="radio" [name]="'dup-' + g.questions[0].id" [value]="q.id" [checked]="keep()[g.questions[0].id] === q.id" (change)="choose(g, q.id)" />
+            <label [for]="'dup-' + q.id" class="form-check-label">Keep #{{ q.id }}</label>
+            <span class="meta">{{ q.subject }} · added {{ q.created_at | date: 'mediumDate' }}{{ q.question_date ? ' · dated ' + q.question_date : '' }}</span>
+            @if (q.used_in.length) { <span class="used">in {{ q.used_in.join(', ') }}</span> }
+          </div>
+        }
+      </div>
+      <button type="button" class="btn btn-outline-primary btn-sm" (click)="resolve(g)" [disabled]="busy()">Archive the other {{ g.questions.length - 1 }}</button>
+    </div>
+  } @empty {
+    @if (!loading()) { <div class="empty">No duplicates found. The question bank is clean.</div> }
+  }
+</div>
+<div class="footer"><button type="button" class="btn btn-primary" (click)="close()">Close</button></div>

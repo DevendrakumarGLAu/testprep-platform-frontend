@@ -1,0 +1,91 @@
+:host {
+  display: block;
+  padding: 20px 24px 12px;
+  min-width: min(760px, 90vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+
+.title {
+  margin: 0 0 12px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.field {
+  flex: 1;
+  min-width: 160px;
+}
+
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  margin: 12px 0 4px;
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+.rand {
+  width: 110px;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.count {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 8px;
+  font-size: 0.9em;
+}
+
+.item {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  margin-bottom: 0;
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+.old {
+  color: var(--mat-sys-error);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--mat-dialog-container-color, var(--mat-sys-surface));
+}
+
+.footer .btn-link {
+  text-decoration: none;
+}

@@ -1,0 +1,68 @@
+<h1 class="h3">Saved questions</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading saved questions"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+<div class="filters">
+  @if (data()?.subjects?.length) {
+    <div class="subject">
+      <label for="saved-subject" class="form-label visually-hidden">Subject</label>
+      <select id="saved-subject" class="form-select" (change)="subject.set($any($event.target).value); load()">
+        <option value="" [selected]="!subject()">All subjects</option>
+        @for (s of data()!.subjects; track s) { <option [value]="s" [selected]="subject() === s">{{ s }}</option> }
+      </select>
+    </div>
+  }
+  <span class="spacer"></span>
+  <app-lang-switch [languages]="languages" />
+</div>
+
+@for (s of data()?.results ?? []; track s.id) {
+  <div class="card">
+    <div class="card-body">
+      <div class="meta">{{ s.subject }}{{ s.subject ? ' · ' : '' }}from {{ s.exam_title }}</div>
+      <div class="q" [attr.lang]="lang()">{{ say(s.text, s.text_hi) }}</div>
+      <ol>
+        @for (o of s.options; track o.id) {
+          <li [class.correct]="o.is_correct" [class.wrong]="s.selected_option === o.id && !o.is_correct">
+            {{ say(o.text, o.text_hi) }}
+            @if (s.selected_option === o.id) { <span class="tag">Your answer</span> }
+            @if (o.is_correct) { <span class="tag">Correct answer</span> }
+          </li>
+        }
+      </ol>
+      @if (s.explanation || s.explanation_hi) { <div class="expl"><strong>Explanation</strong><br />{{ say(s.explanation, s.explanation_hi) }}</div> }
+      <div class="mb-2">
+        <label [for]="'note-' + s.id" class="form-label">My note</label>
+        <textarea [id]="'note-' + s.id" class="form-control" rows="2" maxlength="1000" [ngModel]="s.note" (ngModelChange)="draft(s.id, $event)" placeholder="Why this one matters, a trick to remember..."></textarea>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn btn-primary" (click)="saveNote(s)" [disabled]="!isDirty(s)">Save note</button>
+        <button type="button" class="btn btn-link" (click)="remove(s)"><i class="bi bi-bookmark-dash" aria-hidden="true"></i> Remove</button>
+      </div>
+    </div>
+  </div>
+} @empty {
+  @if (!loading()) {
+    <div class="card"><div class="card-body">
+      <p>You have not saved any questions yet. Open a result and press <strong>Save</strong> under a question to keep it here.</p>
+      <a class="btn btn-primary" routerLink="/student/attempts">Open my results</a>
+    </div></div>
+  }
+}
+
+@if (reports().length) {
+  <h2 class="h5 mt-4">Problems I reported</h2>
+  @for (r of reports(); track r.id) {
+    <div class="card"><div class="card-body">
+      <div class="meta">{{ r.exam_title }}</div>
+      <div>{{ r.question }}</div>
+      <p class="muted">{{ r.reason }}{{ r.message ? ': ' + r.message : '' }}</p>
+      @if (r.image_url) {
+        <img class="thumb" [src]="r.image_url" alt="The picture you sent" title="Tap to enlarge" tabindex="0" role="button" (click)="zoom(r.image_url)" (keydown.enter)="zoom(r.image_url)" />
+      }
+      <span class="chip" [class]="'chip ' + r.status">{{ r.status === 'open' ? 'Waiting for review' : r.status === 'resolved' ? 'Fixed' : 'No change needed' }}</span>
+      @if (r.admin_note) { <div class="note">Admin: {{ r.admin_note }}</div> }
+    </div></div>
+  }
+}

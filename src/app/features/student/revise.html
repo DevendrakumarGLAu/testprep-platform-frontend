@@ -1,0 +1,69 @@
+<h1 class="h3">Revise</h1>
+<div class="filters">
+  <div class="btn-group" role="group" aria-label="What to revise">
+    <button type="button" class="btn btn-outline-primary" [class.active]="source() === 'mistakes'" [attr.aria-pressed]="source() === 'mistakes'" (click)="choose('mistakes')">My mistakes</button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="source() === 'saved'" [attr.aria-pressed]="source() === 'saved'" (click)="choose('saved')">Saved questions</button>
+  </div>
+  @if (exams().length) {
+    <div class="exam">
+      <label for="revise-exam" class="form-label visually-hidden">Exam</label>
+      <select id="revise-exam" class="form-select" (change)="pickExam($any($event.target).value)">
+        <option value="" [selected]="!exam()">All exams ({{ allCount() }})</option>
+        @for (g of examGroups(); track g.name) {
+          <optgroup [label]="g.name">
+            @for (e of g.exams; track e.id) { <option [value]="e.id" [selected]="exam() === e.id">{{ e.name }} ({{ e.count }})</option> }
+          </optgroup>
+        }
+      </select>
+    </div>
+  }
+  <span class="spacer"></span>
+  <app-lang-switch [languages]="languages" />
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading cards"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@if (!loading() && !total()) {
+  <div class="card"><div class="card-body">
+    @if (exam()) {
+      <p>No cards from this exam in {{ source() === 'saved' ? 'your saved questions' : 'your mistakes' }}. Choose another exam, or all exams.</p>
+    } @else if (source() === 'saved') {
+      <p>You have not saved any questions yet. Save a question from a test review and it will appear here.</p>
+    } @else {
+      <p>No mistakes to revise. Questions you get wrong in a test show up here once its solutions are released, and leave once you answer them correctly.</p>
+    }
+    <a class="btn btn-outline-primary" routerLink="/student/tests">Take a test</a>
+  </div></div>
+} @else if (!loading() && !current()) {
+  <div class="card"><div class="card-body done">
+    <i class="bi bi-trophy" aria-hidden="true"></i>
+    <h2 class="h4">Round complete</h2>
+    <p>You went through {{ total() }} {{ total() === 1 ? 'card' : 'cards' }}.@if (more()) { There are {{ more() }} more waiting. }</p>
+    <button type="button" class="btn btn-primary" (click)="load()">Start another round</button>
+  </div></div>
+} @else if (current(); as c) {
+  <p class="meta" role="status">Card {{ done() + 1 }} of {{ total() }} · {{ remaining() }} left</p>
+  <div class="card"><div class="card-body">
+    <div class="meta">{{ c.subject }}@if (c.exam_title) { · {{ c.exam_title }} }</div>
+    <div class="q">{{ say(c.text, c.text_hi) }}</div>
+    <ol type="A">
+      @for (o of c.options; track o.id) {
+        <li [class.correct]="shown() && o.is_correct" [class.yours]="shown() && !o.is_correct && o.id === c.your_option">
+          {{ say(o.text, o.text_hi) }}
+          @if (shown() && o.is_correct) { <span class="tag">Correct answer</span> }
+          @if (shown() && !o.is_correct && o.id === c.your_option) { <span class="tag">Your answer</span> }
+        </li>
+      }
+    </ol>
+    @if (shown()) {
+      @if (say(c.explanation, c.explanation_hi)) { <div class="expl">{{ say(c.explanation, c.explanation_hi) }}</div> }
+      <div class="actions">
+        <button type="button" class="btn btn-primary" (click)="gotIt()"><i class="bi bi-check-lg" aria-hidden="true"></i> Got it</button>
+        <button type="button" class="btn btn-outline-primary" (click)="again()"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Again</button>
+      </div>
+    } @else {
+      <button type="button" class="btn btn-primary" (click)="shown.set(true)">Show answer</button>
+    }
+  </div></div>
+}

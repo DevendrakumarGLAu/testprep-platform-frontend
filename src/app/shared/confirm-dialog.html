@@ -1,0 +1,6 @@
+<h2 class="h5 title" [id]="titleId">{{ data.title }}</h2>
+<p class="message">{{ data.message }}</p>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="close(false)">Cancel</button>
+  <button type="button" class="btn btn-primary" (click)="close(true)">{{ data.confirmLabel || 'Confirm' }}</button>
+</div>

@@ -1,0 +1,214 @@
+<header class="hero">
+  <div class="hero-text">
+    <p class="eyebrow">{{ today | date: 'EEEE, d MMMM' }}</p>
+    <h1>{{ greeting() }}, {{ name() }}</h1>
+    <p class="sub">{{ subtitle() }}</p>
+    <div class="hero-actions">
+      <a class="btn btn-light on-hero" [routerLink]="primary().link" [queryParams]="primary().query">
+        <i class="bi {{ primary().icon }} me-1"></i> {{ primary().label }}
+      </a>
+      <a class="btn btn-outline-light ghost" routerLink="/student/practice">Practise weak topics</a>
+    </div>
+  </div>
+  @if (d(); as d) {
+    <div class="hero-side">
+      <div class="ring" role="img" [attr.aria-label]="d.activity.today + ' of ' + d.activity.goal + ' questions answered today'">
+        <svg viewBox="0 0 120 120" aria-hidden="true">
+          <circle cx="60" cy="60" r="52" class="track" />
+          <circle cx="60" cy="60" r="52" class="arc" [attr.stroke-dasharray]="ring" [attr.stroke-dashoffset]="goalOffset()" />
+        </svg>
+        <div class="ring-text"><strong>{{ d.activity.today }}</strong><span>of {{ d.activity.goal }}</span></div>
+      </div>
+      <div class="side-meta">
+        <span class="streak"><i class="bi bi-fire"></i> {{ d.activity.streak ? d.activity.streak + '-day streak' : 'Start a streak today' }}</span>
+        <span class="goal-note">{{ d.activity.goal_reached ? 'Goal reached' : "Today's goal" }}</span>
+      </div>
+    </div>
+  }
+</header>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading your dashboard">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+
+<app-live-strip />
+
+@if (d(); as d) {
+  @if (d.in_progress.length) {
+    <section class="block" aria-label="Tests in progress">
+      <h2>Continue where you left off</h2>
+      <div class="resume-list">
+        @for (e of d.in_progress; track e.id) {
+          <a class="resume" [routerLink]="['/student/tests', e.id]">
+            <i class="bi bi-play-circle-fill play"></i>
+            <span class="resume-text">
+              <strong>{{ e.title }}</strong>
+              <span class="muted">{{ e.category_name || 'Mock test' }} · {{ e.duration_minutes }} min</span>
+            </span>
+            <span class="go">Resume <i class="bi bi-arrow-right"></i></span>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  <div class="kpis">
+    <div class="kpi done"><i class="bi bi-check2-circle icon"></i>
+      <div><div class="value">{{ d.counts.completed }}</div><div class="label">Tests completed</div></div></div>
+    <div class="kpi score"><i class="bi bi-percent icon"></i>
+      <div><div class="value">{{ d.average_score_percent === null ? '—' : d.average_score_percent + '%' }}</div><div class="label">Average score</div></div></div>
+    <div class="kpi acc"><i class="bi bi-bullseye icon"></i>
+      <div><div class="value">{{ d.accuracy_percent === null ? '—' : d.accuracy_percent + '%' }}</div><div class="label">Accuracy</div></div></div>
+    <div class="kpi open"><i class="bi bi-journal-text icon"></i>
+      <div>
+        <div class="value">{{ d.counts.available }}</div>
+        <div class="label">Tests to take</div>
+        @if (d.counts.in_progress || d.counts.upcoming) {
+          <div class="sublabel">{{ d.counts.in_progress }} in progress · {{ d.counts.upcoming }} upcoming</div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <section class="block" aria-label="Your exams">
+    <div class="block-head">
+      <h2>Your exams</h2>
+      <a class="btn btn-link" routerLink="/student/prepare">{{ d.preparing.length ? 'Change exams' : 'Browse exams' }}</a>
+    </div>
+    @if (d.preparing.length) {
+      <div class="exams">
+        @for (p of d.preparing; track p.id) {
+          <div class="card exam">
+            <div class="card-body exam-body">
+              <div class="mini-ring" role="img" [attr.aria-label]="percent(p) + ' percent of tests attempted'">
+                <svg viewBox="0 0 120 120" aria-hidden="true">
+                  <circle cx="60" cy="60" r="52" class="track" />
+                  <circle cx="60" cy="60" r="52" class="arc" [attr.stroke-dasharray]="ring" [attr.stroke-dashoffset]="offset(percent(p))" />
+                </svg>
+                <span>{{ percent(p) }}%</span>
+              </div>
+              <div class="exam-text">
+                @if (p.group) { <div class="family">{{ p.group.name }}</div> }
+                <h3>{{ p.name }}</h3>
+                <p class="muted">{{ p.attempted_tests }} of {{ p.total_tests }} tests attempted</p>
+              </div>
+            </div>
+            <div class="card-footer">
+              @if (p.group) {
+                <a class="btn btn-primary" [routerLink]="['/student/tests/family', p.group.id]" [queryParams]="{ exam: p.id }">Open tests</a>
+              } @else {
+                <a class="btn btn-primary" [routerLink]="['/student/tests/exam', p.id]">Open tests</a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="card onboard">
+        <div class="card-body onboard-body">
+          <i class="bi bi-flag-fill icon"></i>
+          <div>
+            <h3>Pick your exam to get started</h3>
+            <p class="muted">Choose the exam you are preparing for, for example SSC CGL. Its full tests, mini mocks, previous year papers and subject tests will be one tap away.</p>
+          </div>
+          <a class="btn btn-primary" routerLink="/student/prepare">Choose your exam</a>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="block" aria-label="Today and this week">
+    <h2>Today &amp; this week</h2>
+    <app-study-plan-card />
+    <app-activity-cards [activity]="d.activity" />
+    <app-weekly-card />
+  </section>
+
+  <section class="block two" aria-label="Performance">
+    <div class="card">
+      <div class="card-header">Performance trend</div>
+      <div class="card-body">
+        @if (points().length) {
+          <svg viewBox="0 0 300 130" class="trend" role="img" aria-label="Score percentage over recent attempts">
+            <defs>
+              <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--mat-sys-primary)" stop-opacity="0.28" />
+                <stop offset="100%" stop-color="var(--mat-sys-primary)" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+            @for (g of grid; track g.value) {
+              <line x1="26" [attr.y1]="g.y" x2="292" [attr.y2]="g.y" class="axis" [class.faint]="g.value > 0" />
+              <text x="22" [attr.y]="g.y + 3" class="tick" text-anchor="end">{{ g.value }}</text>
+            }
+            <polygon [attr.points]="area()" fill="url(#trendFill)" />
+            <polyline [attr.points]="line()" class="line" />
+            @for (p of points(); track p.attempt) {
+              <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3.5" class="dot"><title>{{ p.title }}: {{ p.percentage }}%</title></circle>
+            }
+          </svg>
+          <p class="muted trend-note">
+            Last {{ points().length }} result{{ points().length === 1 ? '' : 's' }}.
+            Latest: <strong>{{ latest()?.percentage }}%</strong>
+            @if (change() !== null) { <span [class.up]="change()! > 0" [class.down]="change()! < 0">({{ change()! > 0 ? '+' : '' }}{{ change() }} points)</span> }
+          </p>
+        } @else {
+          <p class="muted mb-0">Your trend appears after your first released result.</p>
+        }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Subject-wise accuracy</div>
+      <div class="card-body">
+        @for (s of subjects(); track s.subject; let i = $index) {
+          <div class="bar-row">
+            <span class="bar-label">{{ s.subject }}</span>
+            <div class="bar"><div class="fill" [class]="level(s.accuracy)" [style.width.%]="s.accuracy"></div></div>
+            <span class="bar-val">{{ s.accuracy }}%</span>
+          </div>
+        } @empty {
+          <p class="muted mb-0">No released results yet.</p>
+        }
+        @if (subjects().length > 1) {
+          <p class="muted subject-note">Weakest first. <a routerLink="/student/practice">Practise {{ subjects()[0].subject }}</a></p>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-label="Recent results">
+    <div class="block-head">
+      <h2>Recent results</h2>
+      <a class="btn btn-link" routerLink="/student/attempts">All attempts</a>
+    </div>
+    <div class="card">
+      <div class="card-body results">
+        @for (r of d.recent_results; track r.id) {
+          <a class="result-row" [routerLink]="['/student/results', r.id]">
+            <span class="r-main"><strong>{{ r.exam_title }}</strong><span class="muted">{{ r.submitted_at | date: 'medium' }}</span></span>
+            <span class="r-score">{{ r.score }} <span class="muted">/ {{ r.total_marks }}</span></span>
+            <span class="pill" [class.pass]="r.passed" [class.fail]="!r.passed">{{ r.passed ? 'Passed' : 'Not passed' }}</span>
+            <i class="bi bi-chevron-right chev"></i>
+          </a>
+        } @empty {
+          <p class="muted empty">No released results yet. Results from tests with manual or scheduled release appear once published.</p>
+        }
+      </div>
+    </div>
+  </section>
+
+  @if (d.upcoming.length) {
+    <section class="block" aria-label="Upcoming tests">
+      <h2>Upcoming tests</h2>
+      <div class="cards">@for (e of d.upcoming; track e.id) { <app-test-card [exam]="e" /> }</div>
+    </section>
+  }
+
+  @if (d.recommended.length) {
+    <section class="block" aria-label="Suggested tests">
+      <h2>Suggested for you</h2>
+      <div class="cards">@for (e of d.recommended; track e.id) { <app-test-card [exam]="e" /> }</div>
+    </section>
+  }
+}

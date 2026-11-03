@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.player {
+  position: sticky;
+  top: 8px;
+  z-index: 2;
+}
+
+.now {
+  font-size: 1.05rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 9rem;
+  overflow-y: auto;
+}
+
+.active-row {
+  background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
+}

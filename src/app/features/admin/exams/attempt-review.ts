@@ -1,8 +1,5 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
 import { Location } from '@angular/common';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
 import { ResultView } from '../../../shared/result-view';
@@ -12,12 +9,10 @@ import { ExamService } from './exam.service';
 /** Admin view of one student's attempt, always with full solutions. */
 @Component({
   selector: 'app-attempt-review',
-  imports: [MatButtonModule, MatIconModule, MatProgressBarModule, ResultView],
-  template: `
-    <button mat-button (click)="back()"><mat-icon>arrow_back</mat-icon> Back</button>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-    @if (data(); as d) { <app-result-view [data]="d" /> }
-  `,
+  imports: [ResultView],
+  templateUrl: './attempt-review.html',
+  styleUrl: './attempt-review.scss',
+  host: { class: 'bs' },
 })
 export class AttemptReview {
   id = input.required<string>();

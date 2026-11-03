@@ -1,0 +1,21 @@
+<h2 class="h5 title">{{ batch ? 'Edit batch' : 'New batch' }}</h2>
+<form [formGroup]="form" id="batch-form" (ngSubmit)="save()" novalidate>
+  <div class="mb-3">
+    <label for="bd-name" class="form-label">Name</label>
+    <input id="bd-name" class="form-control" [class.is-invalid]="form.controls.name.invalid && (form.controls.name.touched || form.controls.name.dirty)" formControlName="name" />
+    @if (form.controls.name.invalid && (form.controls.name.touched || form.controls.name.dirty)) { <div class="invalid-feedback">Required</div> }
+  </div>
+  <div class="mb-3">
+    <label for="bd-desc" class="form-label">Description</label>
+    <textarea id="bd-desc" class="form-control" rows="3" formControlName="description"></textarea>
+  </div>
+  <div class="form-check form-switch mb-3">
+    <input id="bd-active" class="form-check-input" type="checkbox" role="switch" formControlName="is_active" />
+    <label for="bd-active" class="form-check-label">Active</label>
+  </div>
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+</form>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="batch-form" [disabled]="saving()">Save</button>
+</div>

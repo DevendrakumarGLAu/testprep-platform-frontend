@@ -1,0 +1,23 @@
+<div class="card">
+  <div class="card-body">
+    <div class="head"><i class="bi bi-flag"></i><strong>Daily goal</strong></div>
+    <div class="big">{{ activity().today }} <span class="muted">/ {{ activity().goal }} questions</span></div>
+    <div class="progress goal" role="progressbar" [attr.aria-valuenow]="goalPercent()" aria-valuemin="0" aria-valuemax="100" aria-label="Progress towards today's goal">
+      <div class="progress-bar" [style.width.%]="goalPercent()"></div>
+    </div>
+    <p class="muted">{{ activity().goal_reached ? 'Goal reached. Great work!' : activity().goal - activity().today + ' to go today' }}</p>
+    <div class="week" aria-label="Questions answered in the last 7 days">
+      @for (d of week(); track d.date) { <i [class.none]="!d.questions" [style.height.%]="d.height" [attr.title]="d.date + ': ' + d.questions"></i> }
+    </div>
+  </div>
+</div>
+
+<app-daily-quiz-card />
+
+<div class="card">
+  <div class="card-body">
+    <div class="head"><i class="bi bi-bullseye"></i><strong>Practice</strong></div>
+    <p class="text">Find the topics you get wrong most and practise them.</p>
+    <a class="btn btn-outline-primary" routerLink="/student/practice">Practise weak topics</a>
+  </div>
+</div>

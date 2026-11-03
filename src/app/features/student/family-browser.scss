@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.exam-tabs {
+  margin-top: 12px;
+}

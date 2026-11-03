@@ -32,7 +32,7 @@ describe('Revise (flash cards)', () => {
     expect(text()).toContain('Card 1 of 2');
     expect(text()).not.toContain('Correct answer');
     expect(text()).not.toContain('because');
-    (f.nativeElement.querySelector('button.mdc-button--unelevated, button[mat-flat-button]') as HTMLButtonElement).click();
+    (f.nativeElement.querySelector('button.btn-primary') as HTMLButtonElement).click();
     f.detectChanges();
     expect(text()).toContain('Correct answer');
     expect(text()).toContain('Your answer');
@@ -99,13 +99,13 @@ describe('Revise by exam', () => {
     const { f, c, text } = render(withExams());
     expect(c.allCount()).toBe(7);
     expect(c.examGroups().map((g) => [g.name, g.exams.map((e) => e.name)])).toEqual([['SSC Exams', ['SSC CGL', 'SSC MTS']], ['Other', ['Banking', 'Other tests']]]);
-    expect((f.nativeElement as HTMLElement).querySelector('mat-form-field.exam')).not.toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.exam select')).not.toBeNull();
     expect(text()).toContain('Exam');
   });
 
   it('shows no filter when the server sent no exams (an older server) or there are none', () => {
     const { f } = render(data(1));
-    expect((f.nativeElement as HTMLElement).querySelector('mat-form-field.exam')).toBeNull();
+    expect((f.nativeElement as HTMLElement).querySelector('.exam select')).toBeNull();
   });
 
   it('choosing an exam loads only its cards', () => {
@@ -129,5 +129,27 @@ describe('Revise by exam', () => {
     c.pickExam('mts');
     f.detectChanges();
     expect(text()).toContain('No cards from this exam in your mistakes');
+  });
+});
+
+describe('Revise (Bootstrap)', () => {
+  it('is a Bootstrap page: toggle buttons, a card and no Material component', () => {
+    const { f } = render(data(1));
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelectorAll('.btn-group button').length).toBe(2);
+    expect(el.querySelector('.card .q')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-button-toggle-group, mat-select, mat-icon, [mat-flat-button]')).toBeNull();
+  });
+
+  it('the toggle shows which list is chosen and switches it', () => {
+    const { f, c } = render(data(1));
+    const el = f.nativeElement as HTMLElement;
+    const [mistakes, saved] = Array.from(el.querySelectorAll<HTMLButtonElement>('.btn-group button'));
+    expect(mistakes.classList.contains('active')).toBe(true);
+    saved.click();
+    f.detectChanges();
+    expect(c.source()).toBe('saved');
+    expect(el.querySelectorAll<HTMLButtonElement>('.btn-group button')[1].classList.contains('active')).toBe(true);
   });
 });

@@ -1,0 +1,116 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.wrap {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.bar {
+  background: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 60px;
+    flex-wrap: wrap;
+  }
+
+  nav {
+    display: flex;
+    gap: 18px;
+    font-size: 0.9rem;
+
+    a {
+      color: var(--mat-sys-on-surface);
+      text-decoration: none;
+
+      &:hover {
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--mat-sys-title-large);
+  font-weight: 700;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+}
+
+.page {
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 14px;
+}
+
+.card-body {
+  padding: 28px 32px;
+}
+
+.meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9rem;
+}
+
+.back {
+  margin-top: 16px;
+}
+
+:host ::ng-deep {
+  h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin: 28px 0 8px;
+  }
+
+  p,
+  li {
+    line-height: 1.65;
+  }
+
+  ul {
+    padding-left: 22px;
+  }
+
+  table {
+    width: 100%;
+    margin: 8px 0 16px;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    th {
+      background: var(--mat-sys-surface-container);
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .card-body {
+    padding: 20px 16px;
+  }
+}

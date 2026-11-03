@@ -1,0 +1,23 @@
+<div class="head">
+  <h1 class="h3">Notifications</h1>
+  <button type="button" class="btn btn-outline-primary" (click)="readAll()" [disabled]="!svc.unread()">Mark all as read</button>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading notifications"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@for (n of svc.items(); track n.id) {
+  <div class="card" [class.unread]="!n.read">
+    <div class="card-body">
+      <div class="item" (click)="open(n)" (keydown.enter)="open(n)" tabindex="0" role="button">
+        <i class="bi" [class]="icon(n)" aria-hidden="true"></i>
+        <div>
+          <div class="t">{{ n.title }}</div>
+          @if (n.body) { <div>{{ n.body }}</div> }
+          <div class="muted">{{ n.created_at | date: 'medium' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+} @empty {
+  @if (!loading()) { <div class="card"><div class="card-body">You are all caught up.</div></div> }
+}

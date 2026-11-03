@@ -1,0 +1,41 @@
+<h2 class="h5 title">{{ data.user ? 'Edit user' : 'New user' }}</h2>
+<form [formGroup]="form" id="user-form" (ngSubmit)="save()" novalidate>
+  <div class="mb-3">
+    <label for="ud-username" class="form-label">Username</label>
+    <input id="ud-username" class="form-control" [class.is-invalid]="bad(form.controls.username)" formControlName="username" />
+    @if (bad(form.controls.username)) { <div class="invalid-feedback">Required</div> }
+  </div>
+  <div class="mb-3">
+    <label for="ud-email" class="form-label">Email</label>
+    <input id="ud-email" class="form-control" type="email" [class.is-invalid]="bad(form.controls.email)" formControlName="email" />
+    @if (bad(form.controls.email)) { <div class="invalid-feedback">A valid email is required</div> }
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-6">
+      <label for="ud-first" class="form-label">First name</label>
+      <input id="ud-first" class="form-control" formControlName="first_name" />
+    </div>
+    <div class="col-6">
+      <label for="ud-last" class="form-label">Last name</label>
+      <input id="ud-last" class="form-control" formControlName="last_name" />
+    </div>
+  </div>
+  <div class="mb-3">
+    <label for="ud-role" class="form-label">Role</label>
+    <select id="ud-role" class="form-select" formControlName="role">
+      @for (r of data.allowedRoles; track r) {
+        <option [ngValue]="r">{{ r === 'super_admin' ? 'Super Admin' : r === 'admin' ? 'Admin' : 'Student' }}</option>
+      }
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="ud-password" class="form-label">{{ data.user ? 'New password (optional)' : 'Password' }}</label>
+    <input id="ud-password" class="form-control" type="password" [class.is-invalid]="bad(form.controls.password)" formControlName="password" autocomplete="new-password" />
+    @if (bad(form.controls.password)) { <div class="invalid-feedback">At least 8 characters</div> }
+  </div>
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+</form>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="user-form" [disabled]="saving()">Save</button>
+</div>

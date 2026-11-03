@@ -1,0 +1,26 @@
+:host {
+  display: block;
+}
+
+.list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  padding: 8px 8px 8px 2rem;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85em;
+}
+
+p.muted {
+  margin: 8px 0 4px;
+}
+
+.empty {
+  padding: 12px 0;
+  margin-left: -1.5rem;
+  color: var(--mat-sys-on-surface-variant);
+}

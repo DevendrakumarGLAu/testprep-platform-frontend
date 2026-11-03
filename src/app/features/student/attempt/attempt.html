@@ -1,0 +1,208 @@
+@if (loading()) {
+  <div class="progress loading-bar" role="progressbar" aria-label="Loading"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@if (finished(); as f) {
+  <main class="done">
+    <div class="card">
+      <div class="card-body">
+        <i class="bi bi-check-circle big" aria-hidden="true"></i>
+        <h1 class="h3">{{ f.autoSubmitted ? "Time's up. Your test was submitted." : 'Test submitted' }}</h1>
+        <p>{{ title() }}</p>
+        @if (f.result) {
+          <div class="score">{{ f.result.score }} <span>/ {{ f.result.total_marks }}</span></div>
+          <p [class]="f.result.passed ? 'pass' : 'fail'">{{ f.result.passed ? 'Passed' : 'Not passed' }} (passing marks {{ f.result.passing_marks }})</p>
+          <div class="stats">
+            <div><strong>{{ f.result.correct }}</strong><span>Correct</span></div>
+            <div><strong>{{ f.result.incorrect }}</strong><span>Incorrect</span></div>
+            <div><strong>{{ f.result.unanswered }}</strong><span>Unanswered</span></div>
+            <div><strong>{{ f.result.accuracy }}%</strong><span>Accuracy</span></div>
+            <div><strong>{{ duration(f.result.time_taken_seconds) }}</strong><span>Time taken</span></div>
+          </div>
+        } @else {
+          <p>Your answers are saved. Your result will be available once your instructor releases it.</p>
+        }
+        <div class="actions">
+          @if (f.result) { <a class="btn btn-primary" [routerLink]="['/student/results', id()]">View detailed result</a> }
+          <a class="btn btn-outline-primary" routerLink="/student/dashboard">Back to dashboard</a>
+          <a class="btn btn-link" routerLink="/student/attempts">My attempts</a>
+        </div>
+      </div>
+    </div>
+  </main>
+} @else if (paused()) {
+  <main class="done paused">
+    <div class="card">
+      <div class="card-body">
+        <i class="bi bi-pause-circle big" aria-hidden="true"></i>
+        <h1 class="h3">Test paused</h1>
+        <p>{{ title() }}</p>
+        <div class="score">{{ frozenClock() }} <span>left</span></div>
+        <p>Your timer is stopped and your answers are saved. The questions stay hidden until you resume.</p>
+        @if (autoResumeIn() !== null) {
+          <p class="hint">The test restarts by itself in <strong>{{ autoResumeClock() }}</strong>, and the timer then keeps running.</p>
+        }
+        @if (pauseNote()) { <p class="hint">{{ pauseNote() }}</p> }
+        <div class="actions">
+          <button type="button" class="btn btn-primary" (click)="resumeTest()" [disabled]="busy()"><i class="bi bi-play-fill" aria-hidden="true"></i> Resume test</button>
+          <a class="btn btn-outline-primary" routerLink="/student/dashboard"><i class="bi bi-house" aria-hidden="true"></i> Go to dashboard</a>
+          <a class="btn btn-link" routerLink="/student/tests">My tests</a>
+        </div>
+        <p class="hint">You can leave now. Open this test again from the dashboard or the test page and press Resume.</p>
+      </div>
+    </div>
+  </main>
+} @else if (q(); as cur) {
+  <div class="shell">
+    <header class="bar">
+      <div class="title-wrap">
+        <button type="button" class="btn btn-link back" (click)="leave()" aria-label="Go back. Your answers stay saved" title="Go back">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        </button>
+        <div class="title">{{ title() }}</div>
+      </div>
+      <div class="right">
+        <span class="save" [class]="'save ' + saveState()">
+          <i class="bi" [class]="saveState() === 'saved' ? 'bi-cloud-check' : saveState() === 'saving' ? 'bi-arrow-repeat' : 'bi-cloud-slash'" aria-hidden="true"></i>
+          {{ saveState() === 'saved' ? 'Saved' : saveState() === 'saving' ? 'Saving…' : 'Offline, retrying…' }}
+        </span>
+        @if (sectional()) {
+          <span class="timer" [class.low]="sectionRemaining() <= 60" role="timer" aria-live="off" title="Time left in this section">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i> {{ sectionClock() }}
+          </span>
+          <span class="total" title="Time left in the whole test">Test {{ clock() }}</span>
+        } @else {
+          <span class="timer" [class.low]="remaining() <= 300" role="timer" aria-live="off">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i> {{ clock() }}
+          </span>
+        }
+        @if (pause()?.allowed) {
+          <button type="button" class="btn btn-outline-primary pause-btn" (click)="pauseTest()" [disabled]="submitting() || busy() || pauseBlocked()" [attr.title]="pauseHint()">
+            <i class="bi bi-pause-fill" aria-hidden="true"></i> Pause
+          </button>
+        }
+        <button type="button" class="btn btn-primary" (click)="confirmSubmit()" [disabled]="submitting()">{{ submitLabel() }}</button>
+        @if (mobile()) {
+          <button type="button" class="btn btn-link" (click)="drawerOpen.set(!drawerOpen())" aria-label="Open question palette"><i class="bi bi-list" aria-hidden="true"></i></button>
+        }
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="main">
+        @if (sections().length > 1) {
+          <nav class="sections" role="tablist" aria-label="Subjects">
+            @for (g of sections(); track g.name) {
+              <button type="button" role="tab" class="sec" [class.active]="g.current" [class.closed]="g.status === 'done'"
+                [attr.aria-selected]="g.current" [disabled]="sectional() && !g.current" (click)="openSection(g.name)">
+                <span class="sec-name">
+                  @if (g.status === 'done') { <i class="bi bi-check-circle-fill" aria-hidden="true"></i> }
+                  {{ g.name }}
+                </span>
+                <span class="sec-sub">{{ g.caption }}</span>
+              </button>
+            }
+          </nav>
+        }
+        <div class="card">
+          <div class="card-body">
+            <div class="q-head">
+              <span>{{ cur.section }} · Question {{ index() + 1 }} of {{ questions().length }}</span>
+              <app-lang-switch [languages]="languages()" />
+              <span class="qtime" title="Time you have spent on this question" role="timer" aria-live="off">
+                <i class="bi bi-stopwatch" aria-hidden="true"></i> {{ questionClock() }}
+              </span>
+              <span>+{{ cur.q.marks }} / -{{ cur.q.negative_marks }}</span>
+            </div>
+            @if (cur.q.image_url) {
+              <img class="zoomable" [src]="cur.q.image_url" alt="Question image" tabindex="0" role="button" title="Tap to enlarge"
+                (click)="zoom(cur.q.image_url)" (keydown.enter)="zoom(cur.q.image_url)" />
+            }
+            <div class="q-text" [attr.lang]="lang()">{{ say(cur.q.text, cur.q.text_hi) }}</div>
+            <div class="options" role="radiogroup" [attr.aria-label]="'Options for question ' + (index() + 1)">
+              @for (o of cur.q.options; track o.id; let i = $index) {
+                <label class="opt form-check" [class.chosen]="cur.q.selected_option === o.id">
+                  <input class="form-check-input" type="radio" [name]="'q' + cur.q.id" [value]="o.id" [checked]="cur.q.selected_option === o.id" (change)="select(o.id)" />
+                  <span class="form-check-label"><span class="letter">{{ letter(i) }}.</span> {{ say(o.text, o.text_hi) }}</span>
+                </label>
+              }
+            </div>
+          </div>
+        </div>
+        <div class="q-nav">
+          <button type="button" class="btn btn-outline-primary" (click)="go(index() - 1)" [disabled]="index() === 0"><i class="bi bi-chevron-left" aria-hidden="true"></i> Previous</button>
+          <button type="button" class="btn btn-link" (click)="clear()" [disabled]="cur.q.selected_option === null">Clear response</button>
+          <button type="button" class="btn btn-link" (click)="toggleMark()">
+            <i class="bi" [class]="cur.q.marked_for_review ? 'bi-bookmark-dash' : 'bi-bookmark-plus'" aria-hidden="true"></i>
+            {{ cur.q.marked_for_review ? 'Unmark review' : 'Mark for review' }}
+          </button>
+          <span class="spacer"></span>
+          <button type="button" class="btn btn-primary" (click)="go(index() + 1)" [disabled]="index() === questions().length - 1">Next <i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+        </div>
+      </section>
+
+      <!-- Wide screens: the palette sits beside the question. -->
+      @if (!mobile()) {
+        <aside class="palette"><ng-container *ngTemplateOutlet="paletteBody" /></aside>
+      }
+    </div>
+  </div>
+
+  <!-- Small screens: the question palette lives in a drawer opened from the burger button on the right. -->
+  @if (mobile() && drawerOpen()) {
+    <div class="drawer-layer" (mousedown)="onDrawerBackdrop($event)">
+      <aside class="palette-drawer" role="dialog" aria-label="Question palette">
+        <div class="drawer-head">
+          <strong>Questions</strong>
+          <button type="button" class="btn btn-link" (click)="drawerOpen.set(false)" aria-label="Close question palette"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+        </div>
+        <div class="palette in-drawer"><ng-container *ngTemplateOutlet="paletteBody" /></div>
+      </aside>
+    </div>
+  }
+
+  @if (submitData(); as d) {
+    <app-bs-modal [title]="d.section && !d.last ? 'Submit ' + d.section + '?' : 'Submit your test?'" size="sm" (closed)="answerSubmit(false)">
+      <p>You answered <strong>{{ d.answered }}</strong> of {{ d.total }} questions{{ d.section && !d.last ? ' in this section' : '' }}.</p>
+      <ul class="review" aria-label="Summary of your test">
+        <li><strong>{{ d.answered }}</strong> answered</li>
+        <li [class.warn]="d.unanswered"><strong>{{ d.unanswered }}</strong> not answered</li>
+        <li [class.warn]="d.marked"><strong>{{ d.marked }}</strong> marked for review</li>
+        <li><strong>{{ d.notVisited }}</strong> not visited</li>
+      </ul>
+      @if (d.section && !d.last) {
+        <p class="mb-0">You will move on to the next section. You cannot come back to {{ d.section }} or change its answers.</p>
+      } @else {
+        <p class="mb-0">You cannot change your answers after submitting.</p>
+      }
+      <ng-container footer>
+        <button type="button" class="btn btn-link" (click)="answerSubmit(false)">Keep working</button>
+        <button type="button" class="btn btn-primary" (click)="answerSubmit(true)">{{ d.section && !d.last ? 'Submit section' : 'Submit' }}</button>
+      </ng-container>
+    </app-bs-modal>
+  }
+
+  <ng-template #paletteBody>
+    <div class="counts">
+      <span><i class="sw answered"></i> {{ counts().answered }} answered</span>
+      <span><i class="sw unanswered"></i> {{ counts().unanswered }} unanswered</span>
+      <span><i class="sw marked"></i> {{ counts().marked }} marked</span>
+    </div>
+    @for (g of groups(); track g.name) {
+      <div class="group-name">{{ g.name }}</div>
+      <div class="grid-nums">
+        @for (n of g.items; track n.i) {
+          <button type="button" class="num" [class]="'num ' + n.state" [class.current]="n.i === index()"
+            (click)="go(n.i); mobile() && drawerOpen.set(false)" [attr.aria-label]="'Question ' + (n.i + 1) + ', ' + n.label">{{ n.i + 1 }}</button>
+        }
+      </div>
+    }
+    <div class="legend">
+      <span><i class="sw answered"></i> Answered</span>
+      <span><i class="sw unanswered"></i> Not answered</span>
+      <span><i class="sw marked"></i> Marked</span>
+      <span><i class="sw answered-marked"></i> Answered + marked</span>
+      <span><i class="sw not-visited"></i> Not visited</span>
+    </div>
+  </ng-template>
+}

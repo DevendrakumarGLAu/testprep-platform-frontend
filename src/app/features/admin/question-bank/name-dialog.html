@@ -1,0 +1,26 @@
+<h2 class="h5 title">{{ data.title }}</h2>
+<form [formGroup]="form" id="name-form" (ngSubmit)="save()" novalidate>
+  @if (data.subjects) {
+    <div class="mb-3">
+      <label for="nm-subject" class="form-label">Subject</label>
+      <select id="nm-subject" class="form-select" [class.is-invalid]="bad(form.controls.subject)" formControlName="subject">
+        @for (s of data.subjects; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+      </select>
+      @if (bad(form.controls.subject)) { <div class="invalid-feedback">Required</div> }
+    </div>
+  }
+  <div class="mb-3">
+    <label for="nm-name" class="form-label">Name</label>
+    <input id="nm-name" class="form-control" [class.is-invalid]="bad(form.controls.name)" formControlName="name" maxlength="120" />
+    @if (bad(form.controls.name)) { <div class="invalid-feedback">Required</div> }
+  </div>
+  <div class="mb-3">
+    <label for="nm-desc" class="form-label">Description</label>
+    <textarea id="nm-desc" class="form-control" rows="3" formControlName="description"></textarea>
+  </div>
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+</form>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="name-form" [disabled]="saving()">Save</button>
+</div>

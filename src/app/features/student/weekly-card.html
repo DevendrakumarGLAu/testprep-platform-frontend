@@ -1,0 +1,26 @@
+@if (w(); as s) {
+  <div class="card">
+    <div class="card-body">
+      <div class="head"><i class="bi bi-graph-up-arrow"></i><strong>This week</strong></div>
+      @if (!s.questions && !s.tests) {
+        <p class="note">Nothing yet in the last 7 days. Answer a few questions to see your week here.</p>
+      } @else {
+        <div class="grid">
+          <div><div class="big">{{ s.questions }}</div><div class="label">questions answered {{ trend(s.questions, s.questions_before) }}</div></div>
+          <div><div class="big">{{ s.tests }}</div><div class="label">tests taken · {{ s.active_days }} active {{ s.active_days === 1 ? 'day' : 'days' }}</div></div>
+          @if (s.accuracy !== null) {
+            <div>
+              <div class="big">{{ s.accuracy }}%</div>
+              <div class="label">accuracy
+                @if (s.accuracy_change) { <span [class.up]="s.accuracy_change > 0" [class.down]="s.accuracy_change < 0">({{ s.accuracy_change > 0 ? '+' : '' }}{{ s.accuracy_change }} points)</span> }
+              </div>
+            </div>
+          }
+        </div>
+        @if (s.best_subject) {
+          <p class="note">Strongest: <strong>{{ s.best_subject.name }}</strong> ({{ s.best_subject.accuracy }}%)@if (s.weakest_subject) { · Needs work: <strong>{{ s.weakest_subject.name }}</strong> ({{ s.weakest_subject.accuracy }}%) }</p>
+        }
+      }
+    </div>
+  </div>
+}

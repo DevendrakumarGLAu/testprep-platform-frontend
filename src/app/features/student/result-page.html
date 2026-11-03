@@ -1,0 +1,21 @@
+<a class="btn btn-link px-0" routerLink="/student/attempts"><i class="bi bi-arrow-left"></i> My attempts</a>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading your result">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+@if (data(); as d) {
+  @if (d.solutions_available) {
+    <app-result-extras [attemptId]="id()" [examId]="'' + d.exam.id" [wrong]="d.summary.incorrect + d.summary.unanswered" [card]="card(d)" />
+  }
+  <app-result-view [data]="d" [canAct]="true" [doubtEnabled]="true" (saveToggle)="toggleSave($event)" (report)="reportQuestion($event)" (doubt)="doubtFor.set($event)" />
+  @if (doubtFor() !== null) { <app-ask-doubt [attemptId]="id()" [number]="doubtFor()!" (closed)="doubtFor.set(null)" /> }
+  @if (reportFor() !== null) { <app-report-modal [number]="reportFor()!" (submitted)="sendReport($event)" (closed)="reportFor.set(null)" /> }
+} @else if (message()) {
+  <div class="card">
+    <div class="card-body">
+      <h2>{{ message() }}</h2>
+      <a class="btn btn-primary" routerLink="/student/attempts">Back to my attempts</a>
+    </div>
+  </div>
+}

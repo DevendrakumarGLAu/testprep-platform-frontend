@@ -1,0 +1,21 @@
+<h2 class="h5 title">{{ data.kind === 'date' ? 'Set the question date' : 'Move to another subject' }}</h2>
+<p class="note">This changes {{ data.count }} selected question{{ data.count === 1 ? '' : 's' }}.</p>
+@if (data.kind === 'date') {
+  <div class="mb-3">
+    <label for="bv-date" class="form-label">Question date</label>
+    <input id="bv-date" class="form-control" type="date" [max]="todayStr" [ngModel]="date()" (ngModelChange)="date.set($event)" />
+  </div>
+} @else {
+  <div class="mb-3">
+    <label for="bv-subject" class="form-label">Subject</label>
+    <select id="bv-subject" class="form-select" [ngModel]="subject()" (ngModelChange)="subject.set($event)" aria-describedby="bv-subject-hint">
+      <option [ngValue]="null" disabled>Choose a subject</option>
+      @for (s of data.subjects; track s.id) { <option [ngValue]="s.id">{{ s.name }}</option> }
+    </select>
+    <div id="bv-subject-hint" class="form-text">Their topics are cleared, because topics belong to one subject.</div>
+  </div>
+}
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="button" class="btn btn-primary" [disabled]="!value()" (click)="apply()">Apply</button>
+</div>

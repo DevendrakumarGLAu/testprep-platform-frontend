@@ -1,0 +1,21 @@
+<h2 class="h5 title">Members of {{ batch.name }}</h2>
+<div class="content">
+  @if (loading()) {
+    <div class="progress loader" role="progressbar" aria-label="Loading members"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+  }
+  <h3 class="h6">Current members ({{ members().length }})</h3>
+  @for (m of members(); track m.id) {
+    <div class="member">
+      <span>{{ (m.first_name + ' ' + m.last_name).trim() || m.username }} <span class="muted">{{ m.email }}</span></span>
+      <button type="button" class="btn btn-link" (click)="remove(m)" aria-label="Remove from batch" title="Remove from batch"><i class="bi bi-person-dash" aria-hidden="true"></i></button>
+    </div>
+  } @empty {
+    <p class="muted">No students in this batch yet.</p>
+  }
+  <h3 class="h6">Add students</h3>
+  <app-student-picker [value]="toAdd()" (changed)="toAdd.set($event)" />
+</div>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="close()">Close</button>
+  <button type="button" class="btn btn-primary" (click)="add()" [disabled]="!toAdd().length">Add {{ toAdd().length || '' }} selected</button>
+</div>

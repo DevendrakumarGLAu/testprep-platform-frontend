@@ -1,17 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatSelectModule } from '@angular/material/select';
-import { MatTableModule } from '@angular/material/table';
-import { MatTabsModule } from '@angular/material/tabs';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { Observable } from 'rxjs';
 import { apiErrorMessage } from '../../../core/models';
 import { NotifyService } from '../../../core/notify.service';
+import { BsTab, BsTabs } from '../../../shared/bs-tabs/bs-tabs';
 import { ConfirmDialog } from '../../../shared/confirm-dialog';
 import { Subject, Topic } from './qb.models';
 import { QuestionBankService } from './qb.service';
@@ -26,38 +19,10 @@ interface NameDialogData {
 
 @Component({
   selector: 'app-name-dialog',
-  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
-  styles: `form { display: flex; flex-direction: column; min-width: min(420px, 80vw); padding-top: 8px; } .err { color: var(--mat-sys-error); margin: 0; }`,
-  template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <form [formGroup]="form" id="name-form" (ngSubmit)="save()" novalidate>
-        @if (data.subjects) {
-          <mat-form-field appearance="outline">
-            <mat-label>Subject</mat-label>
-            <mat-select formControlName="subject">
-              @for (s of data.subjects; track s.id) { <mat-option [value]="s.id">{{ s.name }}</mat-option> }
-            </mat-select>
-            <mat-error>Required</mat-error>
-          </mat-form-field>
-        }
-        <mat-form-field appearance="outline">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" maxlength="120" />
-          <mat-error>Required</mat-error>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Description</mat-label>
-          <textarea matInput rows="3" formControlName="description"></textarea>
-        </mat-form-field>
-        @if (error()) { <p class="err" role="alert">{{ error() }}</p> }
-      </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button type="submit" form="name-form" [disabled]="saving()">Save</button>
-    </mat-dialog-actions>
-  `,
+  imports: [ReactiveFormsModule],
+  templateUrl: './name-dialog.html',
+  styleUrl: './name-dialog.scss',
+  host: { class: 'bs' },
 })
 export class NameDialog {
   data = inject<NameDialogData>(MAT_DIALOG_DATA);
@@ -71,6 +36,14 @@ export class NameDialog {
     description: [this.data.value.description],
     subject: [this.data.value.subject ?? null, this.data.subjects ? Validators.required : []],
   });
+
+  bad(c: AbstractControl) {
+    return c.invalid && (c.touched || c.dirty);
+  }
+
+  cancel() {
+    this.ref.close(false);
+  }
 
   save() {
     if (this.form.invalid) {
@@ -93,115 +66,18 @@ export class NameDialog {
 
 @Component({
   selector: 'app-subjects-topics',
-  imports: [MatTabsModule, MatTableModule, MatButtonModule, MatIconModule, MatSelectModule, MatFormFieldModule, MatProgressBarModule],
-  styles: `
-    .bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0 8px; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; }
-    .archived { color: var(--mat-sys-on-surface-variant); font-style: italic; }
-    .empty { padding: 24px; text-align: center; color: var(--mat-sys-on-surface-variant); }
-  `,
-  template: `
-    <h1>Subjects &amp; Topics</h1>
-    @if (loading()) { <mat-progress-bar mode="indeterminate" /> }
-    <mat-tab-group animationDuration="0">
-      <mat-tab label="Subjects">
-        <div class="bar">
-          <span></span>
-          <button mat-flat-button (click)="editSubject(null)"><mat-icon>add</mat-icon> New subject</button>
-        </div>
-        <div class="table-wrap">
-          <table mat-table [dataSource]="subjects()">
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Name</th>
-              <td mat-cell *matCellDef="let s"><span [class.archived]="!s.is_active">{{ s.name }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="topics">
-              <th mat-header-cell *matHeaderCellDef>Topics</th>
-              <td mat-cell *matCellDef="let s">{{ s.topic_count }}</td>
-            </ng-container>
-            <ng-container matColumnDef="questions">
-              <th mat-header-cell *matHeaderCellDef>Questions</th>
-              <td mat-cell *matCellDef="let s">{{ s.question_count }}</td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let s">{{ s.is_active ? 'Active' : 'Archived' }}</td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let s">
-                <button mat-icon-button (click)="editSubject(s)" aria-label="Edit subject"><mat-icon>edit</mat-icon></button>
-                <button mat-icon-button (click)="toggleSubject(s)" [attr.aria-label]="s.is_active ? 'Archive subject' : 'Restore subject'">
-                  <mat-icon>{{ s.is_active ? 'archive' : 'unarchive' }}</mat-icon>
-                </button>
-                <button mat-icon-button (click)="removeSubject(s)" aria-label="Delete subject"><mat-icon>delete</mat-icon></button>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="subjectCols"></tr>
-            <tr mat-row *matRowDef="let row; columns: subjectCols"></tr>
-          </table>
-          @if (!loading() && subjects().length === 0) { <div class="empty">No subjects yet. Create one to get started.</div> }
-        </div>
-      </mat-tab>
-
-      <mat-tab label="Topics">
-        <div class="bar">
-          <mat-form-field appearance="outline" subscriptSizing="dynamic">
-            <mat-label>Filter by subject</mat-label>
-            <mat-select [value]="topicFilter()" (selectionChange)="topicFilter.set($event.value); loadTopics()">
-              <mat-option [value]="null">All subjects</mat-option>
-              @for (s of subjects(); track s.id) { <mat-option [value]="s.id">{{ s.name }}</mat-option> }
-            </mat-select>
-          </mat-form-field>
-          <button mat-flat-button (click)="editTopic(null)" [disabled]="activeSubjects().length === 0">
-            <mat-icon>add</mat-icon> New topic
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table mat-table [dataSource]="topics()">
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Topic</th>
-              <td mat-cell *matCellDef="let t"><span [class.archived]="!t.is_active">{{ t.name }}</span></td>
-            </ng-container>
-            <ng-container matColumnDef="subject">
-              <th mat-header-cell *matHeaderCellDef>Subject</th>
-              <td mat-cell *matCellDef="let t">{{ t.subject_name }}</td>
-            </ng-container>
-            <ng-container matColumnDef="questions">
-              <th mat-header-cell *matHeaderCellDef>Questions</th>
-              <td mat-cell *matCellDef="let t">{{ t.question_count }}</td>
-            </ng-container>
-            <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
-              <td mat-cell *matCellDef="let t">{{ t.is_active ? 'Active' : 'Archived' }}</td>
-            </ng-container>
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef></th>
-              <td mat-cell *matCellDef="let t">
-                <button mat-icon-button (click)="editTopic(t)" aria-label="Edit topic"><mat-icon>edit</mat-icon></button>
-                <button mat-icon-button (click)="toggleTopic(t)" [attr.aria-label]="t.is_active ? 'Archive topic' : 'Restore topic'">
-                  <mat-icon>{{ t.is_active ? 'archive' : 'unarchive' }}</mat-icon>
-                </button>
-                <button mat-icon-button (click)="removeTopic(t)" aria-label="Delete topic"><mat-icon>delete</mat-icon></button>
-              </td>
-            </ng-container>
-            <tr mat-header-row *matHeaderRowDef="topicCols"></tr>
-            <tr mat-row *matRowDef="let row; columns: topicCols"></tr>
-          </table>
-          @if (!loading() && topics().length === 0) { <div class="empty">No topics found.</div> }
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-  `,
+  imports: [BsTabs],
+  templateUrl: './subjects-topics.html',
+  styleUrl: './subjects-topics.scss',
+  host: { class: 'bs' },
 })
 export class SubjectsTopics {
   private api = inject(QuestionBankService);
   private dialog = inject(MatDialog);
   private notify = inject(NotifyService);
 
-  subjectCols = ['name', 'topics', 'questions', 'status', 'actions'];
-  topicCols = ['name', 'subject', 'questions', 'status', 'actions'];
+  readonly tabs: BsTab[] = [{ key: 'subjects', label: 'Subjects' }, { key: 'topics', label: 'Topics' }];
+  tab = signal(0);
   loading = signal(true);
   subjects = signal<Subject[]>([]);
   topics = signal<Topic[]>([]);
@@ -226,6 +102,11 @@ export class SubjectsTopics {
       },
       error: (e) => this.fail(e),
     });
+  }
+
+  pickSubject(value: string) {
+    this.topicFilter.set(value ? Number(value) : null);
+    this.loadTopics();
   }
 
   loadTopics() {

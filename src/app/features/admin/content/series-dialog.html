@@ -1,0 +1,46 @@
+<h2 class="h5 title">{{ data.series ? 'Edit test series' : 'New test series' }}</h2>
+<form [formGroup]="form" id="series-form" (ngSubmit)="save()" novalidate>
+  <div class="mb-3">
+    <label for="sd-title" class="form-label">Title</label>
+    <input id="sd-title" class="form-control" formControlName="title" maxlength="200" placeholder="SSC CGL 2026: 30 mock tests" />
+  </div>
+  <div class="mb-3">
+    <label for="sd-desc" class="form-label">Description</label>
+    <textarea id="sd-desc" class="form-control" rows="2" formControlName="description"></textarea>
+  </div>
+  <div class="mb-3">
+    <label for="sd-exam" class="form-label">Exam</label>
+    <select id="sd-exam" class="form-select" formControlName="category">
+      <option [ngValue]="null">Any exam</option>
+      @for (c of data.categories; track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+    </select>
+  </div>
+
+  <strong>Tests in this series (in order)</strong>
+  <ol>
+    @for (e of chosen(); track e.id; let i = $index) {
+      <li>
+        <span class="n">{{ i + 1 }}.</span><span class="t">{{ e.title }} <span class="muted">({{ e.status }})</span></span>
+        <button type="button" class="btn btn-link" (click)="move(i, -1)" [disabled]="i === 0" aria-label="Move up"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-link" (click)="move(i, 1)" [disabled]="i === chosen().length - 1" aria-label="Move down"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-link" (click)="remove(e.id)" aria-label="Remove from series"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      </li>
+    } @empty { <li class="muted">No tests yet. Add some below.</li> }
+  </ol>
+  <div class="mb-3">
+    <label for="sd-add" class="form-label">Add a test</label>
+    <select #adder id="sd-add" class="form-select" (change)="add(+adder.value || null); adder.value = ''">
+      <option value="" selected>Choose a test…</option>
+      @for (e of available(); track e.id) { <option [value]="e.id">{{ e.title }} ({{ e.status }})</option> }
+    </select>
+  </div>
+  <div class="form-check form-switch mb-3">
+    <input id="sd-published" class="form-check-input" type="checkbox" role="switch" formControlName="is_published" />
+    <label for="sd-published" class="form-check-label">Visible to students</label>
+  </div>
+  @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+</form>
+<div class="footer">
+  <button type="button" class="btn btn-link" (click)="cancel()">Cancel</button>
+  <button type="submit" class="btn btn-primary" form="series-form" [disabled]="saving()">Save</button>
+</div>

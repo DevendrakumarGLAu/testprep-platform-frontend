@@ -1,0 +1,113 @@
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the test">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+@if (e(); as t) {
+  <header class="hero">
+    <span class="chip"><i class="bi bi-patch-check-fill"></i> {{ t.category_name || 'Mock test' }}</span>
+    <h1>{{ t.title }}</h1>
+    <p>{{ t.is_live ? 'This is a live test: everyone starts together and finishes together.' : 'Read the instructions below, then start when you are ready.' }}</p>
+    @if (liveLeft() !== null) {
+      <div class="live-wait" role="timer" aria-live="off">
+        <i class="bi bi-broadcast"></i> Starts in <span class="clock">{{ liveClock() }}</span>
+        <span>Stay on this page. The Start button opens by itself at {{ t.start_at | date: 'h:mm a' }}.</span>
+      </div>
+    } @else if (t.is_live && t.status !== 'in_progress' && t.can_start) {
+      <div class="live-wait">
+        <i class="bi bi-broadcast"></i> The test is on.
+        @if (t.join_closes_at) { <span>You can join until {{ t.join_closes_at | date: 'h:mm a' }}; you get the time that is left.</span> }
+      </div>
+    }
+    @if (t.last_attempt_id && t.result_available) {
+      <a class="btn btn-outline-light view-result" [routerLink]="['/student/results', t.last_attempt_id]"><i class="bi bi-bar-chart-fill"></i> View your result</a>
+    }
+  </header>
+
+  <div class="facts">
+    <div class="fact"><i class="bi bi-clock icon"></i><div><span>Duration</span>{{ t.duration_minutes }} minutes</div></div>
+    <div class="fact"><i class="bi bi-card-checklist icon"></i><div><span>Questions</span>{{ t.question_count }}</div></div>
+    <div class="fact"><i class="bi bi-star-fill icon"></i><div><span>Total marks</span>{{ t.total_marks }}</div></div>
+    <div class="fact"><i class="bi bi-dash-circle icon"></i><div><span>Negative marking</span>{{ t.negative_marking_enabled ? 'Yes, per question' : 'No' }}</div></div>
+    <div class="fact"><i class="bi bi-arrow-repeat icon"></i><div><span>Attempts</span>{{ t.attempts_used }} used{{ t.max_attempts ? " of " + t.max_attempts : " (unlimited)" }}</div></div>
+    <div class="fact"><i class="bi bi-calendar-check icon"></i><div><span>Available</span>
+      @if (t.start_at || t.end_at) { {{ t.start_at ? (t.start_at | date: 'MMM d, h:mm a') : 'Anytime' }} to {{ t.end_at ? (t.end_at | date: 'MMM d, h:mm a') : 'no end' }} } @else { Anytime }
+    </div></div>
+  </div>
+
+  <div class="card block">
+    <div class="card-body">
+      @if (t.description) { <p class="pre">{{ t.description }}</p> }
+      @if (t.sections?.length) {
+        <h3>Sections</h3>
+        <ul>@for (s of t.sections; track s.name) {
+          <li>{{ s.name }}: {{ s.question_count }} questions{{ s.duration_minutes ? ' · ' + s.duration_minutes + ' minutes' : '' }}</li>
+        }</ul>
+        @if (t.sectional_timing) {
+          <div class="warn">
+            <i class="bi bi-hourglass-split"></i>
+            <span>This test has timed sections. Each section has its own timer and opens only after the one before it. You can move on
+            by submitting a section, or when its time is up. You cannot go back to a section once you have left it.</span>
+          </div>
+        }
+      }
+      @if (t.instructions) { <h3>Instructions</h3><p class="pre">{{ t.instructions }}</p> }
+      @if (t.allow_pause) {
+        <div class="warn pause-rule">
+          <i class="bi bi-pause-circle"></i>
+          <span>You can pause this test{{ t.max_pauses ? ' up to ' + t.max_pauses + (t.max_pauses === 1 ? ' time' : ' times') : '' }}. The timer stops and the
+          questions are hidden while you are paused.
+          @if (t.pause_minutes) { For at most {{ t.pause_minutes }} minutes each time. After that the test restarts by itself and the timer keeps running. }
+          @else { You can come back and resume whenever you like, and you will have the same time left. }</span>
+        </div>
+      }
+      <div class="warn">
+        <i class="bi bi-stopwatch"></i>
+        <span>The timer is controlled by the server and starts the moment you begin. It keeps running if you
+        refresh or lose connection, and your answers are submitted automatically when time is up.</span>
+      </div>
+
+      @if (t.status !== 'in_progress' && t.can_start) {
+        @if (t.languages && t.languages.length > 1) {
+          <div class="lang">
+            <label for="test-language" class="form-label">Language</label>
+            <select
+              id="test-language"
+              class="form-select"
+              [class.is-invalid]="langError()"
+              required
+              [attr.aria-label]="'Language of the questions'"
+              (change)="choose($any($event.target).value)"
+            >
+              <option value="" disabled [selected]="!chosen()">Select a language</option>
+              @for (l of t.languages; track l) { <option [value]="l" [selected]="chosen() === l">{{ label[l] }}</option> }
+            </select>
+            @if (langError()) { <p class="err" role="alert">Select a language.</p> }
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="bar"><div class="in">
+    @if (t.status === 'in_progress') {
+      <span></span>
+      <div class="actions">
+        <a class="btn btn-link" routerLink="/student/tests">Back</a>
+        <button type="button" class="btn btn-primary" (click)="go()" [disabled]="starting()"><i class="bi bi-play-fill"></i> Resume attempt</button>
+      </div>
+    } @else if (t.can_start) {
+      <div class="form-check agree">
+        <input id="agree" class="form-check-input" type="checkbox" [checked]="agreed()" (change)="agreed.set($any($event.target).checked)" />
+        <label for="agree" class="form-check-label">I have read the instructions and I am ready to begin.</label>
+      </div>
+      <div class="actions">
+        <a class="btn btn-link" routerLink="/student/tests">Cancel</a>
+        <button type="button" class="btn btn-primary" (click)="start()" [disabled]="!agreed() || starting()">Start test</button>
+      </div>
+    } @else {
+      <strong>{{ t.reason }}</strong>
+      <a class="btn btn-outline-primary" routerLink="/student/tests">Back to tests</a>
+    }
+  </div></div>
+}

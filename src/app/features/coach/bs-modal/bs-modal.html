@@ -1,0 +1,21 @@
+<div class="modal-backdrop-layer" (mousedown)="onBackdrop($event)">
+  <div
+    #dialog
+    class="modal-dialog modal-dialog-scrollable modal-dialog-centered"
+    [class.modal-sm]="size() === 'sm'"
+    [class.modal-lg]="size() === 'lg'"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="title()"
+    tabindex="-1"
+  >
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5">{{ title() }}</h2>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closed.emit()"></button>
+      </div>
+      <div class="modal-body"><ng-content /></div>
+      <div class="modal-footer"><ng-content select="[footer]" /></div>
+    </div>
+  </div>
+</div>

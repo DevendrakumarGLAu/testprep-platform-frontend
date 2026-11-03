@@ -1,0 +1,142 @@
+:host {
+  display: block;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.field {
+  min-width: 170px;
+
+  &.search {
+    min-width: 240px;
+  }
+}
+
+.bulk {
+  display: flex;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: var(--mat-sys-secondary-container);
+  flex-wrap: wrap;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.dropdown-wrap {
+  position: relative;
+
+  .dropdown-menu {
+    top: 100%;
+    left: 0;
+    background: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface);
+    border-color: var(--mat-sys-outline-variant);
+
+    .dropdown-item {
+      color: inherit;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-high);
+      }
+    }
+  }
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--mat-sys-on-surface);
+  --bs-table-border-color: var(--mat-sys-outline-variant);
+}
+
+td.needs,
+span.needs {
+  color: var(--mat-sys-error);
+  font-weight: 500;
+}
+
+span.ok {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+td.usage {
+  min-width: 150px;
+  max-width: 240px;
+}
+
+td.qid {
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
+td.qdate {
+  white-space: nowrap;
+
+  .age {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.8em;
+  }
+}
+
+td.text {
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.off {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.row-actions {
+  white-space: nowrap;
+  text-align: right;
+
+  .btn-link {
+    padding: 4px 8px;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}

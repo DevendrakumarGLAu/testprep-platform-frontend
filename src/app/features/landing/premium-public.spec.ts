@@ -79,14 +79,14 @@ describe('Premium test card', () => {
     expect(t).toContain('Premium · ₹199.00');
     expect(t).toContain('Locked');
     expect(t).toContain('Ask your administrator for access');
-    const actions = [...(f.nativeElement as HTMLElement).querySelectorAll('mat-card-actions a')].map((a) => a.textContent!.trim());
-    expect(actions).toEqual(['lock Locked']);
+    const actions = [...(f.nativeElement as HTMLElement).querySelectorAll('.actions a')].map((a) => a.textContent!.trim());
+    expect(actions).toEqual(['Locked']);
   });
 
   it('an unlocked premium test starts normally, and a free test shows no badge', () => {
     const open = card(exam({ premium: true, price: null, locked: false }));
     expect(text(open)).toContain('Premium');
-    expect([...(open.nativeElement as HTMLElement).querySelectorAll('mat-card-actions a')].map((a) => a.textContent!.trim())).toEqual(['Start']);
+    expect([...(open.nativeElement as HTMLElement).querySelectorAll('.actions a')].map((a) => a.textContent!.trim())).toEqual(['Start']);
     TestBed.resetTestingModule();
     expect(text(card(exam({})))).not.toContain('Premium');
   });

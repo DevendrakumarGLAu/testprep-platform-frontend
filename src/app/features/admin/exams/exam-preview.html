@@ -1,0 +1,43 @@
+<div class="banner no-print"><i class="bi bi-eye" aria-hidden="true"></i> Preview mode: answers cannot be submitted.
+  <a class="btn btn-link" [routerLink]="['/admin/tests', id()]">Back to editor</a>
+  <button type="button" class="btn btn-link" (click)="print()"><i class="bi bi-printer" aria-hidden="true"></i> Print the paper</button></div>
+@if (loading()) {
+  <div class="progress loader no-print" role="progressbar" aria-label="Loading the preview"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (p(); as t) {
+  <h1 class="h3">{{ t.title }}</h1>
+  <div class="card">
+    <div class="card-body">
+      <p>{{ t.description }}</p>
+      <div class="facts">
+        <div class="fact"><span>Duration</span>{{ t.duration_minutes }} minutes</div>
+        <div class="fact"><span>Questions</span>{{ t.question_count }}</div>
+        <div class="fact"><span>Total marks</span>{{ t.total_marks }}</div>
+        <div class="fact"><span>Negative marking</span>{{ t.negative_marking_enabled ? 'Yes' : 'No' }}</div>
+        <div class="fact"><span>Attempts allowed</span>{{ t.max_attempts || "Unlimited" }}</div>
+        <div class="fact"><span>Available</span>
+          @if (t.start_at || t.end_at) { {{ t.start_at ? (t.start_at | date: 'short') : 'Any time' }} → {{ t.end_at ? (t.end_at | date: 'short') : 'No end' }} } @else { Always }
+        </div>
+      </div>
+      @if (t.instructions) { <h2 class="h6">Instructions</h2><p class="pre">{{ t.instructions }}</p> }
+    </div>
+  </div>
+
+  @for (s of t.sections; track s.id) {
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">{{ s.name }}</h2>
+        @for (q of s.questions; track q.id; let i = $index) {
+          <div class="q">
+            <div class="q-head"><span>Question {{ i + 1 }}</span><span>+{{ q.marks }} / -{{ q.negative_marks }}</span></div>
+            @if (q.image_url) { <img [src]="q.image_url" alt="Question image" /> }
+            <div class="q-text">{{ q.text }}@if (q.text && q.text_hi) { <br /> } <span lang="hi">{{ q.text_hi }}</span></div>
+            <ol>@for (o of q.options; track o.id) { <li>{{ o.text }}{{ o.text && o.text_hi ? " / " : "" }}<span lang="hi">{{ o.text_hi }}</span></li> }</ol>
+          </div>
+        } @empty {
+          <p>No questions in this section.</p>
+        }
+      </div>
+    </div>
+  }
+}

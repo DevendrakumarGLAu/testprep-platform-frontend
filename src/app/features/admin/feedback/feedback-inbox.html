@@ -1,0 +1,40 @@
+<div class="head">
+  <h1 class="h3">Feedback</h1>
+  <div class="btn-group" role="group" aria-label="Show">
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'new'" [attr.aria-pressed]="filter() === 'new'" (click)="pick('new')">
+      New @if (newCount()) { <span class="badge rounded-pill text-bg-danger ms-1">{{ newCount() }}</span> }
+    </button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === 'done'" [attr.aria-pressed]="filter() === 'done'" (click)="pick('done')">Handled</button>
+    <button type="button" class="btn btn-outline-primary" [class.active]="filter() === ''" [attr.aria-pressed]="filter() === ''" (click)="pick('')">All</button>
+  </div>
+</div>
+<p class="muted">Notes sent with the Feedback button in the top bar.</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading feedback"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@for (f of rows(); track f.id) {
+  <div class="card note" [class.done]="f.status === 'done'">
+    <div class="card-body">
+      <div class="top">
+        <span [class]="'kind ' + f.kind">{{ f.kind_label }}</span>
+        <strong>{{ f.from_name }}</strong>
+        @if (f.from_role) { <span class="muted">{{ f.from_role }}</span> }
+        <span class="muted ms-auto">{{ f.created_at | date: 'medium' }}</span>
+      </div>
+      <p class="message">{{ f.message }}</p>
+      <div class="muted small">
+        @if (f.page) { <span class="me-3"><i class="bi bi-link-45deg" aria-hidden="true"></i> {{ f.page }}</span> }
+        @if (f.from_email) { <a [href]="'mailto:' + f.from_email">{{ f.from_email }}</a> }
+      </div>
+      @if (f.device) { <div class="muted small device">{{ f.device }}</div> }
+      <div class="actions">
+        <button type="button" [class]="f.status === 'done' ? 'btn btn-sm btn-outline-secondary' : 'btn btn-sm btn-primary'" (click)="toggle(f)">
+          {{ f.status === 'done' ? 'Reopen' : 'Mark handled' }}
+        </button>
+      </div>
+    </div>
+  </div>
+} @empty {
+  @if (!loading()) { <div class="empty">{{ filter() === 'new' ? 'Nothing new. Everything has been handled.' : 'No feedback here yet.' }}</div> }
+}

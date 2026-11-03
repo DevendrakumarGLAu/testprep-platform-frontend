@@ -1,0 +1,19 @@
+<a class="btn btn-link px-0" routerLink="/student/tests"><i class="bi bi-arrow-left"></i> All exams</a>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the exams">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+@if (family(); as f) {
+  <h1>{{ f.name }}</h1>
+  @if (f.description) { <p class="muted">{{ f.description }}</p> }
+  @if (exams().length) {
+    <app-bs-tabs class="exam-tabs" [tabs]="strip()" [selected]="index()" (selectedChange)="pick($event)">
+      @if (open(); as e) {
+        @for (x of [e]; track x.id) { <app-prep-hub [id]="x.id" [embedded]="true" /> }
+      }
+    </app-bs-tabs>
+  } @else {
+    <p class="empty">No tests in {{ f.name }} yet. Check back soon.</p>
+  }
+}

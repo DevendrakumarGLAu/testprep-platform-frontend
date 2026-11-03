@@ -1,0 +1,15 @@
+<a class="btn btn-link back" routerLink="/student/series"><i class="bi bi-arrow-left" aria-hidden="true"></i> All series</a>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the series"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (series(); as s) {
+  <h1 class="h3">{{ s.title }}</h1>
+  @if (s.description) { <p class="muted">{{ s.description }}</p> }
+  <div class="progress meter" role="progressbar" aria-label="Tests attempted" [attr.aria-valuenow]="percent(s)" aria-valuemin="0" aria-valuemax="100">
+    <div class="progress-bar" [style.width.%]="percent(s)"></div>
+  </div>
+  <p class="muted">{{ s.attempted }} of {{ s.total }} tests attempted</p>
+  <div class="cards">@for (t of s.tests; track t.id; let i = $index) { <app-test-card [exam]="t" /> }</div>
+} @else if (!loading()) {
+  <p>This series is not available.</p>
+}

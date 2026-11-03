@@ -74,7 +74,7 @@ describe('ExamForm negative marking rule', () => {
     third.click();
     fixture.detectChanges();
     expect(c.form.value.negative_value).toBe(0.3333);
-    expect(third.classList).toContain('on');
+    expect(third.classList).toContain('active');
     expect(text(el)).toContain('1/3 of the question');
   });
 

@@ -1,0 +1,19 @@
+<h1 class="h3">Test series</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading test series"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@for (s of rows(); track s.id) {
+  <a class="card series-card" [routerLink]="['/student/series', s.id]">
+    <div class="card-body">
+      <div class="meta">{{ s.category || 'All exams' }}</div>
+      <h2 class="h5">{{ s.title }}</h2>
+      @if (s.description) { <p>{{ s.description }}</p> }
+      <div class="progress" role="progressbar" aria-label="Tests attempted" [attr.aria-valuenow]="percent(s)" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" [style.width.%]="percent(s)"></div>
+      </div>
+      <p>{{ s.attempted }} of {{ s.total }} tests attempted</p>
+    </div>
+  </a>
+} @empty {
+  @if (!loading()) { <div class="card"><div class="card-body">No test series yet. Check back soon.</div></div> }
+}

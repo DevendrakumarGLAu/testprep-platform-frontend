@@ -1,0 +1,32 @@
+<h1>My attempts</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading your attempts">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+<div class="table-wrap">
+  <table class="table table-hover align-middle">
+    <thead>
+      <tr><th>Test</th><th>Started</th><th>Status</th><th>Score</th><th></th></tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r.id) {
+        <tr>
+          <td>{{ r.exam_title }} <span class="muted">#{{ r.attempt_number }}</span></td>
+          <td>{{ r.started_at | date: 'medium' }}</td>
+          <td>{{ status(r) }}</td>
+          <td>
+            @if (r.result_available) { {{ r.score }} / {{ r.total_marks }} ({{ r.percentage }}%) {{ r.passed ? '· Passed' : '· Not passed' }} }
+            @else if (r.status === 'submitted') { <span class="muted">Result not released yet</span> }
+            @else { — }
+          </td>
+          <td class="actions">
+            @if (r.status === 'in_progress') { <a class="btn btn-sm btn-primary" [routerLink]="['/student/attempt', r.id]">Resume</a> }
+            @if (r.result_available) { <a class="btn btn-sm btn-outline-primary" [routerLink]="['/student/results', r.id]">View result</a> }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!loading() && rows().length === 0) { <div class="empty">You have not attempted any tests yet.</div> }
+</div>

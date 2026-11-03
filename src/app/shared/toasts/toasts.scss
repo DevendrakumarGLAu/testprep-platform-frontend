@@ -1,0 +1,39 @@
+// Messages stack in the top-right corner, where they do not cover the exam or the page's own buttons, above every dialog.
+.toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(380px, calc(100vw - 32px));
+}
+
+.toast {
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+
+  &.success {
+    background: #1b5e20;
+  }
+
+  &.warning {
+    background: #b45309;
+  }
+
+  &.error {
+    background: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
+  }
+}
+
+.action {
+  align-self: center;
+  margin-right: 4px;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}

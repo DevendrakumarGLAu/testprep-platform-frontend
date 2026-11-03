@@ -1,0 +1,29 @@
+:host {
+  display: block;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}

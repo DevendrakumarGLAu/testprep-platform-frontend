@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
@@ -19,7 +19,7 @@ describe('BulkValueDialog', () => {
   const subjects = [{ id: 1, name: 'Maths' }, { id: 2, name: 'GK' }] as unknown as Subject[];
 
   function open(kind: 'date' | 'subject') {
-    TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { kind, count: 3, subjects } }] });
+    TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { kind, count: 3, subjects } }, { provide: MatDialogRef, useValue: { close: vi.fn() } }] });
     const f = TestBed.createComponent(BulkValueDialog);
     f.detectChanges();
     return f;
@@ -53,7 +53,7 @@ describe('DuplicatesDialog', () => {
       resolveDuplicates: vi.fn(() => of({ archived: 1, still_used_in: ['Mock A'] })),
     };
     const notify = { success: vi.fn(), error: vi.fn() };
-    TestBed.configureTestingModule({ providers: [{ provide: QuestionBankService, useValue: api }, { provide: NotifyService, useValue: notify }] });
+    TestBed.configureTestingModule({ providers: [{ provide: QuestionBankService, useValue: api }, { provide: NotifyService, useValue: notify }, { provide: MatDialogRef, useValue: { close: vi.fn() } }] });
     const f = TestBed.createComponent(DuplicatesDialog);
     f.detectChanges();
     return { f, c: f.componentInstance, api, notify };
@@ -115,5 +115,58 @@ describe('InsightsPage', () => {
     expect(f.nativeElement.querySelectorAll('.col').length).toBe(2);
     expect(f.nativeElement.querySelectorAll('.bar.low').length).toBe(1); // question 2: only 40% answered
     http.verify();
+  });
+});
+
+describe('Question bank dialogs (Bootstrap)', () => {
+  const MATERIAL = 'mat-dialog-title, mat-dialog-content, mat-form-field, mat-select, mat-radio-group, mat-radio-button, [mat-flat-button], [mat-button]';
+  const button = (el: HTMLElement, label: string) => Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.trim() === label)!;
+
+  it('the bulk pop-up applies the chosen subject, and Cancel closes with nothing', () => {
+    const close = vi.fn();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: MAT_DIALOG_DATA, useValue: { kind: 'subject', count: 2, subjects: [{ id: 1, name: 'Maths' }, { id: 2, name: 'GK' }] } },
+        { provide: MatDialogRef, useValue: { close } },
+      ],
+    });
+    const f = TestBed.createComponent(BulkValueDialog);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector(MATERIAL)).toBeNull();
+    expect(button(el, 'Apply').disabled).toBe(true);
+    const select = el.querySelector('#bv-subject') as HTMLSelectElement;
+    select.selectedIndex = 2; // GK
+    select.dispatchEvent(new Event('change'));
+    f.detectChanges();
+    button(el, 'Apply').click();
+    expect(close).toHaveBeenCalledWith(2);
+    button(el, 'Cancel').click();
+    expect(close).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('the duplicates pop-up chooses a copy with radio buttons and closes with whether anything changed', () => {
+    const close = vi.fn();
+    const group = { text: 'Same?', questions: [1, 2].map((id) => ({ id, subject: 'GK', created_at: '2026-01-01T00:00:00Z', question_date: null, used_in: [] })) };
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: QuestionBankService, useValue: { duplicates: () => of({ groups: [group] }), resolveDuplicates: vi.fn(() => of({ archived: 1, still_used_in: [] })) } },
+        { provide: NotifyService, useValue: { success: vi.fn(), error: vi.fn() } },
+        { provide: MatDialogRef, useValue: { close } },
+      ],
+    });
+    const f = TestBed.createComponent(DuplicatesDialog);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.querySelector(MATERIAL)).toBeNull();
+    const radios = el.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+    expect(radios.length).toBe(2);
+    expect(radios[0].checked).toBe(true);
+    radios[1].click();
+    f.detectChanges();
+    expect(f.componentInstance.keep()[1]).toBe(2);
+    button(el, 'Close').click();
+    expect(close).toHaveBeenCalledWith(false);
   });
 });

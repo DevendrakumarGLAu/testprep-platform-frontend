@@ -1,7 +1,5 @@
 import { DatePipe } from '@angular/common';
 import { Component, DestroyRef, effect, inject, input, signal, untracked } from '@angular/core';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { RouterLink } from '@angular/router';
 import { countdown } from '../../shared/countdown';
 import { StudentExam } from './student.models';
@@ -14,47 +12,10 @@ import { StudentService } from './student.service';
  */
 @Component({
   selector: 'app-live-strip',
-  imports: [DatePipe, RouterLink, MatButtonModule, MatCardModule],
-  styles: `
-    :host { display: block; }
-    section { margin: 8px 0 20px; }
-    h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 1.1rem; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--mat-sys-error); animation: pulse 1.2s infinite; }
-    @keyframes pulse { 50% { opacity: 0.25; } }
-    .list { display: grid; gap: 10px; }
-    mat-card { border-left: 4px solid var(--mat-sys-error); }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 16px; }
-    .meta { color: var(--mat-sys-on-surface-variant); font-size: 0.9em; }
-    .when { font-weight: 700; font-variant-numeric: tabular-nums; }
-    .when.now { color: var(--mat-sys-error); }
-    .empty { padding: 16px 0; color: var(--mat-sys-on-surface-variant); }
-  `,
-  template: `
-    @if (inTab() && !items().length) {
-      <p class="empty">No live tests right now. They will appear here.</p>
-    }
-    @if (items().length) {
-      <section aria-label="Live tests">
-        @if (!inTab()) { <h2><span class="dot"></span> Live tests</h2> }
-        <div class="list">
-          @for (e of items(); track e.id) {
-            <mat-card appearance="outlined" class="live-card">
-              <div class="row">
-                <div>
-                  <strong>{{ e.title }}</strong>
-                  <div class="meta">
-                    {{ e.category_name ? e.category_name + ' · ' : '' }}{{ e.start_at | date: 'EEE, d MMM, h:mm a' }} · {{ e.duration_minutes }} min
-                  </div>
-                </div>
-                <div class="when" [class.now]="phase(e) === 'live'">{{ when(e) }}</div>
-                <a mat-flat-button [routerLink]="['/student/tests', e.id]">{{ action(e) }}</a>
-              </div>
-            </mat-card>
-          }
-        </div>
-      </section>
-    }
-  `,
+  imports: [DatePipe, RouterLink],
+  templateUrl: './live-strip.html',
+  styleUrl: './live-strip.scss',
+  host: { class: 'bs' },
 })
 export class LiveStrip {
   /** Only live tests of this exam (public id). Empty = every exam. */

@@ -1,0 +1,10 @@
+@if (popup(); as p) {
+  <app-bs-modal [title]="p.title" (closed)="dismiss()">
+    @if (p.image_url) { <img class="banner" [src]="p.image_url" alt="" /> }
+    @if (p.body) { <p class="body">{{ p.body }}</p> }
+    <ng-container footer>
+      <button type="button" class="btn btn-link" (click)="dismiss()">{{ p.link ? 'Maybe later' : 'Got it' }}</button>
+      @if (p.link) { <button type="button" class="btn btn-primary" (click)="open()">{{ p.button_label }}</button> }
+    </ng-container>
+  </app-bs-modal>
+}

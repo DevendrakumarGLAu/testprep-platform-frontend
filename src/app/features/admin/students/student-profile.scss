@@ -1,0 +1,113 @@
+:host {
+  display: block;
+}
+
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  margin-bottom: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+
+  .card {
+    margin: 0;
+  }
+}
+
+.stat {
+  padding: 14px;
+
+  .value {
+    font: var(--mat-sys-headline-small);
+  }
+}
+
+.two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+
+  .card {
+    margin: 0;
+  }
+}
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--mat-sys-on-surface);
+  --bs-table-border-color: var(--mat-sys-outline-variant);
+  font-size: 0.9em;
+}
+
+.pass {
+  color: #2e7d32;
+}
+
+.fail {
+  color: var(--mat-sys-error);
+}
+
+// A scrollable list of tick boxes, used where more than one thing can be chosen.
+.checklist {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+.line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.note {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--mat-sys-secondary-container);
+  margin: 8px 0;
+}

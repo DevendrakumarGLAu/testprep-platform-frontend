@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  margin: 16px 0;
+}
+
+.card {
+  margin-bottom: 12px;
+}
+
+.rank {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.big {
+  font: var(--mat-sys-display-small);
+  color: var(--mat-sys-primary);
+  line-height: 1;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+tr.me {
+  --bs-table-bg: var(--mat-sys-primary-container);
+  font-weight: 500;
+}
+
+.tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.redo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,109 @@
+<div class="container-xl px-0">
+  <h1 class="h3 mb-1">Listen and revise</h1>
+  <p class="text-body-secondary mb-3">Your questions are read aloud with their answers and explanations, so you can revise on the bus or while walking. The screen can be off.</p>
+
+  @if (!speech.supported) {
+    <div class="alert alert-danger">This browser cannot read text aloud. Try Chrome on Android or Safari on iPhone.</div>
+  } @else if (!speech.hasHindiVoice() && mode() !== 'english') {
+    <div class="alert alert-warning">
+      <strong>No Hindi voice found on this device.</strong> Hindi may be read badly. On Android open <em>Settings, Language, Text-to-speech</em> and install the Hindi voice of Google Text-to-speech, or choose English below.
+    </div>
+  }
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-6">
+          <div class="form-label">What to listen to</div>
+          <div class="btn-group w-100" role="group" aria-label="Source">
+            <button type="button" class="btn" [class.btn-primary]="source() === 'mistakes'" [class.btn-outline-primary]="source() !== 'mistakes'" (click)="pickSource('mistakes')">My mistakes</button>
+            <button type="button" class="btn" [class.btn-primary]="source() === 'saved'" [class.btn-outline-primary]="source() !== 'saved'" (click)="pickSource('saved')">Saved questions</button>
+          </div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label for="listen-mode" class="form-label">Language</label>
+          <select id="listen-mode" class="form-select" [ngModel]="mode()" (ngModelChange)="mode.set($event)">
+            <option value="hindi">Hindi (English where a question has no Hindi)</option>
+            <option value="english">English</option>
+            <option value="both">Hindi, then English</option>
+          </select>
+        </div>
+        @if (exams().length > 1) {
+          <div class="col-12 col-md-6">
+            <label for="listen-exam" class="form-label">From one test</label>
+            <select id="listen-exam" class="form-select" [ngModel]="exam()" (ngModelChange)="exam.set($event); load()">
+              <option value="">All tests</option>
+              @for (e of exams(); track e.id) { <option [value]="e.id">{{ e.name }} ({{ e.count }})</option> }
+            </select>
+          </div>
+        }
+        <div class="col-6 col-md-3">
+          <label for="listen-count" class="form-label">How many</label>
+          <select id="listen-count" class="form-select" [ngModel]="count()" (ngModelChange)="count.set(+$event); load()">
+            @for (n of [10, 20, 30, 50]; track n) { <option [ngValue]="n">{{ n }}</option> }
+          </select>
+        </div>
+        <div class="col-6 col-md-3 d-flex align-items-end">
+          <div class="form-check form-switch mb-2">
+            <input id="listen-q" class="form-check-input" type="checkbox" role="switch" [ngModel]="withQuestion()" (ngModelChange)="withQuestion.set($event)" />
+            <label for="listen-q" class="form-check-label">Read the question too</label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="d-flex justify-content-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading</span></div></div>
+  } @else if (error()) {
+    <div class="alert alert-danger">{{ error() }}</div>
+  } @else if (loaded() && cards().length === 0) {
+    <div class="card"><div class="card-body text-center text-body-secondary py-5">
+      <i class="bi bi-headphones display-6"></i>
+      <p class="mt-2 mb-3">{{ source() === 'mistakes' ? 'No mistakes to revise yet. Take a test first.' : 'You have not saved any questions yet.' }}</p>
+      <a class="btn btn-primary" routerLink="/student/tests">Browse tests</a>
+    </div></div>
+  } @else if (cards().length) {
+    <div class="card player mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between small text-body-secondary mb-1">
+          <span>{{ speech.playing() ? 'Question ' + (speech.index() + 1) + ' of ' + cards().length : cards().length + ' questions ready' }}</span>
+          <span>{{ total() }} available</span>
+        </div>
+        @if (speech.playing() && current(); as c) {
+          <p class="now mb-3" [attr.lang]="c.text_hi ? 'hi' : 'en'">{{ text(c) }}</p>
+        } @else {
+          <p class="text-body-secondary mb-3">Press play. You can use the buttons on your phone's lock screen too.</p>
+        }
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <button class="btn btn-outline-secondary" (click)="speech.previous()" [disabled]="!speech.playing()" aria-label="Previous"><i class="bi bi-skip-backward-fill"></i></button>
+          @if (!speech.playing()) {
+            <button class="btn btn-primary btn-lg px-4" (click)="play()"><i class="bi bi-play-fill me-1"></i> Play</button>
+          } @else {
+            <button class="btn btn-primary btn-lg px-4" (click)="speech.toggle()">
+              <i class="bi me-1" [class.bi-pause-fill]="!speech.paused()" [class.bi-play-fill]="speech.paused()"></i> {{ speech.paused() ? 'Resume' : 'Pause' }}
+            </button>
+          }
+          <button class="btn btn-outline-secondary" (click)="speech.next()" [disabled]="!speech.playing()" aria-label="Next"><i class="bi bi-skip-forward-fill"></i></button>
+          <button class="btn btn-outline-danger" (click)="speech.stop()" [disabled]="!speech.playing()" aria-label="Stop"><i class="bi bi-stop-fill"></i></button>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <label for="listen-rate" class="small text-body-secondary mb-0">Speed</label>
+            <select id="listen-rate" class="form-select form-select-sm w-auto" [ngModel]="speech.rate()" (ngModelChange)="rateChanged($event)">
+              @for (r of rates; track r) { <option [ngValue]="r">{{ r }}x</option> }
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-group">
+      @for (c of cards(); track c.key; let i = $index) {
+        <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-3" [class.active-row]="speech.playing() && speech.index() === i" (click)="play(i)">
+          <span class="badge text-bg-secondary">{{ i + 1 }}</span>
+          <span class="text-truncate flex-grow-1" [attr.lang]="c.text_hi ? 'hi' : 'en'">{{ text(c) }}</span>
+          <i class="bi bi-play-circle text-primary"></i>
+        </button>
+      }
+    </div>
+  }
+</div>

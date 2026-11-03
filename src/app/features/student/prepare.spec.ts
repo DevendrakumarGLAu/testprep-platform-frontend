@@ -22,7 +22,7 @@ async function render(r: PrepResponse) {
 }
 
 const heads = (el: HTMLElement) => [...el.querySelectorAll('h2.family')].map((h) => h.textContent!.trim());
-const cardNames = (el: HTMLElement) => [...el.querySelectorAll('mat-card h2')].map((h) => h.textContent!.trim());
+const cardNames = (el: HTMLElement) => [...el.querySelectorAll('.card h2')].map((h) => h.textContent!.trim());
 
 describe('Prepare page families', () => {
   it('shows each family as a heading with its exams under it, in the instructor order', async () => {

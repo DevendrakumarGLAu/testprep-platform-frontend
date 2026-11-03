@@ -1,0 +1,5 @@
+<button type="button" class="btn btn-link back" (click)="back()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back</button>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the attempt"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (data(); as d) { <app-result-view [data]="d" /> }

@@ -172,7 +172,7 @@ describe('Student dashboard sections', () => {
     expect(text(card as HTMLElement)).toContain('SSC CGL');
     expect(text(card as HTMLElement)).toContain('4 of 10 tests attempted');
     expect(card.querySelector('.mini-ring')!.textContent).toContain('40%');
-    expect(card.querySelector('mat-card-actions a')!.getAttribute('href')).toBe('/student/tests/family/g1?exam=cgl');
+    expect(card.querySelector('.card-footer a')!.getAttribute('href')).toBe('/student/tests/family/g1?exam=cgl');
     expect(c.percent({ id: 'x', name: 'x', total_tests: 0, attempted_tests: 0 })).toBe(0);
   });
 
@@ -230,6 +230,16 @@ describe('Student dashboard sections', () => {
     expect(text(some.el)).toContain('Later mock');
     expect(text(some.el)).toContain('Suggested for you');
     expect(text(some.el)).toContain('Try this mock');
+  });
+
+  it('is built with Bootstrap, and no Material component is left in the dashboard itself', async () => {
+    const { el } = await open(data());
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.card.exam .btn.btn-primary')).not.toBeNull();
+    expect(el.querySelector('.hero .btn.btn-light')).not.toBeNull();
+    // the cards on it (live strip, activity, quiz, weekly, test cards) are Bootstrap too
+    expect(el.querySelectorAll('mat-card, mat-icon, mat-progress-bar, [mat-button], [mat-flat-button], [mat-stroked-button]').length).toBe(0);
+    expect(el.querySelector('svg circle.progress')).toBeNull(); // would clash with Bootstrap's .progress
   });
 
   it('shows the live tests strip and the today and week cards', async () => {

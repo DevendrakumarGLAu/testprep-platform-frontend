@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.card {
+  margin: 0 0 16px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  .bi {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.big {
+  font: var(--mat-sys-headline-small);
+  line-height: 1.1;
+}
+
+.label {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.85rem;
+}
+
+.up {
+  color: #1b5e20;
+}
+
+.down {
+  color: var(--mat-sys-error);
+}
+
+.note {
+  margin: 12px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}

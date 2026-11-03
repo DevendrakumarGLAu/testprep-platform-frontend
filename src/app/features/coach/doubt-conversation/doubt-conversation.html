@@ -1,0 +1,46 @@
+@let d = doubt();
+<div class="card mb-3">
+  <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span class="small text-body-secondary">{{ d.exam_title }}</span>
+    <span class="badge" [class]="'badge ' + badge(d.status)">{{ label[d.status] }}</span>
+  </div>
+  <div class="card-body">
+    <p class="question mb-1">{{ d.question_text }}</p>
+    @if (d.question_text_hi) { <p class="question text-body-secondary" lang="hi">{{ d.question_text_hi }}</p> }
+    <ul class="list-group mb-3">
+      @for (o of d.options; track $index) {
+        <li class="list-group-item d-flex justify-content-between align-items-start gap-2" [class.correct]="o.is_correct" [class.chosen]="o.text === d.selected_option_text && !o.is_correct">
+          <span>{{ o.text }}@if (o.text_hi && o.text_hi !== o.text) { <span class="text-body-secondary" lang="hi"> · {{ o.text_hi }}</span> }</span>
+          <span class="flex-shrink-0">
+            @if (o.is_correct) { <span class="badge text-bg-success">Correct</span> }
+            @if (o.text === d.selected_option_text) { <span class="badge text-bg-secondary ms-1">Student's choice</span> }
+          </span>
+        </li>
+      }
+    </ul>
+    @if (d.explanation || d.explanation_hi) {
+      <button class="btn btn-link btn-sm p-0" (click)="showExplanation.set(!showExplanation())">{{ showExplanation() ? 'Hide' : 'Show' }} the explanation in the test</button>
+      @if (showExplanation()) {
+        <div class="explanation mt-2 p-3 rounded">
+          @if (d.explanation) { <div>{{ d.explanation }}</div> }
+          @if (d.explanation_hi) { <div class="mt-2" lang="hi">{{ d.explanation_hi }}</div> }
+        </div>
+      }
+    }
+  </div>
+</div>
+
+<div class="thread">
+  @for (r of d.replies; track r.id) {
+    <div class="d-flex mb-3" [class.justify-content-end]="r.role === 'student'">
+      <div class="bubble p-3" [class.mine]="r.role === 'student'" [class.staff]="r.role === 'staff'">
+        <div class="small fw-medium mb-1">
+          {{ r.role === 'staff' ? 'Teacher' + (r.author ? ' ' + r.author : '') : (r.author || 'Student') }}
+          @if (r.via_ai) { <span class="badge text-bg-info ms-1" title="The teacher used the AI helper to draft this reply">AI-assisted</span> }
+        </div>
+        <div class="body">{{ r.body }}</div>
+        <div class="small text-body-secondary mt-1">{{ r.created_at | date: 'd MMM, h:mm a' }}</div>
+      </div>
+    </div>
+  }
+</div>

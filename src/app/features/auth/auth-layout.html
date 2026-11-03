@@ -1,0 +1,26 @@
+<div class="auth-page">
+  <aside class="brand-panel">
+    <a class="brand-logo" routerLink="/"><img src="favicon.svg" alt="" width="40" height="40" /> {{ platform.info().platform_name }}</a>
+    <div class="brand-copy">
+      <h2>Practise like it's the real exam.</h2>
+      <p>Mock tests, subject-wise practice and previous year papers, with a detailed analysis after every attempt.</p>
+      <ul>
+        <li><i class="bi bi-check-circle-fill"></i> Real exam pattern and negative marking</li>
+        <li><i class="bi bi-translate"></i> Questions in Hindi and English</li>
+        <li><i class="bi bi-graph-up-arrow"></i> Accuracy and time-per-question analysis</li>
+      </ul>
+    </div>
+    <span class="brand-foot">© {{ year }} {{ platform.info().platform_name }}</span>
+  </aside>
+
+  <main class="form-panel">
+    <div class="form-box">
+      <a class="home-link" routerLink="/"><i class="bi bi-arrow-left"></i> Back to home</a>
+      <h1>{{ heading() }}</h1>
+      @if (sub()) { <p class="form-sub">{{ sub() }}</p> }
+      <ng-content />
+      <p class="legal">By continuing you agree to our <a routerLink="/terms">Terms of use</a> and <a routerLink="/privacy">Privacy policy</a>.</p>
+      @if (showSupport()) { <app-support-line /> }
+    </div>
+  </main>
+</div>

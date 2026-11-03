@@ -1,0 +1,87 @@
+<div class="shell" [class.mobile]="mobile()">
+  <aside class="sidebar bs" [class.open]="navOpen()" aria-label="Main menu">
+    <div class="brand"><i class="bi bi-mortarboard" aria-hidden="true"></i> {{ platform.info().platform_name }}</div>
+    <nav class="menu">
+      @for (item of items(); track item.link) {
+        <a class="menu-item" [routerLink]="item.link" routerLinkActive="active" (click)="mobile() && navOpen.set(false)">
+          <i class="bi" [class]="item.icon" aria-hidden="true"></i>
+          <span>{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
+  @if (mobile() && navOpen()) {
+    <div class="scrim" (click)="navOpen.set(false)" aria-hidden="true"></div>
+  }
+
+  <div class="column">
+    <header class="topbar bs">
+      @if (mobile()) {
+        <button type="button" class="btn btn-link icon-btn" (click)="navOpen.set(!navOpen())" aria-label="Toggle navigation">
+          <i class="bi bi-list" aria-hidden="true"></i>
+        </button>
+      }
+      <span class="title">{{ areaTitle() }}</span>
+      <span class="spacer"></span>
+      @if (auth.isAdminRole()) {
+        <div class="search">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input class="form-control" type="search" [formControl]="query" (focus)="searchOpen.set(true)" placeholder="Search questions, tests, students" aria-label="Search" autocomplete="off" />
+          @if (searchOpen() && (hasResults() || searched())) {
+            <div class="dropdown-menu show results">
+              @if (results().questions.length) {
+                <h6 class="dropdown-header">Questions</h6>
+                @for (q of results().questions; track q.id) {
+                  <button type="button" class="dropdown-item" (click)="open('/admin/questions/' + q.id)">{{ q.text }} ({{ q.subject }})</button>
+                }
+              }
+              @if (results().tests.length) {
+                <h6 class="dropdown-header">Tests</h6>
+                @for (t of results().tests; track t.id) {
+                  <button type="button" class="dropdown-item" (click)="open('/admin/tests/' + t.id)">{{ t.title }} ({{ t.status }})</button>
+                }
+              }
+              @if (results().students.length) {
+                <h6 class="dropdown-header">Students</h6>
+                @for (s of results().students; track s.id) {
+                  <button type="button" class="dropdown-item" (click)="open('/admin/students/' + s.id)">{{ s.name }} ({{ s.email }})</button>
+                }
+              }
+              @if (searched() && !hasResults()) { <span class="dropdown-item-text text-body-secondary">No matches</span> }
+            </div>
+          }
+        </div>
+      }
+      <app-feedback-button />
+      <button type="button" class="btn btn-link icon-btn" (click)="theme.cycle()" [attr.aria-label]="'Appearance: ' + themeLabel() + '. Click to change.'" [title]="'Appearance: ' + themeLabel()">
+        <i class="bi" [class]="theme.mode() === 'dark' ? 'bi-moon-stars' : theme.mode() === 'light' ? 'bi-sun' : 'bi-circle-half'" aria-hidden="true"></i>
+      </button>
+      <app-notification-bell />
+      <div class="account">
+        <button type="button" class="btn btn-link account-btn" (click)="menuOpen.set(!menuOpen())" aria-haspopup="menu" [attr.aria-expanded]="menuOpen()">
+          <i class="bi bi-person-circle" aria-hidden="true"></i>
+          <span class="name">{{ displayName() }}</span>
+        </button>
+        @if (menuOpen()) {
+          <div class="dropdown-menu dropdown-menu-end show" role="menu">
+            <div class="menu-meta">{{ roleLabel() }}</div>
+            <a class="dropdown-item" role="menuitem" [routerLink]="profileLink()" (click)="menuOpen.set(false)"><i class="bi bi-person" aria-hidden="true"></i> My profile</a>
+            <button type="button" class="dropdown-item" role="menuitem" (click)="logout()"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</button>
+          </div>
+        }
+      </div>
+    </header>
+    @if (auth.user()?.must_change_password) {
+      <div class="banner warn bs" role="alert">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i> You are using a temporary password. Please <a [routerLink]="profileLink()">choose your own password</a> now.
+      </div>
+    } @else if (auth.user() && auth.user()!.email_verified === false && platform.info().email_enabled) {
+      <div class="banner bs" role="status">
+        <i class="bi bi-envelope-exclamation" aria-hidden="true"></i> Please confirm your email address ({{ auth.user()!.email }}).
+        <button type="button" class="btn btn-link btn-sm" (click)="sendVerification()" [disabled]="sentVerification()">{{ sentVerification() ? 'Link sent. Check your email' : 'Send me the link' }}</button>
+      </div>
+    }
+    <main class="content"><router-outlet /></main>
+    @if (auth.role() === 'student') { <app-popup-host /> }
+  </div>
+</div>

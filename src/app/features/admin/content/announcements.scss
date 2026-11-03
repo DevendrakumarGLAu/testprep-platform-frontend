@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  max-width: 640px;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}

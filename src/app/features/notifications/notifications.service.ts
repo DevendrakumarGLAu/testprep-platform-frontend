@@ -13,13 +13,14 @@ export interface AppNotification {
   read: boolean;
 }
 
-export const KIND_ICON: Record<AppNotification['kind'], string> = {
-  announcement: 'campaign',
-  new_test: 'assignment',
-  result: 'emoji_events',
-  reminder: 'alarm',
-  report: 'flag',
-  weekly: 'insights',
+/** The icon of each kind of notification, as a Bootstrap Icons class. */
+export const KIND_BI_ICON: Record<AppNotification['kind'], string> = {
+  announcement: 'bi-megaphone',
+  new_test: 'bi-clipboard-check',
+  result: 'bi-trophy',
+  reminder: 'bi-alarm',
+  report: 'bi-flag',
+  weekly: 'bi-graph-up',
 };
 
 const POLL_MS = 60_000;

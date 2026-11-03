@@ -1,0 +1,64 @@
+<h1 class="h3">Insights</h1>
+<p class="muted">Based on submitted attempts of real tests. Students' own practice sets are not counted.</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading insights"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+@if (data(); as d) {
+  <div class="card"><div class="card-body">
+    <div class="big">{{ d.attempts }}</div><div class="muted">submitted attempts</div>
+  </div></div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Busiest tests</h2>
+        @for (t of d.tests; track t.id) {
+          <div class="item"><span class="t"><a [routerLink]="['/admin/tests', t.id]">{{ t.title }}</a></span><span>{{ t.attempts }} attempts · avg {{ t.average_percent === null ? '—' : t.average_percent + '%' }}</span></div>
+        } @empty { <p class="muted">No attempts yet.</p> }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Hardest questions</h2>
+        <p class="card-subtitle muted">Fewest right answers (at least {{ d.min_answers }} attempts)</p>
+        @for (q of d.hardest; track q.question) {
+          <div class="item"><span class="t"><a [routerLink]="['/admin/questions', q.question]">#{{ q.question }}</a> {{ q.text }}<div class="meta">{{ q.subject }} · {{ q.attempts }} attempts</div></span><span class="bad">{{ q.correct_percent }}% right</span></div>
+        } @empty { <p class="muted">Not enough attempts yet.</p> }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Most skipped questions</h2>
+        <p class="card-subtitle muted">Left unanswered most often</p>
+        @for (q of d.most_skipped; track q.question) {
+          <div class="item"><span class="t"><a [routerLink]="['/admin/questions', q.question]">#{{ q.question }}</a> {{ q.text }}<div class="meta">{{ q.subject }} · {{ q.attempts }} attempts</div></span><span class="bad">{{ q.skipped_percent }}% skipped</span></div>
+        } @empty { <p class="muted">No skipped questions to show yet.</p> }
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Where students give up</h2>
+        <p class="card-subtitle muted">Share who answered, by question number</p>
+        <label for="insights-test" class="form-label visually-hidden">Test</label>
+        <select id="insights-test" class="form-select" (change)="pick(+$any($event.target).value)">
+          @for (t of exams(); track t.id) { <option [value]="t.id" [selected]="examId() === t.id">{{ t.title }}</option> }
+        </select>
+        @if (dropoff(); as o) {
+          @if (o.attempts) {
+            <div class="chart" role="img" [attr.aria-label]="'Share of students who answered each question of ' + o.exam">
+              @for (p of o.positions; track p.number) {
+                <div class="col" [title]="'Q' + p.number + ': ' + p.answered_percent + '% answered, ' + (p.correct_percent ?? 0) + '% right, ' + p.average_seconds + 's'">
+                  <div class="bar" [class.low]="p.answered_percent < 60" [style.height.%]="p.answered_percent"></div><small>{{ p.number }}</small>
+                </div>
+              }
+            </div>
+            <p class="meta">{{ o.attempts }} attempts. Red bars: fewer than 60% answered.</p>
+          } @else { <p class="muted">Nobody has submitted this test yet.</p> }
+        }
+      </div>
+    </div>
+  </div>
+}

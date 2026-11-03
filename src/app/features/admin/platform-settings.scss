@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  max-width: 640px;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+.hint {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 4px 0 16px 2.5em;
+  font-size: 0.85em;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}

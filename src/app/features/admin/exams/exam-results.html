@@ -1,0 +1,94 @@
+<div class="head">
+  <h1 class="h3">Results{{ s() ? ': ' + s()!.exam.title : '' }}</h1>
+  <span class="head-actions">
+    <button type="button" class="btn btn-outline-primary" (click)="pdf()" [disabled]="pdfBusy()"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF report</button>
+    <a class="btn btn-link" [routerLink]="['/admin/tests', id()]"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to test</a>
+  </span>
+</div>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading results"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+
+@if (s(); as d) {
+  <div class="stats">
+    <div class="card stat"><div class="value">{{ d.attempts_submitted }}</div><div class="label">Submitted attempts</div></div>
+    <div class="card stat"><div class="value">{{ d.students }}</div><div class="label">Students</div></div>
+    <div class="card stat"><div class="value">{{ d.attempts_in_progress }}</div><div class="label">In progress</div></div>
+    <div class="card stat"><div class="value">{{ d.average_score ?? '—' }}</div><div class="label">Average score ({{ d.average_percentage ?? '—' }}%)</div></div>
+    <div class="card stat"><div class="value">{{ d.highest_score ?? '—' }}</div><div class="label">Highest</div></div>
+    <div class="card stat"><div class="value">{{ d.lowest_score ?? '—' }}</div><div class="label">Lowest</div></div>
+    <div class="card stat"><div class="value">{{ d.pass_rate === null ? '—' : d.pass_rate + '%' }}</div><div class="label">Pass rate</div></div>
+  </div>
+
+  <div class="card release">
+    <div class="card-body">
+      <h2 class="h6 card-title">Release status</h2>
+      <div class="line">
+        <div>
+          <strong>Results: {{ d.exam.results_visible ? 'visible to students' : 'hidden from students' }}</strong>
+          <div class="muted">Policy: {{ policy(d.exam.result_release) }}
+            @if (d.exam.result_release === 'scheduled' && d.exam.result_release_at) { · {{ d.exam.result_release_at | date: 'medium' }} }</div>
+        </div>
+        @if (d.exam.result_release === 'manual') {
+          @if (d.exam.results_visible) {
+            <button type="button" class="btn btn-outline-primary" (click)="release('hide-results')">Hide results</button>
+          } @else {
+            <button type="button" class="btn btn-primary" (click)="release('release-results')">Release results</button>
+          }
+        }
+      </div>
+      <div class="line">
+        <div>
+          <strong>Solutions: {{ d.exam.solutions_visible ? 'visible to students' : 'hidden from students' }}</strong>
+          <div class="muted">Policy: {{ policy(d.exam.solution_release) }}</div>
+        </div>
+        @if (d.exam.solution_release === 'manual') {
+          @if (d.exam.solutions_released) {
+            <button type="button" class="btn btn-outline-primary" (click)="release('hide-solutions')">Hide solutions</button>
+          } @else {
+            <button type="button" class="btn btn-primary" (click)="release('release-solutions')">Release solutions</button>
+          }
+        }
+      </div>
+      <p class="muted">Release policies are set under the test's Details tab. Manual buttons only appear for manual policies.</p>
+    </div>
+  </div>
+
+  <div class="card release">
+    <div class="card-body">
+      <h2 class="h6 card-title">Attempts</h2>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Student</th><th>#</th><th>Score</th><th>Result</th><th>Time</th><th>Submitted</th><th></th></tr></thead>
+          <tbody>
+            @for (a of rows(); track a.id) {
+              <tr>
+                <td>{{ a.student_name }}<div class="muted">{{ a.student_email }}</div></td>
+                <td>{{ a.attempt_number }}</td>
+                <td>@if (a.status === 'submitted') { {{ a.score }} / {{ a.total_marks }} ({{ a.percentage }}%) } @else { <span class="muted">In progress</span> }</td>
+                <td>@if (a.status === 'submitted') { <span [class]="a.passed ? 'pass' : 'fail'">{{ a.passed ? 'Passed' : 'Not passed' }}</span> }</td>
+                <td>{{ a.time_taken_seconds === null ? '—' : duration(a.time_taken_seconds) }}</td>
+                <td>{{ a.submitted_at ? (a.submitted_at | date: 'short') : '—' }}{{ a.auto_submitted ? ' (auto)' : '' }}</td>
+                <td>@if (a.status === 'submitted') { <a class="btn btn-link" [routerLink]="['/admin/attempts', a.id]">Review</a> }</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        @if (rows().length === 0) { <p class="muted">No attempts yet.</p> }
+      </div>
+      <app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="20" (page)="onPage($event)" />
+    </div>
+  </div>
+
+  @if (d.questions.length) {
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 card-title">Question difficulty (hardest first)</h2>
+        <div class="qrow muted"><span>Question</span><span>Correct</span><span>Answered</span><span>Avg time</span></div>
+        @for (q of d.questions; track q.question) {
+          <div class="qrow"><span>{{ q.text }}</span><span>{{ q.correct_percent }}%</span><span>{{ q.answered_percent }}%</span><span>{{ q.average_seconds }}s</span></div>
+        }
+      </div>
+    </div>
+  }
+}

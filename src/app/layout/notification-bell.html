@@ -1,0 +1,25 @@
+<div class="wrap">
+  <button type="button" class="btn btn-link bell" (click)="toggle()" aria-haspopup="true" [attr.aria-expanded]="isOpen()" [attr.aria-label]="'Notifications, ' + svc.unread() + ' unread'">
+    <i class="bi bi-bell" aria-hidden="true"></i>
+    @if (svc.unread()) { <span class="badge rounded-pill text-bg-danger count">{{ svc.unread() }}</span> }
+  </button>
+  @if (isOpen()) {
+    <div class="dropdown-menu dropdown-menu-end show panel">
+      <div class="top">
+        <strong>Notifications</strong>
+        <button type="button" class="btn btn-link btn-sm" (click)="readAll()" [disabled]="!svc.unread()">Mark all as read</button>
+      </div>
+      @for (n of svc.items(); track n.id) {
+        <button type="button" class="item" [class.unread]="!n.read" (click)="open(n)">
+          <i class="bi" [class]="icon(n)" aria-hidden="true"></i>
+          <span>
+            <span class="t">{{ n.title }}</span>
+            @if (n.body) { <span class="b"><br />{{ n.body }}</span> }
+            <span class="d"><br />{{ n.created_at | date: 'MMM d, h:mm a' }}</span>
+          </span>
+        </button>
+      } @empty { <div class="empty">You are all caught up.</div> }
+      <a class="all" [routerLink]="allLink()" (click)="isOpen.set(false)">See all</a>
+    </div>
+  }
+</div>

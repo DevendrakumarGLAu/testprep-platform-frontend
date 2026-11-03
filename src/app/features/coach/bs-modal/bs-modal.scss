@@ -1,0 +1,77 @@
+// Bootstrap's own .modal needs its script to show; here the page decides when the dialog exists, so a fixed overlay is enough.
+.modal-backdrop-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1300; // above the Material side navigation and toolbar
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.5);
+  overflow-y: auto;
+
+  // Bootstrap keeps these on its own `.modal` element, which this frame does not use, so they are set here (with the app's colours).
+  --bs-modal-padding: 1rem;
+  --bs-modal-color: var(--mat-sys-on-surface);
+  --bs-modal-bg: var(--mat-sys-surface-container-high, var(--mat-sys-surface));
+  --bs-modal-border-color: var(--mat-sys-outline-variant);
+  --bs-modal-border-width: 1px;
+  --bs-modal-border-radius: 1rem;
+  --bs-modal-box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+  --bs-modal-inner-border-radius: calc(1rem - 1px);
+  --bs-modal-header-padding-x: 1rem;
+  --bs-modal-header-padding-y: 1rem;
+  --bs-modal-header-padding: 1rem 1rem;
+  --bs-modal-header-border-color: var(--mat-sys-outline-variant);
+  --bs-modal-header-border-width: 1px;
+  --bs-modal-title-line-height: 1.5;
+  --bs-modal-footer-gap: 0.5rem;
+  --bs-modal-footer-bg: transparent;
+  --bs-modal-footer-border-color: var(--mat-sys-outline-variant);
+  --bs-modal-footer-border-width: 1px;
+}
+
+.modal-dialog {
+  position: relative;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0;
+  outline: none;
+  display: flex;
+  // The layer is a fixed frame, so a percentage height has nothing to resolve against: size to the window instead. Without this a
+  // tall dialog on a short screen is centred and its top (the title and first fields) ends up above the visible area.
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+}
+
+.modal-dialog.modal-sm {
+  max-width: 22rem;
+}
+
+.modal-dialog.modal-lg {
+  max-width: 48rem;
+}
+
+.modal-content {
+  width: 100%;
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+// Bootstrap's scrollable dialog caps the content at 100% of the dialog, which has no fixed height here, so take the dialog's own cap.
+.modal-dialog.modal-dialog-scrollable .modal-content {
+  max-height: inherit;
+}
+
+.modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.modal-footer:empty {
+  display: none;
+}

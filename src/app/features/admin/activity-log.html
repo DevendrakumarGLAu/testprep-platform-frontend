@@ -1,0 +1,23 @@
+<h1 class="h3">Activity log</h1>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading the activity log"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead>
+      <tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      @for (r of rows(); track r.id) {
+        <tr>
+          <td>{{ r.created_at | date: 'medium' }}</td>
+          <td>{{ r.actor_name || '—' }}</td>
+          <td>{{ r.action }}</td>
+          <td>{{ r.target_type }} {{ r.target_id }}</td>
+          <td>{{ r.detail }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+<app-bs-pager [length]="total()" [pageIndex]="pageIndex()" [pageSize]="20" (page)="onPage($event)" />

@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  padding: 16px;
+}
+
+.summary {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.summary.picked {
+  border-color: var(--mat-sys-primary);
+  background: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+}

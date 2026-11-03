@@ -1,8 +1,6 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { Location } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { By } from '@angular/platform-browser';
-import { MatSidenav } from '@angular/material/sidenav';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -648,7 +646,7 @@ describe('AttemptPage question palette layout', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  const drawer = () => fixture.debugElement.query(By.directive(MatSidenav)).componentInstance as MatSidenav;
+  const drawerOpen = () => fixture.componentInstance.drawerOpen();
   const burger = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('button[aria-label="Open question palette"]');
 
   afterEach(() => fixture?.destroy());
@@ -657,7 +655,7 @@ describe('AttemptPage question palette layout', () => {
     const el = await open(true);
     expect(el.querySelector('aside.palette')).toBeNull();
     expect(burger(el)).not.toBeNull();
-    expect(drawer().opened).toBe(false);
+    expect(drawerOpen()).toBe(false);
   });
 
   it('on a phone: the burger opens a drawer containing every question number', async () => {
@@ -665,8 +663,8 @@ describe('AttemptPage question palette layout', () => {
     burger(el)!.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(drawer().opened).toBe(true);
-    const drawerEl = el.querySelector('mat-sidenav')!;
+    expect(drawerOpen()).toBe(true);
+    const drawerEl = el.querySelector('.palette-drawer')!;
     const buttons = drawerEl.querySelectorAll('button.num');
     expect(buttons.length).toBe(2);
     expect(drawerEl.textContent).toContain('Section A');
@@ -678,12 +676,12 @@ describe('AttemptPage question palette layout', () => {
     burger(el)!.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    el.querySelectorAll<HTMLButtonElement>('mat-sidenav button.num')[1].click();
+    el.querySelectorAll<HTMLButtonElement>('.palette-drawer button.num')[1].click();
     fixture.detectChanges();
     await fixture.whenStable();
     expect(fixture.componentInstance.index()).toBe(1);
     expect(el.textContent).toContain('Second?');
-    expect(drawer().opened).toBe(false);
+    expect(drawerOpen()).toBe(false);
   });
 
   it('on a phone: the close button inside the drawer works', async () => {
@@ -694,7 +692,7 @@ describe('AttemptPage question palette layout', () => {
     el.querySelector<HTMLButtonElement>('button[aria-label="Close question palette"]')!.click();
     fixture.detectChanges();
     await fixture.whenStable();
-    expect(drawer().opened).toBe(false);
+    expect(drawerOpen()).toBe(false);
   });
 
   it('on a wide screen: the palette stays beside the question and there is no burger', async () => {
@@ -736,12 +734,12 @@ describe('AttemptPage question language', () => {
     return { fixture, c: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
   }
 
-  const dropdown = (el: HTMLElement) => el.querySelector('app-lang-switch mat-select');
+  const dropdown = (el: HTMLElement) => el.querySelector<HTMLSelectElement>('app-lang-switch select');
   const stem = (el: HTMLElement) => el.querySelector('.q-text')!.textContent!.trim();
 
   it('shows the language dropdown and starts in English', async () => {
     const { el } = await open(bilingual());
-    expect(dropdown(el)!.textContent).toContain('English');
+    expect(dropdown(el)!.selectedOptions[0].textContent).toContain('English');
     expect(stem(el)).toBe('First?');
   });
 
@@ -749,7 +747,7 @@ describe('AttemptPage question language', () => {
     const { fixture, c, el } = await open(bilingual());
     TestBed.inject(LanguageService).set('hi'); // what the dropdown does when Hindi is picked
     fixture.detectChanges();
-    expect(dropdown(el)!.textContent).toContain('हिन्दी');
+    expect(dropdown(el)!.selectedOptions[0].textContent).toContain('हिन्दी');
     expect(stem(el)).toBe('पहला?');
     expect([...el.querySelectorAll('.opt')].map((o) => o.textContent!.replace(/\s+/g, ' ').trim())).toEqual(['A. क', 'B. ख']);
     c.go(1);
@@ -1018,7 +1016,7 @@ describe('AttemptPage back arrow', () => {
   it('shows a back arrow in the top bar', async () => {
     const { el } = await open(pauseInfo());
     const b = el.querySelector('button.back') as HTMLButtonElement;
-    expect(b.textContent).toContain('arrow_back');
+    expect(b.querySelector('.bi-arrow-left')).not.toBeNull();
     expect(b.getAttribute('aria-label')).toContain('Go back');
   });
 
@@ -1117,5 +1115,74 @@ describe('AttemptPage paused screen', () => {
     expect(el.textContent).toContain('Resume test');
     fixture.destroy();
     vi.useRealTimers();
+  });
+});
+
+describe('AttemptPage Bootstrap screen', () => {
+  let fixture: ComponentFixture<AttemptPage>;
+  const api = { attempt: vi.fn(), saveAnswers: vi.fn(() => of(okNow())), submit: vi.fn(() => of(submitted)) };
+
+  async function open() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: api },
+        { provide: BreakpointObserver, useValue: { observe: () => of({ matches: false, breakpoints: {} }) } },
+      ],
+    });
+    api.attempt.mockReturnValue(of(state()));
+    api.submit.mockClear();
+    fixture = TestBed.createComponent(AttemptPage);
+    fixture.componentRef.setInput('id', 'att5');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  afterEach(() => fixture?.destroy());
+
+  it('is a Bootstrap page with no Material component', async () => {
+    const el = await open();
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.card .q-text')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-radio-group, mat-radio-button, mat-sidenav-container, mat-icon, [mat-flat-button]')).toBeNull();
+  });
+
+  it('shows the options as radio buttons and picking one selects it', async () => {
+    const el = await open();
+    const radios = el.querySelectorAll<HTMLInputElement>('input[type="radio"]');
+    expect(radios.length).toBe(2);
+    radios[1].click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.q()!.q.selected_option).toBe(2);
+    expect(el.querySelectorAll<HTMLInputElement>('input[type="radio"]')[1].checked).toBe(true);
+    expect(el.querySelectorAll('.opt.chosen').length).toBe(1);
+  });
+
+  it('Submit opens a pop-up with the summary, and Keep working closes it without submitting', async () => {
+    const el = await open();
+    el.querySelector<HTMLButtonElement>('header .right button.btn-primary')!.click();
+    fixture.detectChanges();
+    const modal = el.querySelector('app-bs-modal')!;
+    expect(modal.textContent).toContain('Submit your test?');
+    expect(modal.textContent).toContain('0 of 2');
+    expect(modal.textContent).toContain('You cannot change your answers after submitting.');
+    Array.from(modal.querySelectorAll('button')).find((b) => b.textContent!.trim() === 'Keep working')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('app-bs-modal')).toBeNull();
+    expect(api.submit).not.toHaveBeenCalled();
+  });
+
+  it('confirming in the pop-up submits the test', async () => {
+    const el = await open();
+    el.querySelector<HTMLButtonElement>('header .right button.btn-primary')!.click();
+    fixture.detectChanges();
+    Array.from(el.querySelectorAll('app-bs-modal button')).find((b) => b.textContent!.trim() === 'Submit')!.dispatchEvent(new Event('click'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(api.submit).toHaveBeenCalled();
+    expect(el.querySelector('app-bs-modal')).toBeNull();
+    expect(el.textContent).toContain('Test submitted');
   });
 });

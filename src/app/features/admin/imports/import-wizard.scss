@@ -92,10 +92,10 @@
   padding: 24px;
   text-align: center;
 
-  mat-icon {
+  .bi {
+    display: block;
     font-size: 40px;
-    width: 40px;
-    height: 40px;
+    line-height: 1.2;
     color: var(--mat-sys-primary);
   }
 }
@@ -251,13 +251,49 @@ table.plain {
   text-align: center;
 
   .big {
+    display: block;
     font-size: 56px;
-    width: 56px;
-    height: 56px;
+    line-height: 1.2;
     color: var(--mat-sys-primary);
   }
 }
 
-mat-card-content {
-  padding-top: 12px;
+.loader {
+  height: 4px;
+  margin: 8px 0;
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+.card {
+  background: var(--mat-sys-surface);
+  border-color: var(--mat-sys-outline-variant);
+  border-radius: 12px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: transparent;
+  border-top: 0;
+  padding: 0 1rem 1rem;
+}
+
+// A box of tick boxes, used where more than one column can be chosen.
+.checklist {
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+.icon {
+  padding: 4px 8px;
+  line-height: 1;
+  color: var(--mat-sys-on-surface-variant);
 }

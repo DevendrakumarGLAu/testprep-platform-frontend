@@ -1,0 +1,28 @@
+<div class="head">
+  <h1 class="h3">Study notes</h1>
+  <button type="button" class="btn btn-primary" (click)="edit(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New note</button>
+</div>
+<p class="muted">Short notes and monthly capsules that students read next to their practice. Only published notes are visible to students.</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading notes"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Title</th><th>Exam / subject</th><th>Covers</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (n of rows(); track n.id) {
+        <tr>
+          <td>{{ n.title || n.title_hi }}</td>
+          <td>{{ n.category_name || 'Any exam' }}{{ n.subject_name ? ' / ' + n.subject_name : '' }}</td>
+          <td>{{ n.note_date ? (n.note_date | date: 'mediumDate') : '' }}</td>
+          <td><span [class.on]="n.is_published">{{ n.is_published ? 'Published' : 'Draft' }}</span></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="edit(n)" aria-label="Edit note" title="Edit note"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="remove(n)" aria-label="Delete note" title="Delete note"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+@if (!loading() && rows().length === 0) { <p class="muted">No notes yet. Create the first one.</p> }

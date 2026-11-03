@@ -1,0 +1,35 @@
+<h1 class="h3">Platform settings</h1>
+<div class="card">
+  <div class="card-body">
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="mb-3">
+        <label for="ps-name" class="form-label">Platform name</label>
+        <input id="ps-name" class="form-control" [class.is-invalid]="bad(form.controls.platform_name)" formControlName="platform_name" maxlength="60" />
+        @if (bad(form.controls.platform_name)) { <div class="invalid-feedback">The platform name is required</div> }
+      </div>
+      <div class="mb-3">
+        <label for="ps-email" class="form-label">Support email</label>
+        <input id="ps-email" class="form-control" type="email" [class.is-invalid]="bad(form.controls.support_email)" formControlName="support_email" />
+        @if (bad(form.controls.support_email)) { <div class="invalid-feedback">Enter a valid email address</div> }
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-12 col-md-6">
+          <label for="ps-phone" class="form-label">Support phone or WhatsApp</label>
+          <input id="ps-phone" class="form-control" type="tel" formControlName="support_phone" maxlength="40" placeholder="+91 98765 43210" aria-describedby="ps-phone-hint" />
+          <div id="ps-phone-hint" class="form-text">Shown on the login page, so people who forget a password know who to contact. Include the country code to get a WhatsApp link.</div>
+        </div>
+        <div class="col-12 col-md-6">
+          <label for="ps-hours" class="form-label">When you answer</label>
+          <input id="ps-hours" class="form-control" formControlName="support_hours" maxlength="80" placeholder="Mon to Sat, 10 am to 6 pm" />
+        </div>
+      </div>
+      <div class="form-check form-switch">
+        <input id="ps-registration" class="form-check-input" type="checkbox" role="switch" formControlName="allow_registration" aria-describedby="ps-registration-hint" />
+        <label for="ps-registration" class="form-check-label">Allow students to register themselves</label>
+      </div>
+      <p id="ps-registration-hint" class="hint">When off, the sign-up page is closed and only administrators can create student accounts.</p>
+      @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+      <div class="actions"><button type="submit" class="btn btn-primary" [disabled]="saving()">Save settings</button></div>
+    </form>
+  </div>
+</div>

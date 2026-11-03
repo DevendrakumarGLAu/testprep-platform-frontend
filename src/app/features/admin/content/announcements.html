@@ -1,0 +1,47 @@
+<h1 class="h3">Announcements</h1>
+<p class="muted">The message appears under the bell icon for each student. Students are not emailed.</p>
+<div class="card">
+  <div class="card-body">
+    <form [formGroup]="form" (ngSubmit)="send()" novalidate>
+      <div class="mb-3">
+        <label for="an-title" class="form-label">Title</label>
+        <input id="an-title" class="form-control" formControlName="title" maxlength="200" />
+      </div>
+      <div class="mb-3">
+        <label for="an-body" class="form-label">Message (optional)</label>
+        <textarea id="an-body" class="form-control" rows="4" formControlName="body" maxlength="1000"></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="an-audience" class="form-label">Send to</label>
+        <select id="an-audience" class="form-select" formControlName="audience">
+          <option value="all">All students</option>
+          <option value="exam">Students preparing for an exam</option>
+          <option value="batch">A batch</option>
+        </select>
+      </div>
+      @if (form.value.audience === 'exam') {
+        <div class="mb-3">
+          <label for="an-exam" class="form-label">Exam</label>
+          <select id="an-exam" class="form-select" formControlName="target">
+            @for (c of categories(); track c.id) { <option [ngValue]="c.id">{{ c.name }}</option> }
+          </select>
+        </div>
+      }
+      @if (form.value.audience === 'batch') {
+        <div class="mb-3">
+          <label for="an-batch" class="form-label">Batch</label>
+          <select id="an-batch" class="form-select" formControlName="target">
+            @for (b of batches(); track b.id) { <option [ngValue]="b.id">{{ b.name }}</option> }
+          </select>
+        </div>
+      }
+      <div class="mb-3">
+        <label for="an-link" class="form-label">Link (optional)</label>
+        <input id="an-link" class="form-control" formControlName="link" placeholder="/student/tests" aria-describedby="an-link-hint" />
+        <div id="an-link-hint" class="form-text">A page of this app that opens when the student clicks the message.</div>
+      </div>
+      @if (error()) { <div class="alert alert-danger py-2" role="alert">{{ error() }}</div> }
+      <div><button type="submit" class="btn btn-primary" [disabled]="sending()"><i class="bi bi-send" aria-hidden="true"></i> Send</button></div>
+    </form>
+  </div>
+</div>

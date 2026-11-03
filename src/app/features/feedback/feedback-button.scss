@@ -1,0 +1,32 @@
+:host {
+  display: inline-block;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  font-size: 0.9rem;
+
+  .bi {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+}
+
+.intro {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.btn-link {
+  text-decoration: none;
+}
+
+@media (max-width: 700px) {
+  .label {
+    display: none;
+  }
+}

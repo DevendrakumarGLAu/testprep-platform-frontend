@@ -1,15 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal, viewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatSelectModule } from '@angular/material/select';
 import { THEME_LABEL, ThemeMode, ThemeService } from '../../core/theme.service';
 import { AuthService } from '../../core/auth.service';
 import { apiErrorMessage } from '../../core/models';
@@ -28,120 +19,10 @@ const ROLE_LABEL = { super_admin: 'Super Admin', admin: 'Admin', student: 'Stude
 /** "My profile": the signed-in person's own details and password. The same page serves students and admins. */
 @Component({
   selector: 'app-profile',
-  imports: [
-    DatePipe, ReactiveFormsModule, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule,
-    MatProgressSpinnerModule, CaptchaField, MatButtonToggleModule, MatSelectModule, MatCheckboxModule,
-  ],
+  imports: [DatePipe, ReactiveFormsModule, CaptchaField],
+  templateUrl: './profile.html',
   styleUrl: './profile.scss',
-  template: `
-    @if (user(); as u) {
-      <header class="who">
-        <div class="avatar" aria-hidden="true">{{ initials() }}</div>
-        <div>
-          <h1>{{ fullName() }}</h1>
-          <p class="sub">{{ roleLabel() }} · member since {{ u.date_joined | date: 'mediumDate' }}</p>
-        </div>
-      </header>
-
-      <div class="grid">
-        <mat-card appearance="outlined">
-          <mat-card-header><mat-card-title>My details</mat-card-title></mat-card-header>
-          <mat-card-content>
-            <form [formGroup]="details" (ngSubmit)="saveDetails()" novalidate>
-              <div class="row">
-                <mat-form-field appearance="outline">
-                  <mat-label>First name</mat-label>
-                  <input matInput formControlName="first_name" autocomplete="given-name" maxlength="150" />
-                  <mat-error>First name is required</mat-error>
-                </mat-form-field>
-                <mat-form-field appearance="outline">
-                  <mat-label>Last name</mat-label>
-                  <input matInput formControlName="last_name" autocomplete="family-name" maxlength="150" />
-                </mat-form-field>
-              </div>
-              <mat-form-field appearance="outline">
-                <mat-label>Phone</mat-label>
-                <input matInput type="tel" formControlName="phone" autocomplete="tel" maxlength="20" />
-                <mat-icon matSuffix>call</mat-icon>
-                <mat-error>Enter a valid phone number</mat-error>
-              </mat-form-field>
-              @if (u.role === 'student') {
-                <mat-form-field appearance="outline">
-                  <mat-label>Daily goal (questions)</mat-label>
-                  <mat-select formControlName="daily_goal_questions">
-                    @for (n of goals; track n) { <mat-option [value]="n">{{ n }} questions a day</mat-option> }
-                  </mat-select>
-                  <mat-hint>Shown as a progress ring on your dashboard.</mat-hint>
-                </mat-form-field>
-                <mat-checkbox formControlName="weekly_summary">Send me a weekly summary of my practice</mat-checkbox>
-              }
-              <mat-form-field appearance="outline">
-                <mat-label>Username</mat-label>
-                <input matInput [value]="u.username" disabled />
-                <mat-icon matSuffix>lock</mat-icon>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Email</mat-label>
-                <input matInput [value]="u.email" disabled />
-                <mat-icon matSuffix>lock</mat-icon>
-                <mat-hint>
-                  Username and email can only be changed by an administrator.
-                  @if (u.email_verified) { Email confirmed. } @else { Email not confirmed yet. }
-                </mat-hint>
-              </mat-form-field>
-              @if (detailsError()) { <p class="form-error" role="alert">{{ detailsError() }}</p> }
-              <div class="actions">
-                <button mat-flat-button type="submit" [disabled]="savingDetails() || details.pristine">
-                  @if (savingDetails()) { <mat-spinner diameter="20" /> } @else { Save changes }
-                </button>
-                <button mat-button type="button" (click)="resetDetails()" [disabled]="details.pristine">Undo</button>
-              </div>
-            </form>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card appearance="outlined">
-          <mat-card-header><mat-card-title>Appearance</mat-card-title></mat-card-header>
-          <mat-card-content>
-            <mat-button-toggle-group [value]="theme.mode()" (change)="theme.set($event.value)" aria-label="Appearance" hideSingleSelectionIndicator>
-              @for (m of modes; track m) { <mat-button-toggle [value]="m">{{ label[m] }}</mat-button-toggle> }
-            </mat-button-toggle-group>
-          </mat-card-content>
-        </mat-card>
-
-        <mat-card appearance="outlined">
-          <mat-card-header><mat-card-title>Change password</mat-card-title></mat-card-header>
-          <mat-card-content>
-            <form [formGroup]="password" (ngSubmit)="changePassword()" novalidate>
-              <mat-form-field appearance="outline">
-                <mat-label>Current password</mat-label>
-                <input matInput type="password" formControlName="old_password" autocomplete="current-password" />
-                <mat-error>Enter your current password</mat-error>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>New password</mat-label>
-                <input matInput type="password" formControlName="new_password" autocomplete="new-password" />
-                <mat-hint>At least 8 characters, not too common</mat-hint>
-                <mat-error>Password must be at least 8 characters</mat-error>
-              </mat-form-field>
-              <mat-form-field appearance="outline">
-                <mat-label>Confirm new password</mat-label>
-                <input matInput type="password" formControlName="confirm" autocomplete="new-password" />
-                @if (password.controls.confirm.hasError('mismatch')) { <mat-error>Passwords do not match</mat-error> }
-              </mat-form-field>
-              <app-captcha />
-              @if (passwordError()) { <p class="form-error" role="alert">{{ passwordError() }}</p> }
-              <div class="actions">
-                <button mat-flat-button type="submit" [disabled]="savingPassword()">
-                  @if (savingPassword()) { <mat-spinner diameter="20" /> } @else { Update password }
-                </button>
-              </div>
-            </form>
-          </mat-card-content>
-        </mat-card>
-      </div>
-    }
-  `,
+  host: { class: 'bs' },
 })
 export class Profile {
   private fb = inject(FormBuilder);
@@ -193,6 +74,11 @@ export class Profile {
       );
     new_password.valueChanges.subscribe(check);
     confirm.valueChanges.subscribe(check);
+  }
+
+  /** Show a field's error once the person has touched it or tried to save. */
+  bad(c: AbstractControl) {
+    return c.invalid && (c.touched || c.dirty);
   }
 
   resetDetails() {

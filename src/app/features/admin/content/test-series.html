@@ -1,0 +1,27 @@
+<div class="head">
+  <h1 class="h3">Test series</h1>
+  <button type="button" class="btn btn-primary" (click)="edit(null)"><i class="bi bi-plus-lg" aria-hidden="true"></i> New series</button>
+</div>
+<p class="muted">Group tests into an ordered series, for example "SSC CGL 2026: 30 mocks". Students see their progress through it.</p>
+@if (loading()) {
+  <div class="progress loader" role="progressbar" aria-label="Loading test series"><div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div></div>
+}
+<div class="table-responsive">
+  <table class="table align-middle">
+    <thead><tr><th>Series</th><th>Tests</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (s of rows(); track s.id) {
+        <tr>
+          <td>{{ s.title }}<div class="muted">{{ s.category_name || 'Any exam' }}</div></td>
+          <td>{{ s.exams.length }}</td>
+          <td><span [class.on]="s.is_published">{{ s.is_published ? 'Published' : 'Draft' }}</span></td>
+          <td class="row-actions">
+            <button type="button" class="btn btn-link" (click)="edit(s)" aria-label="Edit series" title="Edit series"><i class="bi bi-pencil" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link" (click)="remove(s)" aria-label="Delete series" title="Delete series"><i class="bi bi-trash" aria-hidden="true"></i></button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+@if (!loading() && rows().length === 0) { <p class="muted">No series yet.</p> }

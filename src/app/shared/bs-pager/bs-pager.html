@@ -1,0 +1,17 @@
+<nav class="pager" aria-label="Pages">
+  @if (pageSizeOptions().length > 1) {
+    <label class="size">
+      <span>Rows per page</span>
+      <select class="form-select form-select-sm" (change)="size($any($event.target).value)">
+        @for (n of pageSizeOptions(); track n) { <option [value]="n" [selected]="n === pageSize()">{{ n }}</option> }
+      </select>
+    </label>
+  }
+  <span class="range" aria-live="polite">{{ first() }}–{{ last() }} of {{ length() }}</span>
+  <ul class="pagination pagination-sm mb-0">
+    <li class="page-item" [class.disabled]="atStart()"><button type="button" class="page-link" (click)="go(0)" [disabled]="atStart()" aria-label="First page"><i class="bi bi-chevron-double-left" aria-hidden="true"></i></button></li>
+    <li class="page-item" [class.disabled]="atStart()"><button type="button" class="page-link" (click)="go(pageIndex() - 1)" [disabled]="atStart()" aria-label="Previous page"><i class="bi bi-chevron-left" aria-hidden="true"></i></button></li>
+    <li class="page-item" [class.disabled]="atEnd()"><button type="button" class="page-link" (click)="go(pageIndex() + 1)" [disabled]="atEnd()" aria-label="Next page"><i class="bi bi-chevron-right" aria-hidden="true"></i></button></li>
+    <li class="page-item" [class.disabled]="atEnd()"><button type="button" class="page-link" (click)="go(pages() - 1)" [disabled]="atEnd()" aria-label="Last page"><i class="bi bi-chevron-double-right" aria-hidden="true"></i></button></li>
+  </ul>
+</nav>

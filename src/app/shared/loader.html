@@ -1,0 +1,15 @@
+@if (loading.bar()) {
+  <div class="progress bar" role="progressbar" aria-label="Loading">
+    <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+  </div>
+}
+@if (loading.overlay()) {
+  <div class="overlay" role="status" aria-live="polite" aria-label="Please wait">
+    <div class="box">
+      <div class="spinner-border spinner" aria-hidden="true"></div>
+      @if (loading.slow()) {
+        <div class="wake">The server is starting up after being idle. This can take up to a minute. Please wait.</div>
+      }
+    </div>
+  </div>
+}

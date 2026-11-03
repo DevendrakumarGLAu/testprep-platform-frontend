@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+.question,
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.list-group-item.correct {
+  background: color-mix(in srgb, var(--bs-success) 14%, transparent);
+}
+
+.list-group-item.chosen {
+  background: color-mix(in srgb, var(--bs-danger) 12%, transparent);
+}
+
+.explanation {
+  background: var(--mat-sys-surface-container);
+  white-space: pre-wrap;
+}
+
+.bubble {
+  max-width: min(36rem, 92%);
+  border-radius: 1rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.bubble.mine {
+  background: color-mix(in srgb, var(--mat-sys-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--mat-sys-primary) 35%, transparent);
+}
+
+.bubble.staff {
+  background: var(--mat-sys-surface-container-high);
+}

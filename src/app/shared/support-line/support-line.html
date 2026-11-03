@@ -1,0 +1,12 @@
+@if (visible()) {
+  <p class="support">
+    <i class="bi bi-headset" aria-hidden="true"></i>
+    <span>{{ lead() }}</span>
+    @if (phone()) {
+      <a class="phone" [href]="'tel:' + tel()">{{ phone() }}</a>
+      @if (whatsapp()) { <a class="wa" [href]="whatsapp()" target="_blank" rel="noopener">WhatsApp</a> }
+    }
+    @if (email()) { <a class="mail" [href]="'mailto:' + email()">{{ email() }}</a> }
+    @if (hours()) { <span class="hours">{{ hours() }}</span> }
+  </p>
+}

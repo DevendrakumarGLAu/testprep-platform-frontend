@@ -47,7 +47,7 @@ describe('Exam family page: exam tabs', () => {
     return { fixture, el: fixture.nativeElement as HTMLElement, navigate, byUrl };
   }
 
-  const tabs = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('.exam-tabs > .mat-mdc-tab-header [role="tab"]')];
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll<HTMLElement>('.exam-tabs > .bs-tabs-strip [role="tab"]')];
   const label = (t: HTMLElement) => t.textContent!.replace(/\s+/g, ' ').trim();
   const selected = (el: HTMLElement) => label(tabs(el).find((t) => t.getAttribute('aria-selected') === 'true')!);
 

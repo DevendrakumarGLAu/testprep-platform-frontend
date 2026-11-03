@@ -1,0 +1,61 @@
+:host {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.card {
+  height: 100%;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  .bi {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.big {
+  font: var(--mat-sys-headline-medium);
+  line-height: 1.1;
+}
+
+.muted {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 4px 0 0;
+}
+
+.goal {
+  height: 8px;
+  margin-top: 6px;
+}
+
+.week {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 40px;
+  margin-top: 12px;
+
+  i {
+    flex: 1;
+    min-height: 3px;
+    border-radius: 3px;
+    background: var(--mat-sys-primary);
+    opacity: 0.85;
+  }
+
+  i.none {
+    background: var(--mat-sys-outline-variant);
+  }
+}
+
+p.text {
+  margin: 4px 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+}

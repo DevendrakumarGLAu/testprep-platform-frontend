@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 0;
+}
+
+.size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  select {
+    width: auto;
+  }
+}
+
+.range {
+  font-size: 0.85rem;
+  color: var(--mat-sys-on-surface-variant);
+}

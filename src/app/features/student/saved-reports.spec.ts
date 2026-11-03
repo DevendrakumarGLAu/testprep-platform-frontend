@@ -1,11 +1,10 @@
 import { TestBed } from '@angular/core/testing';
-import { MatDialog } from '@angular/material/dialog';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { NotifyService } from '../../core/notify.service';
 import { ResultData } from '../../shared/result.models';
-import { ReportDialog } from './report-dialog';
+import { ReportModal } from './report-modal/report-modal';
 import { Saved } from './saved';
 import { SavedList, SavedQuestion } from './student.models';
 import { StudentResultPage } from './result-page';
@@ -127,14 +126,13 @@ describe('Result page: save and report buttons', () => {
     }],
   });
 
-  function open(api: Record<string, unknown>, dialogResult: unknown = undefined) {
+  function open(api: Record<string, unknown>) {
     localStorage.clear();
     const notify = { success: vi.fn(), error: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]), { provide: NotifyService, useValue: notify },
         { provide: StudentService, useValue: { leaderboard: () => throwError(() => ({ status: 403 })), ...api } },
-        { provide: MatDialog, useValue: { open: vi.fn(() => ({ afterClosed: () => of(dialogResult) })) } },
       ],
     });
     const f = TestBed.createComponent(StudentResultPage);
@@ -147,7 +145,7 @@ describe('Result page: save and report buttons', () => {
 
   it('shows Save and Report under each reviewed question', () => {
     const { f } = open({ result: vi.fn(() => of(result())) });
-    expect(buttons(f).map((b) => b.textContent!.trim())).toEqual(['replay Re-attempt', 'bookmark_border Save', 'flag Report a problem']);
+    expect(buttons(f).map((b) => b.textContent!.trim())).toEqual(['Re-attempt', 'Save', 'Ask a doubt', 'Report a problem']);
   });
 
   it('saves and un-saves a question', async () => {
@@ -168,19 +166,35 @@ describe('Result page: save and report buttons', () => {
 
   it('sends a report and then shows it as waiting', async () => {
     const api = { result: vi.fn(() => of(result())), reportQuestion: vi.fn(() => of({ id: 1, status: 'open', updated: false, image_url: null })) };
-    const { f, c } = open(api, { reason: 'typo', message: 'Spelling of Ganga', image: null });
-    await c.reportQuestion(1);
+    const { f, c } = open(api);
+    c.reportQuestion(1);
     f.detectChanges();
+    expect(f.nativeElement.querySelector('app-report-modal')).not.toBeNull(); // the form opens for question 1
+    await c.sendReport({ reason: 'typo', message: 'Spelling of Ganga', image: null });
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('app-report-modal')).toBeNull();
     expect(api.reportQuestion).toHaveBeenCalledWith('att1', 1, 'typo', 'Spelling of Ganga', null);
-    expect(buttons(f)[2].textContent).toContain('Reported, waiting for review');
-    expect(buttons(f)[2].disabled).toBe(true);
+    expect(buttons(f)[3].textContent).toContain('Reported, waiting for review');
+    expect(buttons(f)[3].disabled).toBe(true);
   });
 
-  it('sends nothing when the report dialog is cancelled', async () => {
+  it('sends nothing when the report form is closed without sending', () => {
     const api = { result: vi.fn(() => of(result())), reportQuestion: vi.fn() };
-    const { c } = open(api, undefined);
-    await c.reportQuestion(1);
+    const { f, c } = open(api);
+    c.reportQuestion(1);
+    f.detectChanges();
+    (f.nativeElement.querySelector('app-report-modal .btn-close') as HTMLButtonElement).click();
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('app-report-modal')).toBeNull();
     expect(api.reportQuestion).not.toHaveBeenCalled();
+  });
+
+  it('shows the error when sending the report fails', async () => {
+    const api = { result: vi.fn(() => of(result())), reportQuestion: vi.fn(() => throwError(() => ({ error: { detail: 'Try again later.' } }))) };
+    const { c, notify } = open(api);
+    c.reportQuestion(1);
+    await c.sendReport({ reason: 'typo', message: '', image: null });
+    expect(notify.error).toHaveBeenCalledWith('Try again later.');
   });
 
   it('shows the error when saving fails', async () => {
@@ -196,38 +210,69 @@ describe('Result page: save and report buttons', () => {
   });
 });
 
-describe('Report dialog', () => {
-  it('needs a reason, and words when the reason is "something else"', async () => {
-    const { MAT_DIALOG_DATA, MatDialogRef } = await import('@angular/material/dialog');
-    const close = vi.fn();
-    TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { number: 4 } }, { provide: MatDialogRef, useValue: { close } }] });
-    const f = TestBed.createComponent(ReportDialog);
+describe('Report form', () => {
+  function modal() {
+    const f = TestBed.createComponent(ReportModal);
+    f.componentRef.setInput('number', 4);
     f.detectChanges();
-    const c = f.componentInstance;
+    const submitted = vi.fn();
+    f.componentInstance.submitted.subscribe(submitted);
+    return { f, c: f.componentInstance, submitted };
+  }
+
+  it('is a Bootstrap pop-up with the reasons as radio buttons', () => {
+    const { f } = modal();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
     expect(text(f)).toContain('question 4');
+    expect(el.querySelectorAll('input[type="radio"]').length).toBeGreaterThan(2);
+    expect(el.querySelector('mat-radio-group, mat-form-field, mat-dialog-content, [mat-flat-button]')).toBeNull();
+  });
+
+  it('choosing a reason selects it', () => {
+    const { f, c } = modal();
+    const radio = f.nativeElement.querySelectorAll('input[type="radio"]')[1] as HTMLInputElement;
+    radio.click();
+    f.detectChanges();
+    expect(c.reason()).toBe(radio.value);
+  });
+
+  it('needs a reason, and words when the reason is "something else"', () => {
+    const { c, submitted } = modal();
     c.send();
-    expect(close).not.toHaveBeenCalled();
+    expect(submitted).not.toHaveBeenCalled();
     expect(c.error()).toContain('Choose what is wrong');
     c.reason.set('other');
     c.send();
     expect(c.error()).toContain('few words');
     c.message.set('The picture is missing');
     c.send();
-    expect(close).toHaveBeenCalledWith({ reason: 'other', message: 'The picture is missing', image: null });
+    expect(submitted).toHaveBeenCalledWith({ reason: 'other', message: 'The picture is missing', image: null });
+  });
+
+  it('shows its errors on the form', () => {
+    const { f, c } = modal();
+    c.send();
+    f.detectChanges();
+    expect(f.nativeElement.querySelector('.alert-danger')!.textContent).toContain('Choose what is wrong');
+  });
+
+  it('can be cancelled', () => {
+    const { f, c } = modal();
+    const closed = vi.fn();
+    c.closed.subscribe(closed);
+    const cancel = Array.from(f.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find((b) => b.textContent!.trim() === 'Cancel')!;
+    cancel.click();
+    expect(closed).toHaveBeenCalled();
   });
 
   describe('picture', () => {
     const png = (size = 100, type = 'image/png') => new File([new Uint8Array(size)], 'shot', { type });
 
-    async function dialog() {
-      const { MAT_DIALOG_DATA, MatDialogRef } = await import('@angular/material/dialog');
-      const close = vi.fn();
-      TestBed.configureTestingModule({ providers: [{ provide: MAT_DIALOG_DATA, useValue: { number: 4 } }, { provide: MatDialogRef, useValue: { close } }] });
+    function dialog() {
       vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:shot');
       vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-      const f = TestBed.createComponent(ReportDialog);
-      f.detectChanges();
-      return { f, c: f.componentInstance, close };
+      return modal();
     }
     const paste = (files: File[]) => {
       const ev = new Event('paste', { cancelable: true }) as ClipboardEvent;
@@ -237,14 +282,14 @@ describe('Report dialog', () => {
     };
     const choose = (input: { files: File[]; value: string }) => ({ target: input }) as unknown as Event;
 
-    it('only offers real picture types in the file chooser', async () => {
-      const { f } = await dialog();
+    it('only offers real picture types in the file chooser', () => {
+      const { f } = dialog();
       expect((f.nativeElement.querySelector('input[type="file"]') as HTMLInputElement).getAttribute('accept')).toBe('image/jpeg,image/png,image/webp,image/gif');
       expect(text(f)).toContain('paste a screenshot with Ctrl+V');
     });
 
-    it('a chosen picture is previewed and sent with the report', async () => {
-      const { f, c, close } = await dialog();
+    it('a chosen picture is previewed and sent with the report', () => {
+      const { f, c, submitted } = dialog();
       const file = png();
       const input = { files: [file], value: 'C:\\fakepath\\shot.png' };
       c.pick(choose(input));
@@ -253,11 +298,11 @@ describe('Report dialog', () => {
       expect((f.nativeElement.querySelector('.picture img') as HTMLImageElement).getAttribute('src')).toBe('blob:shot');
       c.reason.set('typo');
       c.send();
-      expect(close).toHaveBeenCalledWith({ reason: 'typo', message: '', image: file });
+      expect(submitted).toHaveBeenCalledWith({ reason: 'typo', message: '', image: file });
     });
 
-    it('a pasted screenshot is taken, and text or other files are left alone', async () => {
-      const { c } = await dialog();
+    it('a pasted screenshot is taken, and text or other files are left alone', () => {
+      const { c } = dialog();
       const ev = paste([png()]);
       expect(ev.defaultPrevented).toBe(true);
       expect(c.image()).not.toBeNull();
@@ -267,8 +312,8 @@ describe('Report dialog', () => {
       expect(c.image()).toBeNull();
     });
 
-    it('refuses a wrong type or a picture over 2 MB', async () => {
-      const { c } = await dialog();
+    it('refuses a wrong type or a picture over 2 MB', () => {
+      const { c } = dialog();
       c.pick(choose({ files: [png(10, 'image/bmp')], value: 'x' }));
       expect(c.error()).toBe('Use a JPG, PNG, WebP or GIF picture.');
       c.pick(choose({ files: [png(2 * 1024 * 1024 + 1)], value: 'x' }));
@@ -276,8 +321,8 @@ describe('Report dialog', () => {
       expect(c.image()).toBeNull();
     });
 
-    it('can remove the picture again, and stops listening for pastes when closed', async () => {
-      const { f, c } = await dialog();
+    it('can remove the picture again, and stops listening for pastes when closed', () => {
+      const { f, c } = dialog();
       c.pick(choose({ files: [png()], value: 'x' }));
       c.remove();
       f.detectChanges();
@@ -287,5 +332,25 @@ describe('Report dialog', () => {
       paste([png()]);
       expect(c.image()).toBeNull();
     });
+  });
+});
+
+describe('Saved questions page (Bootstrap)', () => {
+  it('is a Bootstrap page with cards, a note box and a native subject list', async () => {
+    const note = { id: 1, text: 'Q?', options: [], note: '', subject: 'Geo', exam_title: 'M', explanation: '' };
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: StudentService, useValue: { saved: () => of({ count: 1, subjects: ['Geo'], results: [note] }), myReports: () => of({ results: [] }) } },
+        { provide: NotifyService, useValue: { success: vi.fn(), error: vi.fn() } },
+      ],
+    });
+    const f = TestBed.createComponent(Saved);
+    f.detectChanges();
+    const el = f.nativeElement as HTMLElement;
+    expect(el.classList.contains('bs')).toBe(true);
+    expect(el.querySelector('.card textarea.form-control')).not.toBeNull();
+    expect(el.querySelector('select.form-select')).not.toBeNull();
+    expect(el.querySelector('mat-card, mat-form-field, mat-select, [mat-flat-button]')).toBeNull();
   });
 });
